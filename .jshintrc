@@ -1,0 +1,6 @@
+{
+	"undef": true, //Require all non-global variables to be declared
+	"unused": true, //Require all defined variables be used
+	"strict": true, //Requires all functions run in ES5 Strict Mode
+	"quotmark": "single"
+}

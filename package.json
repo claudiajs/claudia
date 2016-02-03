@@ -1,0 +1,23 @@
+{
+  "name": "beamup",
+  "version": "0.0.1",
+  "description": "Simple AWS microservice deployer",
+  "main": "deploy.js",
+  "scripts": {
+    "pretest": "jshint src spec && jscs src spec",
+    "test": "node spec/support/jasmine-runner.js"
+  },
+  "author": "Gojko Adzic",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^0.21.0",
+    "aws-sdk": "^2.2.33",
+    "bluebird": "^3.2.1"
+  },
+  "devDependencies": {
+    "jasmine": "^2.4.1",
+    "jasmine-spec-reporter": "^2.4.0",
+    "jscs": "^2.9.0",
+    "jshint": "^2.9.1"
+  }
+}
