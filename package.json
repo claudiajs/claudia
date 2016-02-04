@@ -12,7 +12,9 @@
   "dependencies": {
     "archiver": "^0.21.0",
     "aws-sdk": "^2.2.33",
-    "bluebird": "^3.2.1"
+    "bluebird": "^3.2.1",
+    "shelljs": "^0.5.3",
+    "uuid": "^2.0.1"
   },
   "devDependencies": {
     "jasmine": "^2.4.1",
