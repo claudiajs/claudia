@@ -5,13 +5,15 @@ var tmppath = require('../src/util/tmppath'),
 	underTest = require('../src/tasks/loadconfig');
 describe('loadconfig', function () {
 	'use strict';
-	var workingdir;
+	var workingdir, pwd;
 	beforeEach(function () {
 		workingdir = tmppath();
 		shell.mkdir(workingdir);
+		pwd = shell.pwd();
 		shell.cd(workingdir);
 	});
 	afterEach(function () {
+		shell.cd(pwd);
 		shell.rm('-rf', workingdir);
 	});
 	it('fails if package.json is missing', function (done) {
