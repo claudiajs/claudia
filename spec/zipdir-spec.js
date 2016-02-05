@@ -3,6 +3,7 @@ var tmppath = require('../src/util/tmppath'),
 	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path'),
+	os = require('os'),
 	underTest = require('../src/tasks/zipdir');
 describe('zipdir', function () {
 	'use strict';
@@ -43,14 +44,18 @@ describe('zipdir', function () {
 
 		underTest(original).then(function (argpath) {
 			var unpacked = path.join(workingdir, 'unpacked');
+
 			zipfile = argpath;
 			shell.mkdir(unpacked);
 			shell.cd(unpacked);
 			if (shell.exec('unzip ' + argpath).code !== 0) {
 				done.fail('invalid archive');
 			}
+
+			expect(path.dirname(argpath)).toEqual(os.tmpdir());
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+
 			done();
 		}, done.fail);
 	});
