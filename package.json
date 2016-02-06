@@ -1,5 +1,5 @@
 {
-  "name": "beamup",
+  "name": "claudia",
   "version": "0.0.1",
   "description": "Simple AWS microservice deployer",
   "main": "deploy.js",

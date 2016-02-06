@@ -1,13 +1,12 @@
-BeamUp -- a simple Node.JS microservice deployer for AWS
-========================================================
+# Claudia - a simple Node.JS microservice deployer for AWS
 
 
 
-# Notes
+## Notes
 
 To make this compatible with the current version of AWS Lambda Node.JS support, please use Node 0.10 for development.
 
-# Running tests
+## Running tests
 
 summary format
 
@@ -22,7 +21,7 @@ filter by name
     npm test -- filter=prefix
 
 
-## Using a non-default AWS profile/credentials
+### Using a non-default AWS profile/credentials
 
 create a .env file in the main project folder (this is ignored by .gitignore) and add your credentials there. This file will be loaded
 into the environment at the start of the test run, if it exists. See [Setting AWS Credentials for NodeJS](http://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html). The easiest
