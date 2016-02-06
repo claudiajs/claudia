@@ -13,6 +13,23 @@ module.exports = function create(options) {
 		lambda = new aws.Lambda({region: options.region}),
 		createRole = Promise.promisify(iam.createRole.bind(iam)),
 		createFunction = Promise.promisify(lambda.createFunction.bind(lambda)),
+		validationError = function () {
+			if (!options.name) {
+				return 'project name is missing. please specify with --name';
+			}
+			if (!options.region) {
+				return 'AWS region is missing. please specify with --region';
+			}
+			if (!options.handler) {
+				return 'Lambda handler is missing. please specify with --handler';
+			}
+			if (shell.test('-e', path.join(source, 'claudia.json'))) {
+				return 'claudia.json already exists in the source folder';
+			}
+			if (!shell.test('-e', path.join(source, 'package.json'))) {
+				return 'package.json does not exist in the source folder';
+			}
+		},
 		lambdaRolePolicy = {
 			'Version': '2012-10-17',
 			'Statement': [{
@@ -75,17 +92,9 @@ module.exports = function create(options) {
 						});
 					});
 		};
-	if (!options.name) {
-		return Promise.reject('project name is missing. please specify with --name');
-	}
-	if (!options.region) {
-		return Promise.reject('AWS region is missing. please specify with --region');
-	}
-	if (shell.test('-e', path.join(source, 'claudia.json'))) {
-		return Promise.reject('claudia.json already exists in the source folder');
-	}
-	if (!shell.test('-e', path.join(source, 'package.json'))) {
-		return Promise.reject('package.json does not exist in the source folder');
+
+	if (validationError()) {
+		return Promise.reject(validationError());
 	}
 	return createRole({
 		RoleName: options.name + '-executor',

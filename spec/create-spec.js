@@ -9,7 +9,7 @@ var underTest = require('../src/commands/create'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
-	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout;
+	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout, config;
 	beforeEach(function () {
 		workingdir = tmppath();
 		cwd = shell.pwd();
@@ -19,6 +19,7 @@ describe('create', function () {
 		newObjects = false;
 		originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
 		var deleteRole = Promise.promisify(iam.deleteRole.bind(iam)),
@@ -41,21 +42,31 @@ describe('create', function () {
 		}).finally(done);
 	});
 	it('fails if name is not given', function (done) {
-		underTest({}).then(done.fail, function (message) {
+		config.name = undefined;
+		underTest(config).then(done.fail, function (message) {
 			expect(message).toEqual('project name is missing. please specify with --name');
 			done();
 		});
 	});
 	it('fails if the region is not given', function (done) {
-		underTest({name: testRunName, source: workingdir}).then(done.fail, function (message) {
+		config.region = undefined;
+		underTest(config).then(done.fail, function (message) {
 			expect(message).toEqual('AWS region is missing. please specify with --region');
 			done();
 		});
 	});
+	it('fails if the handler is not given', function (done) {
+		config.handler = undefined;
+		underTest(config).then(done.fail, function (message) {
+			expect(message).toEqual('Lambda handler is missing. please specify with --handler');
+			done();
+		});
+	});
+
 	it('fails if claudia.json already exists in the source folder', function (done) {
 		shell.mkdir(workingdir);
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
-		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(done.fail, function (message) {
+		underTest(config).then(done.fail, function (message) {
 			expect(message).toEqual('claudia.json already exists in the source folder');
 			done();
 		});
@@ -64,7 +75,7 @@ describe('create', function () {
 		shell.mkdir(workingdir);
 		shell.cd(workingdir);
 		fs.writeFileSync(path.join('claudia.json'), '{}', 'utf8');
-		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(done.fail, function (message) {
+		underTest(config).then(done.fail, function (message) {
 			expect(message).toEqual('claudia.json already exists in the source folder');
 			done();
 		});
@@ -73,7 +84,7 @@ describe('create', function () {
 		shell.mkdir(workingdir);
 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 		shell.rm(path.join(workingdir, 'package.json'));
-		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(done.fail, function (message) {
+		underTest(config).then(done.fail, function (message) {
 			expect(message).toEqual('package.json does not exist in the source folder');
 			done();
 		});
@@ -84,7 +95,7 @@ describe('create', function () {
 			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
 		shell.mkdir(workingdir);
 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(function (result) {
+		underTest(config).then(function (result) {
 			newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
 			expect(result.lambda).toEqual({
 				role: testRunName + '-executor',

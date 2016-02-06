@@ -7,6 +7,7 @@ COMMANDS are:
     create        Create the initial lambda function and related security role. The options for create are:
       --name          lambda function name (eg awesome-microservice)
       --region        AWS region where to create the lambda (eg us-east-1)
+      --handler       Main function for Lambda to execute, as module.function (Eg if it's in the main.js file and exported as router, this would be main.router)
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
 
     update        Create a new version of the Lambda function using project files. The options for update are:

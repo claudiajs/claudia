@@ -24,7 +24,7 @@ If you need to do any post-processing or validation before deployment, you can d
 If you have a Node.js project that you'd like to deploy as a Lambda function, just run:
 
 ````
-claudia create --name LAMBDA_NAME --region AWS_REGION
+claudia create --name LAMBDA_NAME --region AWS_REGION --handler MAIN_FUNCTION
 ````
 
 This will automatically create the required AWS resources, upload an initial version of your code, and save the configuration into the `claudia.json` configuration 
