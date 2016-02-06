@@ -52,20 +52,20 @@ describe('create', function () {
 			done();
 		});
 	});
-	it('fails if beamup.json already exists in the source folder', function (done) {
+	it('fails if claudia.json already exists in the source folder', function (done) {
 		shell.mkdir(workingdir);
-		fs.writeFileSync(path.join(workingdir, 'beamup.json'), '{}', 'utf8');
+		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
 		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(done.fail, function (message) {
-			expect(message).toEqual('beamup.json already exists in the source folder');
+			expect(message).toEqual('claudia.json already exists in the source folder');
 			done();
 		});
 	});
 	it('checks the current folder if the source parameter is not defined', function (done) {
 		shell.mkdir(workingdir);
 		shell.cd(workingdir);
-		fs.writeFileSync(path.join('beamup.json'), '{}', 'utf8');
+		fs.writeFileSync(path.join('claudia.json'), '{}', 'utf8');
 		underTest({name: testRunName, region: awsRegion, source: workingdir}).then(done.fail, function (message) {
-			expect(message).toEqual('beamup.json already exists in the source folder');
+			expect(message).toEqual('claudia.json already exists in the source folder');
 			done();
 		});
 	});
@@ -78,7 +78,7 @@ describe('create', function () {
 			done();
 		});
 	});
-	it('creates the role and the lambda function, saving the results into beamup.json', function (done) {
+	it('creates the role and the lambda function, saving the results into claudia.json', function (done) {
 		var getRole = Promise.promisify(iam.getRole.bind(iam)),
 			getFunctionConfiguration = Promise.promisify(lambda.getFunctionConfiguration.bind(lambda)),
 			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
@@ -91,7 +91,7 @@ describe('create', function () {
 				region: awsRegion,
 				name: testRunName
 			});
-			expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'beamup.json'), 'utf8'))).toEqual(result);
+			expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(result);
 			return getRole({RoleName: testRunName + '-executor'}).then(function (role) {
 				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
 			}).then(function () {
