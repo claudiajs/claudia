@@ -30,7 +30,7 @@ claudia create --name LAMBDA_NAME --region AWS_REGION --handler MAIN_FUNCTION
 This will automatically create the required AWS resources, upload an initial version of your code, and save the configuration into the `claudia.json` configuration 
 file so that you can update the resources easily in the future.
 
-See the [Command Line Reference](../bin/usage.txt) for more options.
+See the [Command Line Reference](bin/usage.txt) for more options.
 
 ## Working with pre-existing lambda/API gateway resources
 
