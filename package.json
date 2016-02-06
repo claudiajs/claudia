@@ -26,7 +26,7 @@
     "pretest": "jshint src spec && jscs src spec",
     "test": "node spec/support/jasmine-runner.js"
   },
-  "author": "Gojko Adzic",
+  "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
   "dependencies": {
     "archiver": "^0.21.0",
     "aws-sdk": "^2.2.33",
