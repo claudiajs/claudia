@@ -19,7 +19,8 @@
   },
   "homepage": "http://claudiajs.com",
   "files": [
-    "src", "*.md"
+    "src",
+    "*.md"
   ],
   "scripts": {
     "pretest": "jshint src spec && jscs src spec",
@@ -30,6 +31,7 @@
     "archiver": "^0.21.0",
     "aws-sdk": "^2.2.33",
     "bluebird": "^3.2.1",
+    "minimist": "^1.2.0",
     "shelljs": "^0.5.3",
     "uuid": "^2.0.1"
   },

@@ -1,0 +1,10 @@
+usage: claudia [command] {OPTIONS}
+
+    Deploy a Node.JS project to AWS as a lambda microservice, optionally updating APIs/event hooks.
+
+COMMANDS are:
+
+    create        Create the initial lambda function and related security role. The options for create are:
+      --name          lambda function name (eg awesome-microservice)
+      --region        AWS region where to create the lambda (eg us-east-1)
+      --source        Directory with project files (optional. Claudia will use current dir if not provided)
