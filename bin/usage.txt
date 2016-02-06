@@ -9,5 +9,8 @@ COMMANDS are:
       --region        AWS region where to create the lambda (eg us-east-1)
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
 
+    update        Create a new version of the Lambda function using project files. The options for update are:
+      --source       [Optional] Directory with project files. Defaults to current directory.
+
     test-lambda   Execute the lambda function configured in claudia.json and print out the response. The options for test-lambda are:
-	  --source        [Optional] Directory with project files. Defaults to current directory.
+      --source       [Optional] Directory with project files. Defaults to current directory.
