@@ -1,14 +1,31 @@
 {
   "name": "claudia",
   "version": "0.0.1",
-  "description": "Simple AWS microservice deployer",
-  "main": "deploy.js",
+  "description": "Simple Node.JS AWS microservice deployer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/claudiajs/claudia.git"
+  },
+  "keywords": [
+    "aws",
+    "microservices",
+    "lambda",
+    "api",
+    "s3"
+  ],
+  "bugs": {
+    "url": "https://github.com/claudiajs/claudia/issues"
+  },
+  "homepage": "http://claudiajs.com",
+  "files": [
+    "src", "*.md"
+  ],
   "scripts": {
     "pretest": "jshint src spec && jscs src spec",
     "test": "node spec/support/jasmine-runner.js"
   },
   "author": "Gojko Adzic",
-  "license": "MIT",
   "dependencies": {
     "archiver": "^0.21.0",
     "aws-sdk": "^2.2.33",
