@@ -7,6 +7,8 @@
     "type": "git",
     "url": "https://github.com/claudiajs/claudia.git"
   },
+  "bin" : {"claudia" : "./bin/cmd.js" },
+  "main" : "index.js",
   "keywords": [
     "aws",
     "microservices",
@@ -20,7 +22,9 @@
   "homepage": "http://claudiajs.com",
   "files": [
     "src",
-    "*.md"
+    "*.md",
+    "*.js",
+    "bin"
   ],
   "scripts": {
     "pretest": "jshint src spec && jscs src spec",

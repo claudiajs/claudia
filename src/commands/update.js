@@ -8,7 +8,7 @@ var Promise = require('bluebird'),
 	fs = require('fs'),
 	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk');
-module.exports = function testLambda(options) {
+module.exports = function update(options) {
 	'use strict';
 	if (!shell.test('-e', path.join(options.source, 'claudia.json'))) {
 		return Promise.reject('claudia.json does not exist in the source folder');
