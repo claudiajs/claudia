@@ -1,14 +1,16 @@
 {
   "name": "claudia",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "deploy Node.js microservices to AWS",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/claudiajs/claudia.git"
   },
-  "bin" : {"claudia" : "./bin/cmd.js" },
-  "main" : "index.js",
+  "bin": {
+    "claudia": "./bin/cmd.js"
+  },
+  "main": "index.js",
   "keywords": [
     "aws",
     "microservices",
