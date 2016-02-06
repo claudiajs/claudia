@@ -16,12 +16,15 @@ var shell = require('shelljs'),
 			}
 		});
 	};
-module.exports = function loadconfig() {
+module.exports = function loadconfig(ignoreBeamupFile) {
 	'use strict';
 	var result = {};
 	return readAsJSON('package.json').then(function (content) {
 		result.package = content;
 	}).then(function () {
+		if (ignoreBeamupFile) {
+			return false;
+		}
 		return readAsJSON('beamup.json');
 	}).then(function (content) {
 		result.config = content;

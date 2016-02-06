@@ -12,6 +12,7 @@ describe('zipdir', function () {
 		workingdir = tmppath();
 		shell.mkdir(workingdir);
 		pwd = shell.pwd();
+		zipfile = false;
 	});
 	afterEach(function () {
 		shell.cd(pwd);

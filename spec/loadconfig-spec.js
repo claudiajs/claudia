@@ -46,6 +46,13 @@ describe('loadconfig', function () {
 				done();
 			});
 		});
+		it('succeeds with package.json only if called with true', function (done) {
+			underTest(true).then(function (result) {
+				expect(result.package).toEqual({pack: 'me'});
+				expect(result.config).toBeFalsy();
+				done();
+			}, done.fail);
+		});
 
 	});
 	describe('when both package.json and beamup.json are present', function () {
