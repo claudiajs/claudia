@@ -1,4 +1,4 @@
-/*global module, require, setTimeout*/
+/*global module, require*/
 var Promise = require('bluebird'),
 	path = require('path'),
 	shell = require('shelljs'),
@@ -42,30 +42,26 @@ module.exports = function create(options) {
 				'Action': 'sts:AssumeRole'
 			}]
 		},
-		iamPropagationError = 'The role defined for the function cannot be assumed by Lambda.',
 		createLambda = function (zipFile, roleArn, retriesLeft) {
-			var tryCreating = function () {
-				return createFunction({
-					Code: { ZipFile: zipFile },
-					FunctionName: options.name,
-					Handler: 'main.handler',
-					Role: roleArn,
-					Runtime: 'nodejs'
-				});
-			};
+			var functionMeta = {
+				Code: { ZipFile: zipFile },
+				FunctionName: options.name,
+				Handler: 'main.handler',
+				Role: roleArn,
+				Runtime: 'nodejs'
+			},
+			iamPropagationError = 'The role defined for the function cannot be assumed by Lambda.';
 			if (!retriesLeft) {
 				return Promise.reject('Timeout waiting for AWS IAM to propagate role');
 			}
-			return new Promise(function (resolve, reject) {
-				tryCreating().then(resolve, function (error) {
-					if (error && error.cause && error.cause.message == iamPropagationError) {
-						setTimeout(function () {
-							createLambda(zipFile, roleArn, retriesLeft - 1).then(resolve, reject);
-						}, 4000);
-					} else {
-						reject(error);
-					}
-				});
+			return createFunction(functionMeta).catch(function (error) {
+				if (error && error.cause && error.cause.message == iamPropagationError) {
+					return Promise.delay(2000).then(function () {
+						return createLambda(zipFile, roleArn, retriesLeft - 1);
+					});
+				} else {
+					return Promise.reject(error);
+				}
 			});
 		},
 		sendLambda = function (roleMetadata) {
