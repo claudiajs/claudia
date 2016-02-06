@@ -6,7 +6,7 @@ One important downside of this version is lack of support for promises. Newer No
 
 # Folder structure
 
-The main body of code is in the [src](./src) directory. Any JS files in the [commands](./commands) subdir are automatically loaded as options for the command-line utility. Commands can expect to get a key-value set of options entered from the command line, and need to return a promise for the execution result. If you add or modify a command, please also update the [usage guide](./bin/usage.txt). 
+The main body of code is in the [src](./src) directory. Any JS files in the [commands](./src/commands) subdir are automatically loaded as options for the command-line utility. Commands can expect to get a key-value set of options entered from the command line, and need to return a promise for the execution result. If you add or modify a command, please also update the [usage guide](./bin/usage.txt). 
 
 Sub-tasks directly related to automating and aggregating AWS workflows should go to the [tasks](./src/tasks) directory, and generic reusable utility functions should go to the [util](./src/util) directory.
 
