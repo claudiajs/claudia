@@ -13,6 +13,8 @@ module.exports = function create(options) {
 		lambda = new aws.Lambda({region: options.region}),
 		createRole = Promise.promisify(iam.createRole.bind(iam)),
 		createFunction = Promise.promisify(lambda.createFunction.bind(lambda)),
+		readFile = Promise.promisify(fs.readFile),
+		writeFile = Promise.promisify(fs.writeFile),
 		validationError = function () {
 			if (!options.name) {
 				return 'project name is missing. please specify with --name';
@@ -67,8 +69,6 @@ module.exports = function create(options) {
 			});
 		},
 		sendLambda = function (roleMetadata) {
-			var readFile = Promise.promisify(fs.readFile),
-				writeFile = Promise.promisify(fs.writeFile);
 			return collectFiles(source).
 					then(zipdir).
 					then(readFile).
@@ -88,7 +88,7 @@ module.exports = function create(options) {
 							JSON.stringify(config, null, 2),
 							'utf8'
 						).then(function () {
-							return Promise.resolve(config);
+							return config;
 						});
 					});
 		};

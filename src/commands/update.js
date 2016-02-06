@@ -22,7 +22,7 @@ module.exports = function update(options) {
 		if (!region) {
 			return Promise.reject('invalid configuration -- lambda.region missing from claudia.json');
 		}
-		return Promise.resolve(config.lambda);
+		return config.lambda;
 	}).then(function (lambdaConfig) {
 		var lambda = new aws.Lambda({region: lambdaConfig.region}),
 			updateLambda = function (fileContents) {
