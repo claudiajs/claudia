@@ -1,34 +1,46 @@
-# Claudia - a simple Node.JS microservice deployer for AWS
+# Developing and contributing to Claudia 
 
+AWS Lambda currently runs on Node.js 0.10.32. To avoid nasty surprises, please use that version for development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment.
 
+One important downside of this version is lack of support for promises. Newer Node.js versions support promises out of the box, but Claudia has to use an external dependency for that. To support future migration to the standard API easier, please use the [bluebird](http://bluebirdjs.com/docs/api-reference.html) promise library. 
 
-## Notes
+# Folder structure
 
-To make this compatible with the current version of AWS Lambda Node.JS support, please use Node 0.10 for development.
+The main body of code is in the [src](./src) directory. Any JS files in the [commands](./commands) subdir are automatically loaded as options for the command-line utility. Commands can expect to get a key-value set of options entered from the command line, and need to return a promise for the execution result. If you add or modify a command, please also update the [usage guide](./bin/usage.txt). 
+
+Sub-tasks directly related to automating and aggregating AWS workflows should go to the [tasks](./src/tasks) directory, and generic reusable utility functions should go to the [util](./src/util) directory.
+
+Claudia has extensive unit and integration tests in the [spec](./spec) directory. Ideally, any new code should also be accompanied by a new test, so we can simplify future maintenance and development.  Unless there is a very compelling reason to use something different, please continue using [Jasmine](https://jasmine.github.io) for tests.
+
+# Running tests
+
+## Setting credentials for tests
+
+See the [Getting Started](getting_started.md) guide for information on how to set up the credentials to run tests. In addition to the ideas there, to allow you to separate out a testing profile from normal operation profiles, you can store additional environment variables or override existing environment values by creating a
+`.env` file in the project root. (This file is ignored by `.gitignore`, so you don't have to worry about uploading it by mistake.) If that file exists, it will be loaded into the environment at the start of a test run.
+
+The easiest way to manage a separate testing profile is probably to define the actual keys in your main `.aws/config` file, and use just the `AWS_PROFILE` key in the `.env` file, like this:
+
+````
+AWS_PROFILE=claudia-test
+````
 
 ## Running tests
 
-summary format
-
-    npm test
-
-list test names
-
-    npm test -- full
-
-filter by name
-
-    npm test -- filter=prefix
-
-
-### Using a non-default AWS profile/credentials
-
-create a .env file in the main project folder (this is ignored by .gitignore) and add your credentials there. This file will be loaded
-into the environment at the start of the test run, if it exists. See [Setting AWS Credentials for NodeJS](http://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html). The easiest
-way to do this is probably to just create a .env file with the profile name
+Run all the test, show a summary of the results:
 
 ````
-AWS_PROFILE=beamup-test
+npm test
 ````
 
-and then define the actual keys in your main .aws/config file
+Run the tests, and show individual test names
+
+````
+npm test -- full
+````
+
+Run only a selected set of tests, filtering by name:
+
+````
+npm test -- filter=prefix
+````
