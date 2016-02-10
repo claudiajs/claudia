@@ -10,6 +10,7 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk');
 module.exports = function update(options) {
 	'use strict';
+	options.source = options.source || shell.cwd();
 	if (!shell.test('-e', path.join(options.source, 'claudia.json'))) {
 		return Promise.reject('claudia.json does not exist in the source folder');
 	}

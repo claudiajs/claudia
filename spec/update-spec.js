@@ -48,6 +48,7 @@ describe('update', function () {
 			done();
 		});
 	});
+
 	it('fails when the project config file does not contain the lambda name', function (done) {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -62,21 +63,34 @@ describe('update', function () {
 			done();
 		});
 	});
-	it('updates the lambda with a new version', function (done) {
-		var invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
+	describe('when the lambda project exists', function () {
+		var invokeLambda;
 
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-			newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
-			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
-			return underTest({source: workingdir});
-		}).then(function (lambdaFunc) {
-			expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
-			expect(lambdaFunc.FunctionName).toEqual(testRunName);
-			return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
-		}).then(function (lambdaResult) {
-			expect(lambdaResult.StatusCode).toEqual(200);
-			expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
-		}).then(done, done.fail);
+		beforeEach(function (done) {
+			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
+				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			}).then(done, done.fail);
+		});
+		it('updates the lambda with a new version', function (done) {
+			underTest({source: workingdir}).then(function (lambdaFunc) {
+				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+				expect(lambdaFunc.FunctionName).toEqual(testRunName);
+				return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+		it('checks the current dir if the source is not provided', function (done) {
+			underTest({source: workingdir}).then(function (lambdaFunc) {
+				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+				expect(lambdaFunc.FunctionName).toEqual(testRunName);
+				return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(done, done.fail);
+		});
+
 	});
 });
