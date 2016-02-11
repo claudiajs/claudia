@@ -89,31 +89,39 @@ describe('create', function () {
 			done();
 		});
 	});
-	it('creates the role and the lambda function, saving the results into claudia.json', function (done) {
-		var getRole = Promise.promisify(iam.getRole.bind(iam)),
-			getFunctionConfiguration = Promise.promisify(lambda.getFunctionConfiguration.bind(lambda)),
-			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		underTest(config).then(function (result) {
-			newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
-			expect(result.lambda).toEqual({
+	describe('creating the function', function () {
+		var creationResult;
+		beforeEach(function (done) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			underTest(config).then(function (result) {
+				creationResult = result;
+				newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
+			}).then(done, done.fail);
+		});
+		it('returns an object containing the new claudia configuration', function () {
+			expect(creationResult.lambda).toEqual({
 				role: testRunName + '-executor',
 				region: awsRegion,
 				name: testRunName
 			});
-			expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(result);
-			return getRole({RoleName: testRunName + '-executor'}).then(function (role) {
+		});
+		it('saves the configuration into claudia.json', function () {
+			expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
+		});
+		it('creates the IAM role for the lambda', function (done) {
+			var getRole = Promise.promisify(iam.getRole.bind(iam));
+			getRole({RoleName: testRunName + '-executor'}).then(function (role) {
 				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
-			}).then(function () {
-				return getFunctionConfiguration({FunctionName: testRunName});
-			}).then(function (lambda) {
-				expect(lambda.FunctionName).toEqual(testRunName);
-				return invokeLambda({FunctionName: lambda.FunctionName});
-			}).then(function (lambdaResult) {
-				expect(lambdaResult.StatusCode).toEqual(200);
-				expect(lambdaResult.Payload).toEqual('"hello world"');
-			});
-		}).then(done, done.fail);
+			}).then(done, done.fail);
+		});
+		it('configures the function in AWS', function (done) {
+			var invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
+			invokeLambda({FunctionName: testRunName}).then(
+				function (lambdaResult) {
+					expect(lambdaResult.StatusCode).toEqual(200);
+					expect(lambdaResult.Payload).toEqual('"hello world"');
+				}).then(done, done.fail);
+		});
 	});
 });
