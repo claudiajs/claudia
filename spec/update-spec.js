@@ -7,6 +7,7 @@ var underTest = require('../src/commands/update'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
+	destroyRole = require('../src/util/destroy-role'),
 	awsRegion = 'us-east-1';
 describe('update', function () {
 	'use strict';
@@ -23,8 +24,7 @@ describe('update', function () {
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		var deleteRole = Promise.promisify(iam.deleteRole.bind(iam)),
-			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda));
+		var deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda));
 		shell.cd(cwd);
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
 		if (shell.test('-e', workingdir)) {
@@ -37,7 +37,7 @@ describe('update', function () {
 			if (!newObjects || !newObjects.lambdaRole) {
 				return Promise.resolve();
 			}
-			return deleteRole({RoleName: newObjects.lambdaRole});
+			return destroyRole(newObjects.lambdaRole);
 		}).catch(function (err) {
 			console.log('error cleaning up', err);
 		}).finally(done);

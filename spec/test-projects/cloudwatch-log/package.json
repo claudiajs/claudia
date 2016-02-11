@@ -1,0 +1,5 @@
+{
+  "name": "cloudwatch-log",
+  "private": true,
+  "files": ["main.js"]
+}

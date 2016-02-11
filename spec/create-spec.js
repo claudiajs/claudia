@@ -2,6 +2,7 @@
 var underTest = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	destroyRole = require('../src/util/destroy-role'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -9,21 +10,23 @@ var underTest = require('../src/commands/create'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
-	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout, config;
+	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout, config, invokeLambda, logs;
 	beforeEach(function () {
 		workingdir = tmppath();
 		cwd = shell.pwd();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
-		newObjects = false;
+		logs = new aws.CloudWatchLogs({region: awsRegion});
+		invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
+		newObjects = {};
 		originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
-		var deleteRole = Promise.promisify(iam.deleteRole.bind(iam)),
-			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda));
+		var deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
+			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs));
 		shell.cd(cwd);
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
 		if (shell.test('-e', workingdir)) {
@@ -33,10 +36,13 @@ describe('create', function () {
 			return done();
 		}
 		deleteFunction({FunctionName: newObjects.lambdaFunction}).then(function () {
-			if (!newObjects || !newObjects.lambdaRole) {
-				return Promise.resolve();
+			if (newObjects.lambdaRole) {
+				return destroyRole(newObjects.lambdaRole);
 			}
-			return deleteRole({RoleName: newObjects.lambdaRole});
+		}).then(function () {
+			if (newObjects.logGroup) {
+				return deleteLogGroup({logGroupName: newObjects.logGroup});
+			}
 		}).catch(function (err) {
 			console.log('error cleaning up', err);
 		}).finally(done);
@@ -90,38 +96,71 @@ describe('create', function () {
 		});
 	});
 	describe('creating the function', function () {
-		var creationResult;
-		beforeEach(function (done) {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			underTest(config).then(function (result) {
-				creationResult = result;
-				newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
+		var createFromDir = function (dir) {
+				shell.mkdir(workingdir);
+				shell.cp('-r', 'spec/test-projects/' + (dir || 'hello-world') + '/*', workingdir);
+				return underTest(config).then(function (result) {
+					newObjects.lambdaRole = result.lambda && result.lambda.role;
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+					return result;
+				});
+			};
+		it('returns an object containing the new claudia configuration', function (done) {
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: testRunName + '-executor',
+					region: awsRegion,
+					name: testRunName
+				});
+				return '';
 			}).then(done, done.fail);
 		});
-		it('returns an object containing the new claudia configuration', function () {
-			expect(creationResult.lambda).toEqual({
-				role: testRunName + '-executor',
-				region: awsRegion,
-				name: testRunName
-			});
-		});
-		it('saves the configuration into claudia.json', function () {
-			expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
+		it('saves the configuration into claudia.json', function (done) {
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
+			}).then(done, done.fail);
 		});
 		it('creates the IAM role for the lambda', function (done) {
-			var getRole = Promise.promisify(iam.getRole.bind(iam));
-			getRole({RoleName: testRunName + '-executor'}).then(function (role) {
-				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
+			createFromDir('hello-world').then(function () {
+				var getRole = Promise.promisify(iam.getRole.bind(iam));
+				return getRole({RoleName: testRunName + '-executor'}).then(function (role) {
+					expect(role.Role.RoleName).toEqual(testRunName + '-executor');
+				});
 			}).then(done, done.fail);
 		});
-		it('configures the function in AWS', function (done) {
-			var invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-			invokeLambda({FunctionName: testRunName}).then(
-				function (lambdaResult) {
+		it('configures the function in AWS so it can be invoked', function (done) {
+			createFromDir('hello-world').then(function () {
+				return invokeLambda({FunctionName: testRunName}).then(function (lambdaResult) {
 					expect(lambdaResult.StatusCode).toEqual(200);
 					expect(lambdaResult.Payload).toEqual('"hello world"');
-				}).then(done, done.fail);
+				});
+			}).then(done, done.fail);
+		});
+		it('allows the function to log to cloudwatch', function (done) {
+			var createLogGroup = Promise.promisify(logs.createLogGroup.bind(logs)),
+				createLogStream = Promise.promisify(logs.createLogStream.bind(logs)),
+				getLogEvents = Promise.promisify(logs.getLogEvents.bind(logs));
+			createLogGroup({logGroupName: testRunName + '-group'}).then(function () {
+				newObjects.logGroup = testRunName + '-group';
+				return createLogStream({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+			}).then(function () {
+				return createFromDir('cloudwatch-log');
+			}).then(function () {
+				return invokeLambda({
+					FunctionName: testRunName,
+					Payload: JSON.stringify({
+						region: awsRegion,
+						stream: testRunName + '-stream',
+						group: testRunName + '-group',
+						message: 'hello ' + testRunName
+					})
+				});
+			}).then(function () {
+				return getLogEvents({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+			}).then(function (logEvents) {
+				expect(logEvents.events.length).toEqual(1);
+				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
+			}).then(done, done.fail);
 		});
 	});
 });
