@@ -61,6 +61,7 @@ describe('addS3EventSource', function () {
 
 	describe('when params are valid', function () {
 		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
 			s3.createBucketAsync({
 				Bucket: testRunName + '-bucket',
 				ACL: 'private'
@@ -69,7 +70,6 @@ describe('addS3EventSource', function () {
 			}).then(done);
 		});
 		it('sets up privileges and s3 notifications for any created files in the s3 bucket', function (done) {
-			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -94,7 +94,6 @@ describe('addS3EventSource', function () {
 			}).then(done, done.fail);
 		});
 		it('adds a prefix if requested', function (done) {
-			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -108,6 +107,44 @@ describe('addS3EventSource', function () {
 				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
 					Name: 'Prefix',
 					Value: '/in/'
+				});
+			}).then(done, done.fail);
+		});
+		it('binds to an alias, if the version is provided', function (done) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'special'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special'});
+			}).then(function () {
+				return s3.getBucketNotificationConfigurationAsync({
+					Bucket: testRunName + '-bucket'
+				});
+			}).then(function (config) {
+				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
+			}).then(done, done.fail);
+		});
+		it('can execute aliased functions', function (done) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'special'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special'});
+			}).then(function () {
+				// needs better...
+				console.log('waiting for IAM propagation');
+				return Promise.delay(5000);
+			}).then(function () {
+				return s3.putObjectAsync({
+					Bucket: testRunName + '-bucket',
+					Key: testRunName  + '.txt',
+					Body: 'file contents',
+					ACL: 'private'
+				});
+			}).then(function () {
+				return s3.waitForAsync('objectNotExists', {
+					Bucket: testRunName + '-bucket',
+					Key: testRunName  + '.txt'
 				});
 			}).then(done, done.fail);
 		});

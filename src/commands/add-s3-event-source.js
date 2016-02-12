@@ -7,11 +7,11 @@ var loadConfig = require('../util/loadconfig'),
 module.exports = function addS3EventSource(options) {
 	'use strict';
 	var lambdaConfig,
+		lambda,
 		getLambda = function (config) {
-			var lambda = new aws.Lambda({region: config.lambda.region}),
-				getFunctionConfiguration = Promise.promisify(lambda.getFunctionConfiguration.bind(lambda));
+			lambda = Promise.promisifyAll(new aws.Lambda({region: config.lambda.region}), {suffix: 'Promise'});
 			lambdaConfig = config.lambda;
-			return getFunctionConfiguration({FunctionName: lambdaConfig.name /* + qualifier */});
+			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
 		},
 		readConfig = function () {
 			return loadConfig(options.source, {lambda: {name: true, region: true, role: true}})
@@ -21,6 +21,7 @@ module.exports = function addS3EventSource(options) {
 				}).then(getLambda)
 				.then(function (result) {
 					lambdaConfig.arn = result.FunctionArn;
+					lambdaConfig.version = result.Version;
 				});
 		},
 		addS3AccessPolicy = function () {
@@ -40,14 +41,12 @@ module.exports = function addS3EventSource(options) {
 		},
 
 		addInvokePermission = function () {
-			var lambda = new aws.Lambda({region: lambdaConfig.region}),
-			addPermission = Promise.promisify(lambda.addPermission.bind(lambda));
-			return addPermission({
+			return lambda.addPermissionPromise({
 				Action: 'lambda:InvokeFunction',
 				FunctionName: lambdaConfig.name,
 				Principal: 's3.amazonaws.com',
 				SourceArn: 'arn:aws:s3:::' + options.bucket,
-				//Qualifier: lambdaF.Version,
+				Qualifier: options.version,
 				StatementId:  options.bucket  + '-access' // + lambdaF.Version,
 			});
 		},
