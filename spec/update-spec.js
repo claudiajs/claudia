@@ -15,7 +15,7 @@ describe('update', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
-		lambda = new aws.Lambda({region: awsRegion});
+		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
@@ -47,11 +47,7 @@ describe('update', function () {
 		});
 	});
 	describe('when the lambda project exists', function () {
-		var invokeLambda, listVersions;
-
 		beforeEach(function (done) {
-			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-			listVersions = Promise.promisify(lambda.listVersionsByFunction.bind(lambda));
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
@@ -63,7 +59,7 @@ describe('update', function () {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 			}).then(function () {
-				return listVersions({FunctionName: testRunName});
+				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(3);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -73,17 +69,25 @@ describe('update', function () {
 		});
 		it('updates the lambda with a new version', function (done) {
 			underTest({source: workingdir}).then(function () {
-				return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
 			}).then(done, done.fail);
 		});
+		it('adds the version alias if supplied', function (done) {
+			underTest({source: workingdir, version: 'great'}).then(function () {
+				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+			}).then(function (result) {
+				expect(result.FunctionVersion).toEqual('2');
+			}).then(done, done.fail);
+		});
+
 		it('checks the current dir if the source is not provided', function (done) {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
-				return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(done, done.fail);
 		});
 

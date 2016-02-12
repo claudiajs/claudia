@@ -6,6 +6,7 @@ var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	addPolicy = require('../tasks/add-policy'),
+	markAlias = require('../tasks/mark-alias'),
 	fs = require('fs');
 module.exports = function create(options) {
 	'use strict';
@@ -43,6 +44,7 @@ module.exports = function create(options) {
 				Runtime: 'nodejs',
 				Publish: true
 			},
+			lambdaData,
 			iamPropagationError = 'The role defined for the function cannot be assumed by Lambda.';
 			if (!retriesLeft) {
 				return Promise.reject('Timeout waiting for AWS IAM to propagate role');
@@ -55,6 +57,14 @@ module.exports = function create(options) {
 				} else {
 					return Promise.reject(error);
 				}
+			}).then(function (creationResult) {
+				lambdaData = creationResult;
+			}).then(function () {
+				if (options.version) {
+					return markAlias(lambdaData.FunctionName, options.region, lambdaData.Version, options.version);
+				}
+			}).then(function () {
+				return lambdaData;
 			});
 		},
 		saveConfig = function (lambdaMetaData) {
@@ -92,6 +102,5 @@ module.exports = function create(options) {
 	then(readFile).
 	then(function (fileContents) {
 		return createLambda(fileContents, roleMetadata.Role.Arn, 10);
-	}).
-	then(saveConfig);
+	}).then(saveConfig);
 };

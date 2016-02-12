@@ -10,9 +10,11 @@ COMMANDS are:
       --handler       Main function for Lambda to execute, as module.function 
                           (Eg if it's in the main.js file and exported as router, this would be main.router)
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
+      --version       [Optional] A version alias to automatically assign to the new function (eg. development)
 
     update        Create a new version of the Lambda function using project files. 
       --source       [Optional] Directory with project files. Defaults to current directory.
+      --version      [Optional] A version alias to automatically assign to the new version (eg. development)
 
     test-lambda   Execute the lambda function configured in claudia.json and print out the response. 
       --source       [Optional] Directory with project files. Defaults to current directory.

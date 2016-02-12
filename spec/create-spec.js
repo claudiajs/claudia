@@ -10,15 +10,13 @@ var underTest = require('../src/commands/create'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects, config, invokeLambda, logs, listVersions;
+	var workingdir, testRunName, iam, lambda, newObjects, config,logs;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
-		lambda = new aws.Lambda({region: awsRegion});
+		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		logs = new aws.CloudWatchLogs({region: awsRegion});
-		invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-		listVersions = Promise.promisify(lambda.listVersionsByFunction.bind(lambda));
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
@@ -111,7 +109,7 @@ describe('create', function () {
 		});
 		it('configures the function in AWS so it can be invoked', function (done) {
 			createFromDir('hello-world').then(function () {
-				return invokeLambda({FunctionName: testRunName});
+				return lambda.invokePromise({FunctionName: testRunName});
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello world"');
@@ -119,11 +117,19 @@ describe('create', function () {
 		});
 		it('configures the function so it will be versioned', function (done) {
 			createFromDir('hello-world').then(function () {
-				return listVersions({FunctionName: testRunName});
+				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
 				expect(result.Versions[1].Version).toEqual('1');
+			}).then(done, done.fail);
+		});
+		it('adds the version alias if supplied', function (done) {
+			config.version = 'great';
+			createFromDir('hello-world').then(function () {
+				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+			}).then(function (result) {
+				expect(result.FunctionVersion).toEqual('1');
 			}).then(done, done.fail);
 		});
 		it('allows the function to log to cloudwatch', function (done) {
@@ -136,7 +142,7 @@ describe('create', function () {
 			}).then(function () {
 				return createFromDir('cloudwatch-log');
 			}).then(function () {
-				return invokeLambda({
+				return lambda.invokePromise({
 					FunctionName: testRunName,
 					Payload: JSON.stringify({
 						region: awsRegion,
