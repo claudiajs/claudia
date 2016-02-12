@@ -2,7 +2,7 @@
 var underTest = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	destroyRole = require('../src/util/destroy-role'),
+
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -10,40 +10,20 @@ var underTest = require('../src/commands/create'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
-	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout, config, invokeLambda, logs;
+	var workingdir, testRunName, iam, lambda, newObjects, config, invokeLambda, logs;
 	beforeEach(function () {
 		workingdir = tmppath();
-		cwd = shell.pwd();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-		newObjects = {};
-		originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
-		var deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
-			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs));
-		shell.cd(cwd);
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
-		if (shell.test('-e', workingdir)) {
-			shell.rm('-rf', workingdir);
-		}
-		if (!newObjects || !newObjects.lambdaFunction) {
-			return done();
-		}
-		deleteFunction({FunctionName: newObjects.lambdaFunction}).then(function () {
-			if (newObjects.lambdaRole) {
-				return destroyRole(newObjects.lambdaRole);
-			}
-		}).then(function () {
-			if (newObjects.logGroup) {
-				return deleteLogGroup({logGroupName: newObjects.logGroup});
-			}
-		}).catch(function (err) {
+		this.destroyObjects(newObjects).catch(function (err) {
 			console.log('error cleaning up', err);
 		}).finally(done);
 	});

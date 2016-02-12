@@ -3,42 +3,24 @@ var underTest = require('../src/commands/test-lambda'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	destroyRole = require('../src/util/destroy-role'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('testLambda', function () {
 	'use strict';
-	var workingdir, cwd, testRunName, iam, lambda, newObjects, originalTimeout;
+	var workingdir, testRunName, iam, lambda, newObjects;
 	beforeEach(function () {
 		workingdir = tmppath();
-		cwd = shell.pwd();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
-		newObjects = false;
-		originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		var deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda));
-		shell.cd(cwd);
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
-		if (shell.test('-e', workingdir)) {
-			shell.rm('-rf', workingdir);
-		}
-		if (!newObjects || !newObjects.lambdaFunction) {
-			return done();
-		}
-		deleteFunction({FunctionName: newObjects.lambdaFunction}).then(function () {
-			if (!newObjects || !newObjects.lambdaRole) {
-				return Promise.resolve();
-			}
-			return destroyRole(newObjects.lambdaRole);
-		}).catch(function (err) {
+		this.destroyObjects(newObjects).catch(function (err) {
 			console.log('error cleaning up', err);
 		}).finally(done);
 	});

@@ -1,8 +1,7 @@
 /*global describe, require, it, expect, beforeEach, afterEach  */
 var underTest = require('../src/tasks/add-policy'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
-	destroyRole = require('../src/util/destroy-role');
+	Promise = require('bluebird');
 describe('add-policy', function () {
 	'use strict';
 	var testRunName,
@@ -25,7 +24,7 @@ describe('add-policy', function () {
 		}).then(done, done.fail);
 	});
 	afterEach(function (done) {
-		destroyRole(testRunName).then(done, done.fail);
+		this.destroyObjects({lambdaRole: testRunName}).then(done, done.fail);
 	});
 	it('appends a policy from the templates folder to the role', function (done) {
 		var expectedPolicy = require('../json-templates/log-writer');
