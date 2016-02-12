@@ -17,7 +17,7 @@ describe('update', function () {
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
-		newObjects = false;
+		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
@@ -53,7 +53,8 @@ describe('update', function () {
 			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
 			}).then(done, done.fail);
 		});

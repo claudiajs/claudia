@@ -48,7 +48,8 @@ describe('testLambda', function () {
 	it('invokes a lambda function and returns the result', function (done) {
 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-			newObjects = { lambdaRole: result.lambda && result.lambda.role, lambdaFunction: result.lambda && result.lambda.name };
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			return underTest({source: workingdir});
 		}).then(function (result) {
 			expect(result.StatusCode).toEqual(200);

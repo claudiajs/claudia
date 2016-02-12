@@ -13,6 +13,7 @@ beforeEach(function () {
 			iam = Promise.promisifyAll(new aws.IAM()),
 			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
 			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
+			s3 = Promise.promisifyAll(new aws.S3()),
 			destroyRole = function (roleName) {
 				var deleteSinglePolicy = function (policyName) {
 					return iam.deleteRolePolicyAsync({
@@ -24,6 +25,19 @@ beforeEach(function () {
 					return Promise.map(result.PolicyNames, deleteSinglePolicy);
 				}).then(function () {
 					return iam.deleteRoleAsync({RoleName: roleName});
+				});
+			},
+			destroyBucket = function (bucketName) {
+				var deleteSingleObject = function (ob) {
+					return s3.deleteObjectAsync({
+						Bucket: bucketName,
+						Key: ob.Key
+					});
+				};
+				return s3.listObjectsAsync({Bucket: bucketName}).then(function (result) {
+					return Promise.map(result.Contents, deleteSingleObject);
+				}).then(function () {
+					return s3.deleteBucketAsync({Bucket: bucketName});
 				});
 			};
 
@@ -46,6 +60,10 @@ beforeEach(function () {
 		}).then(function () {
 			if (newObjects.logGroup) {
 				return deleteLogGroup({logGroupName: newObjects.logGroup});
+			}
+		}).then(function () {
+			if (newObjects.s3Bucket) {
+				return destroyBucket(newObjects.s3Bucket);
 			}
 		});
 	};

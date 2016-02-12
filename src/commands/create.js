@@ -55,6 +55,22 @@ module.exports = function create(options) {
 					return Promise.reject(error);
 				}
 			});
+		},
+		saveConfig = function (lambdaMetaData) {
+			var config = {
+				lambda: {
+					role: roleMetadata.Role.RoleName,
+					name: lambdaMetaData.FunctionName,
+					region: options.region
+				}
+			};
+			return writeFile(
+					path.join(source, 'claudia.json'),
+					JSON.stringify(config, null, 2),
+					'utf8'
+					).then(function () {
+				return config;
+			});
 		};
 	if (validationError()) {
 		return Promise.reject(validationError());
@@ -76,20 +92,5 @@ module.exports = function create(options) {
 	then(function (fileContents) {
 		return createLambda(fileContents, roleMetadata.Role.Arn, 10);
 	}).
-	then(function (lambdaMetaData) {
-		var config = {
-			lambda: {
-				role: roleMetadata.Role.RoleName,
-				name: lambdaMetaData.FunctionName,
-				region: options.region
-			}
-		};
-		return writeFile(
-				path.join(source, 'claudia.json'),
-				JSON.stringify(config, null, 2),
-				'utf8'
-				).then(function () {
-			return config;
-		});
-	});
+	then(saveConfig);
 };
