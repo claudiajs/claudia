@@ -16,6 +16,6 @@ COMMANDS are:
     test-lambda   Execute the lambda function configured in claudia.json and print out the response. The options for test-lambda are:
       --source       [Optional] Directory with project files. Defaults to current directory.
 
-	add-s3-event-source Authorise access to bucket, and add a notification event to Lambda when a file is added to the bucket
-	  --bucket       Bucket name
-	  --source       [Optional] Directory with project files. Defaults to current directory. 
+    add-s3-event-source Authorise access to bucket, and add a notification event to Lambda when a file is added to the bucket
+      --bucket       Bucket name
+      --source       [Optional] Directory with project files. Defaults to current directory. 
