@@ -59,6 +59,16 @@ module.exports = function addS3EventSource(options) {
 						Events: ['s3:ObjectCreated:*']
 					}]
 				};
+			if (options.prefix) {
+				notificationConfig.LambdaFunctionConfigurations[0].Filter = {
+					Key: {
+						FilterRules: [{
+							Name: 'prefix',
+							Value: options.prefix
+						}]
+					}
+				};
+			}
 			return s3.putBucketNotificationConfigurationAsync({
 				Bucket: options.bucket,
 				NotificationConfiguration: notificationConfig

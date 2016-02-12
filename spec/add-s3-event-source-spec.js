@@ -76,6 +76,10 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				return underTest({source: workingdir, bucket: testRunName + '-bucket'});
 			}).then(function () {
+				// needs better...
+				console.log('waiting for IAM propagation');
+				return Promise.delay(5000);
+			}).then(function () {
 				return s3.putObjectAsync({
 					Bucket: testRunName + '-bucket',
 					Key: testRunName  + '.txt',
@@ -86,6 +90,24 @@ describe('addS3EventSource', function () {
 				return s3.waitForAsync('objectNotExists', {
 					Bucket: testRunName + '-bucket',
 					Key: testRunName  + '.txt'
+				});
+			}).then(done, done.fail);
+		});
+		it('adds a prefix if requested', function (done) {
+			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + '-bucket', prefix: '/in/'});
+			}).then(function () {
+				return s3.getBucketNotificationConfigurationAsync({
+					Bucket: testRunName + '-bucket'
+				});
+			}).then(function (config) {
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Prefix',
+					Value: '/in/'
 				});
 			}).then(done, done.fail);
 		});

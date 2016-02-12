@@ -4,18 +4,20 @@ usage: claudia [command] {OPTIONS}
 
 COMMANDS are:
 
-    create        Create the initial lambda function and related security role. The options for create are:
+    create        Create the initial lambda function and related security role.
       --name          lambda function name (eg awesome-microservice)
       --region        AWS region where to create the lambda (eg us-east-1)
-      --handler       Main function for Lambda to execute, as module.function (Eg if it's in the main.js file and exported as router, this would be main.router)
+      --handler       Main function for Lambda to execute, as module.function 
+                          (Eg if it's in the main.js file and exported as router, this would be main.router)
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
 
-    update        Create a new version of the Lambda function using project files. The options for update are:
+    update        Create a new version of the Lambda function using project files. 
       --source       [Optional] Directory with project files. Defaults to current directory.
 
-    test-lambda   Execute the lambda function configured in claudia.json and print out the response. The options for test-lambda are:
+    test-lambda   Execute the lambda function configured in claudia.json and print out the response. 
       --source       [Optional] Directory with project files. Defaults to current directory.
 
-    add-s3-event-source Authorise access to bucket, and add a notification event to Lambda when a file is added to the bucket
+    add-s3-event-source Add a notification event to Lambda when a file is added to a S3 bucket
       --bucket       Bucket name
       --source       [Optional] Directory with project files. Defaults to current directory. 
+      --prefix       [Optional] Prefix filter for S3 keys that will cause the event
