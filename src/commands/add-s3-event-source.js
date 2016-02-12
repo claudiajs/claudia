@@ -47,19 +47,17 @@ module.exports = function addS3EventSource(options) {
 				Principal: 's3.amazonaws.com',
 				SourceArn: 'arn:aws:s3:::' + options.bucket,
 				Qualifier: options.version,
-				StatementId:  options.bucket  + '-access' // + lambdaF.Version,
+				StatementId:  options.bucket  + '-access'
 			});
 		},
 		addBucketNotificationConfig = function () {
 			var s3 = Promise.promisifyAll(new aws.S3()),
-				notificationConfig = {
-					LambdaFunctionConfigurations: [{
-						LambdaFunctionArn: lambdaConfig.arn,
-						Events: ['s3:ObjectCreated:*']
-					}]
+				eventConfig = {
+					LambdaFunctionArn: lambdaConfig.arn,
+					Events: ['s3:ObjectCreated:*']
 				};
 			if (options.prefix) {
-				notificationConfig.LambdaFunctionConfigurations[0].Filter = {
+				eventConfig.Filter = {
 					Key: {
 						FilterRules: [{
 							Name: 'prefix',
@@ -68,10 +66,19 @@ module.exports = function addS3EventSource(options) {
 					}
 				};
 			}
-			return s3.putBucketNotificationConfigurationAsync({
-				Bucket: options.bucket,
-				NotificationConfiguration: notificationConfig
-			});
+			return s3.getBucketNotificationConfigurationAsync({
+					Bucket: options.bucket
+				}).then(function (currentConfig) {
+					var merged = currentConfig || {};
+					if (!merged.LambdaFunctionConfigurations) {
+						merged.LambdaFunctionConfigurations = [];
+					}
+					merged.LambdaFunctionConfigurations.push(eventConfig);
+					return s3.putBucketNotificationConfigurationAsync({
+						Bucket: options.bucket,
+						NotificationConfiguration: merged
+					});
+				});
 		};
 
 	if (!options.bucket) {

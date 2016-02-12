@@ -1,6 +1,7 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
 var underTest = require('../src/commands/add-s3-event-source'),
 	create = require('../src/commands/create'),
+	update = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
@@ -148,7 +149,27 @@ describe('addS3EventSource', function () {
 				});
 			}).then(done, done.fail);
 		});
-
+		it('does not change any existing notification configurations', function (done) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'special'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special',  prefix: '/special/'});
+			}).then(function () {
+				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+				return update({source: workingdir, version: 'crazy'});
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'crazy',  prefix: '/crazy/'});
+			}).then(function () {
+				return s3.getBucketNotificationConfigurationAsync({
+					Bucket: testRunName + '-bucket'
+				});
+			}).then(function (config) {
+				expect(config.LambdaFunctionConfigurations.length).toEqual(2);
+				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
+				expect(/:crazy$/.test(config.LambdaFunctionConfigurations[1].LambdaFunctionArn)).toBeTruthy();
+			}).then(done, done.fail);
+		});
 	});
 
 });
