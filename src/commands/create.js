@@ -40,7 +40,8 @@ module.exports = function create(options) {
 				FunctionName: options.name,
 				Handler: 'main.handler',
 				Role: roleArn,
-				Runtime: 'nodejs'
+				Runtime: 'nodejs',
+				Publish: true
 			},
 			iamPropagationError = 'The role defined for the function cannot be assumed by Lambda.';
 			if (!retriesLeft) {

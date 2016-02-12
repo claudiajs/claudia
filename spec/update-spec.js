@@ -47,10 +47,11 @@ describe('update', function () {
 		});
 	});
 	describe('when the lambda project exists', function () {
-		var invokeLambda;
+		var invokeLambda, listVersions;
 
 		beforeEach(function (done) {
 			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
+			listVersions = Promise.promisify(lambda.listVersionsByFunction.bind(lambda));
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
@@ -58,10 +59,20 @@ describe('update', function () {
 				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
 			}).then(done, done.fail);
 		});
-		it('updates the lambda with a new version', function (done) {
+		it('creates a new version of the lambda function', function (done) {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
-				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
-				expect(lambdaFunc.FunctionName).toEqual(testRunName);
+				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+			}).then(function () {
+				return listVersions({FunctionName: testRunName});
+			}).then(function (result) {
+				expect(result.Versions.length).toEqual(3);
+				expect(result.Versions[0].Version).toEqual('$LATEST');
+				expect(result.Versions[1].Version).toEqual('1');
+				expect(result.Versions[2].Version).toEqual('2');
+			}).then(done, done.fail);
+		});
+		it('updates the lambda with a new version', function (done) {
+			underTest({source: workingdir}).then(function () {
 				return invokeLambda({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
