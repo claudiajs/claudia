@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* global process, __dirname, require, console */
 var minimist = require('minimist'),
 	shell = require('shelljs'),
