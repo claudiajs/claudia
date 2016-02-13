@@ -189,12 +189,38 @@ describe('create', function () {
 					restApiId: apiId,
 					stageName: 'fromtest'
 				});
-
 			}).then(function () {
-				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/echo';
+				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/hello';
 				return got.get(resUrl);
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+		it('assembles the parameters in a way accessible to JavaScript', function (done) {
+			var apiId;
+			createFromDir('api-gw-echo').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+				return apiGateway.createDeploymentAsync({
+					restApiId: apiId,
+					stageName: 'fromtest',
+					variables: {
+						authKey: 'abs123',
+						authBucket: 'bucket123'
+					}
+				});
+			}).then(function () {
+				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/echo?param1=val1&param2=' + encodeURIComponent('val=2') + '&' + encodeURIComponent ('param&3') + '=val3';
+				return got.get(resUrl, {headers: {'auth-head': 'auth-val'}});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({param1: 'val1', param2: 'val=2', 'param&3': 'val3'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.headers['auth-head']).toEqual('auth-val');
+				expect(params.env).toEqual({
+					authKey: 'abs123',
+					authBucket: 'bucket123'
+				});
 			}).then(done, done.fail);
 		});
 	});

@@ -7,16 +7,17 @@ var Promise = require('bluebird'),
 	collectFiles = require('../tasks/collect-files'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
-	fs = require('fs');
+	fs = Promise.promisifyAll(require('fs'));
 module.exports = function create(options) {
 	'use strict';
 	var source = options.source || shell.pwd(),
 		iam = Promise.promisifyAll(new aws.IAM()),
 		lambda = Promise.promisifyAll(new aws.Lambda({region: options.region}), {suffix: 'Promise'}),
 		createFunction = Promise.promisify(lambda.createFunction.bind(lambda)),
-		readFile = Promise.promisify(fs.readFile),
-		writeFile = Promise.promisify(fs.writeFile),
 		roleMetadata,
+		templateFile = function (fileName) {
+			return path.join(__dirname, '..', '..', 'json-templates', fileName);
+		},
 		validationError = function () {
 			if (!options.name) {
 				return 'project name is missing. please specify with --name';
@@ -73,6 +74,7 @@ module.exports = function create(options) {
 				apiGateway = Promise.promisifyAll(new aws.APIGateway({region: options.region})),
 				existingResources,
 				rootResourceId,
+				paramsInputTemplate,
 				restApiId,
 				allowApiInvocation = function () {
 					return iam.getUserAsync().then(function (result) {
@@ -121,6 +123,9 @@ module.exports = function create(options) {
 									httpMethod: methodName,
 									type: 'AWS',
 									integrationHttpMethod: 'POST',
+									requestTemplates: {
+										'application/json': paramsInputTemplate
+									},
 									uri: 'arn:aws:apigateway:' + options.region + ':lambda:path/2015-03-31/functions/' + lambdaMetaData.FunctionArn + '/invocations'
 								});
 							}).then(function () {
@@ -148,8 +153,12 @@ module.exports = function create(options) {
 						return Promise.map(apiConfig[path].methods, createMethod, {concurrency: 1});
 					});
 				};
-			return apiGateway.createRestApiAsync({
-				name: options.name
+			return fs.readFileAsync(templateFile('apigw-params-input.txt'), 'utf8').then(function (content) {
+				paramsInputTemplate = content;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: options.name
+				});
 			}).then(function (result) {
 				restApiId = result.id;
 			}).then(allowApiInvocation)
@@ -179,18 +188,18 @@ module.exports = function create(options) {
 					id: lambdaMetaData.apiId
 				};
 			}
-			return writeFile(
-					path.join(source, 'claudia.json'),
-					JSON.stringify(config, null, 2),
-					'utf8'
-					).then(function () {
+			return fs.writeFileAsync(
+				path.join(source, 'claudia.json'),
+				JSON.stringify(config, null, 2),
+				'utf8'
+			).then(function () {
 				return config;
 			});
 		};
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return readFile(path.join(__dirname, '..', '..', 'json-templates',  'lambda-exector-policy.json'), 'utf8')
+	return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 	.then(function (lambdaRolePolicy) {
 		return iam.createRoleAsync({
 			RoleName: options.name + '-executor',
@@ -203,7 +212,7 @@ module.exports = function create(options) {
 	}).then(function () {
 		return collectFiles(source);
 	}).then(zipdir)
-	.then(readFile)
+	.then(fs.readFileAsync)
 	.then(function (fileContents) {
 		return createLambda(fileContents, roleMetadata.Role.Arn, 10);
 	})
