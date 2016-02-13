@@ -10,6 +10,7 @@ beforeEach(function () {
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
 			logs = new aws.CloudWatchLogs({region: awsRegion}),
+			apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
 			iam = Promise.promisifyAll(new aws.IAM()),
 			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
 			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
@@ -49,7 +50,14 @@ beforeEach(function () {
 		if (!newObjects) {
 			return Promise.resolve();
 		}
+
 		return Promise.resolve().then(function () {
+			if (newObjects.restApi) {
+				return apiGateway.deleteRestApiAsync({
+					restApiId: newObjects.restApi
+				});
+			}
+		}).then(function () {
 			if (newObjects.lambdaFunction) {
 				return deleteFunction({FunctionName: newObjects.lambdaFunction});
 			}

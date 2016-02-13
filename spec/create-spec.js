@@ -2,7 +2,7 @@
 var underTest = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-
+	got = require('got'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -10,7 +10,18 @@ var underTest = require('../src/commands/create'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects, config,logs;
+	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
+		createFromDir = function (dir) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/' + (dir || 'hello-world') + '/*', workingdir);
+			return underTest(config).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+				return result;
+			});
+		};
+
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -75,15 +86,6 @@ describe('create', function () {
 		});
 	});
 	describe('creating the function', function () {
-		var createFromDir = function (dir) {
-				shell.mkdir(workingdir);
-				shell.cp('-r', 'spec/test-projects/' + (dir || 'hello-world') + '/*', workingdir);
-				return underTest(config).then(function (result) {
-					newObjects.lambdaRole = result.lambda && result.lambda.role;
-					newObjects.lambdaFunction = result.lambda && result.lambda.name;
-					return result;
-				});
-			};
 		it('returns an object containing the new claudia configuration', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(creationResult.lambda).toEqual({
@@ -156,6 +158,43 @@ describe('create', function () {
 			}).then(function (logEvents) {
 				expect(logEvents.events.length).toEqual(1);
 				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
+			}).then(done, done.fail);
+		});
+	});
+	describe('creating the web api', function () {
+		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion}));
+		beforeEach(function () {
+			config.handler = undefined;
+			config['api-module'] = 'main';
+		});
+		it('ignores the handler but creates an API if the api-module is provided', function (done) {
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				var apiId = creationResult.api && creationResult.api.id;
+				newObjects.restApi = apiId;
+				expect(apiId).toBeTruthy();
+				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8')))
+					.toEqual(creationResult);
+				return apiId;
+			}).then(function (apiId) {
+				return apiGateway.getRestApiAsync({restApiId: apiId});
+			}).then(function (restApi) {
+				expect(restApi.name).toEqual(testRunName);
+			}).then(done, done.fail);
+		});
+		it('makes the rest api methods invokable by URL', function (done) {
+			var apiId;
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+				return apiGateway.createDeploymentAsync({
+					restApiId: apiId,
+					stageName: 'fromtest'
+				});
+
+			}).then(function () {
+				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/echo';
+				return got.get(resUrl);
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
 	});

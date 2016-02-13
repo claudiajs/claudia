@@ -1,4 +1,4 @@
-/*global module, require, __dirname */
+/*global module, require, __dirname*/
 var Promise = require('bluebird'),
 	path = require('path'),
 	shell = require('shelljs'),
@@ -11,9 +11,8 @@ var Promise = require('bluebird'),
 module.exports = function create(options) {
 	'use strict';
 	var source = options.source || shell.pwd(),
-		iam = new aws.IAM(),
-		lambda = new aws.Lambda({region: options.region}),
-		createRole = Promise.promisify(iam.createRole.bind(iam)),
+		iam = Promise.promisifyAll(new aws.IAM()),
+		lambda = Promise.promisifyAll(new aws.Lambda({region: options.region}), {suffix: 'Promise'}),
 		createFunction = Promise.promisify(lambda.createFunction.bind(lambda)),
 		readFile = Promise.promisify(fs.readFile),
 		writeFile = Promise.promisify(fs.writeFile),
@@ -25,7 +24,7 @@ module.exports = function create(options) {
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
 			}
-			if (!options.handler) {
+			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
 			}
 			if (shell.test('-e', path.join(source, 'claudia.json'))) {
@@ -39,7 +38,7 @@ module.exports = function create(options) {
 			var functionMeta = {
 				Code: { ZipFile: zipFile },
 				FunctionName: options.name,
-				Handler: 'main.handler',
+				Handler: options.handler || (options['api-module'] + '.router'),
 				Role: roleArn,
 				Runtime: 'nodejs',
 				Publish: true
@@ -64,7 +63,107 @@ module.exports = function create(options) {
 					return markAlias(lambdaData.FunctionName, options.region, lambdaData.Version, options.version);
 				}
 			}).then(function () {
+				//TODO: replace FunctionArn with Alias ARN
 				return lambdaData;
+			});
+		},
+		createWebApi = function (lambdaMetaData) {
+			var apiModule = require(path.join(options.source, options['api-module'])),
+				apiConfig = apiModule.apiConfig(),
+				apiGateway = Promise.promisifyAll(new aws.APIGateway({region: options.region})),
+				existingResources,
+				rootResourceId,
+				restApiId,
+				allowApiInvocation = function () {
+					return iam.getUserAsync().then(function (result) {
+						return lambda.addPermissionPromise({
+							Action: 'lambda:InvokeFunction',
+							FunctionName: lambdaMetaData.FunctionName,
+							Principal: 'apigateway.amazonaws.com',
+							SourceArn: 'arn:aws:execute-api:' + options.region + ':' + result.User.UserId + ':' + restApiId + '/*/*/*',
+							Qualifier: options.version,
+							StatementId: 'web-api-access'
+						});
+					});
+				},
+				findByPath = function (resourceItems, path) {
+					var result;
+					resourceItems.forEach(function (item) {
+						if (item.path === path) {
+							result = item;
+						}
+					});
+					return result;
+				},
+				getExistingResources = function () {
+					return apiGateway.getResourcesAsync({restApiId: restApiId, limit: 499});
+				},
+				findRoot = function (resourceItems) {
+					rootResourceId = findByPath(resourceItems, '/').id;
+					return rootResourceId;
+				},
+				createPath = function (path) {
+					return apiGateway.createResourceAsync({
+						restApiId: restApiId,
+						parentId: rootResourceId,
+						pathPart: path
+					}).then(function (resource) {
+						var createMethod = function (methodName) {
+							return apiGateway.putMethodAsync({
+								authorizationType: 'NONE', /*todo support config */
+								httpMethod: methodName,
+								resourceId: resource.id,
+								restApiId: restApiId
+							}).then(function () {
+								return apiGateway.putIntegrationAsync({
+									restApiId: restApiId,
+									resourceId: resource.id,
+									httpMethod: methodName,
+									type: 'AWS',
+									integrationHttpMethod: 'POST',
+									uri: 'arn:aws:apigateway:' + options.region + ':lambda:path/2015-03-31/functions/' + lambdaMetaData.FunctionArn + '/invocations'
+								});
+							}).then(function () {
+								return apiGateway.putMethodResponseAsync({
+									restApiId: restApiId,
+									resourceId: resource.id,
+									httpMethod: methodName,
+									statusCode: '200',
+									responseModels: {
+										'application/json': 'Empty'
+									}
+								});
+							}).then(function () {
+								return apiGateway.putIntegrationResponseAsync({
+									restApiId: restApiId,
+									resourceId: resource.id,
+									httpMethod: methodName,
+									statusCode: '200',
+									responseTemplates: {
+										'application/json': ''
+									}
+								});
+							});
+						};
+						return Promise.map(apiConfig[path].methods, createMethod, {concurrency: 1});
+					});
+				};
+			return apiGateway.createRestApiAsync({
+				name: options.name
+			}).then(function (result) {
+				restApiId = result.id;
+			}).then(allowApiInvocation)
+			.then(getExistingResources)
+			.then(function (resources) {
+				existingResources = resources.items;
+				return existingResources;
+			})
+			.then(findRoot)
+			.then(function () {
+				return Promise.map(Object.keys(apiConfig), createPath, {concurrency: 1});
+			}).then(function () {
+				lambdaMetaData.apiId = restApiId;
+				return lambdaMetaData;
 			});
 		},
 		saveConfig = function (lambdaMetaData) {
@@ -75,6 +174,11 @@ module.exports = function create(options) {
 					region: options.region
 				}
 			};
+			if (lambdaMetaData.apiId) {
+				config.api = {
+					id: lambdaMetaData.apiId
+				};
+			}
 			return writeFile(
 					path.join(source, 'claudia.json'),
 					JSON.stringify(config, null, 2),
@@ -88,7 +192,7 @@ module.exports = function create(options) {
 	}
 	return readFile(path.join(__dirname, '..', '..', 'json-templates',  'lambda-exector-policy.json'), 'utf8')
 	.then(function (lambdaRolePolicy) {
-		return createRole({
+		return iam.createRoleAsync({
 			RoleName: options.name + '-executor',
 			AssumeRolePolicyDocument: lambdaRolePolicy
 		});
@@ -98,9 +202,17 @@ module.exports = function create(options) {
 		return addPolicy('log-writer', options.name + '-executor');
 	}).then(function () {
 		return collectFiles(source);
-	}).then(zipdir).
-	then(readFile).
-	then(function (fileContents) {
+	}).then(zipdir)
+	.then(readFile)
+	.then(function (fileContents) {
 		return createLambda(fileContents, roleMetadata.Role.Arn, 10);
-	}).then(saveConfig);
+	})
+	.then(function (lambdaMetadata) {
+		if (options['api-module']) {
+			return createWebApi(lambdaMetadata);
+		} else {
+			return lambdaMetadata;
+		}
+	})
+	.then(saveConfig);
 };
