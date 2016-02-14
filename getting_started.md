@@ -38,22 +38,31 @@ See the [Command Line Reference](bin/usage.txt) for more options.
 
 Claudia can create an API Gateway definition, wire up integration templates and even simplify routing so that a single Lambda function can handle multiple web API URLs. For that, create a WEB API module using the [Claudia API Builder](https://github.com/claudiajs/claudia-api-builder) and supply the routing module name instead of a handler to create the project:
 
-````
-claudia create --name LAMBDA_NAME --region AWS_REGION --api-module ROUTING_MODULE
-````
+
+    claudia create --name LAMBDA_NAME --region AWS_REGION --api-module ROUTING_MODULE
+
 
 See the [Web Api Example Project](https://github.com/claudiajs/example-projects/tree/master/web-api) for a trivial example of how to wire up a single lambda to multiple HTTP paths.
 
 
 ## Deploying a new version to Lambda
 
-Call `claudia update` -- this will pack up all the required resources and create a new deployment to Lambda
+To pack up all the required resources and create a new deployment to Lambda, call:
+
+    claudia update    
+
 
 ## Creating a new Lambda alias
 
 Event sources can be configured to publish events to a particular Lambda alias (pointer to a numeric version). This makes it easy to use a single Lambda function for development, production and testing environments.
 
-Claudia also simplifies the process of creating and updating a Lambda alias. Just call `claudia set-version --version-name ALIAS_NAME` and Claudia will automatically create a new alias for the currently deployed version, or re-assign an existing alias to it.
+Claudia also simplifies the process of creating and updating a Lambda alias. Just call 
+
+
+    claudia set-version --version ALIAS_NAME
+
+
+and Claudia will automatically create a new alias for the currently deployed version, or re-assign an existing alias to it.
 
 If your project includes a API Gateway REST API, this will also create a new deployment of the REST API to the stage called the same as the supplied version, and link it directly to the Lambda alias. 
 
