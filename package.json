@@ -1,7 +1,7 @@
 {
   "name": "claudia",
   "version": "0.1.0",
-  "description": "deploy Node.js microservices to AWS",
+  "description": "deploy Node.js microservices to AWS easier",
   "license": "MIT",
   "repository": {
     "type": "git",
