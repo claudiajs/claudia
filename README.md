@@ -18,11 +18,13 @@ For some nice examples, see the [Example Projects](https://github.com/claudiajs/
 
 AWS Lambda and API Gateway are built with great flexibility to support fantastically powerful operations, but they can be tedious to set up, especially for simple scenarios. The basic runtime is oriented towards executing Java code, so running Node.js functions requires ironing out quite a few quirks that aren't exactly well documented. Claudia is essentially a bunch of checklists and troubleshooting tips we've collected while developing microservices designed to run in AWS, automated behind a convenient API. 
 
+## Getting started 
+
+Please read the [getting started guide](getting_started.md).
+
 ## Contributing
 
 Contributions are greatly appreciated. See the [contributors' guide](contributing.md) for information on running and testing code.
 
-## Getting started 
 
-Please read the [getting started guide](getting_started.md).
 
