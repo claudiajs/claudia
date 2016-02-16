@@ -3,24 +3,28 @@ var aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	templateFile = require('../util/template-file'),
 	fs = Promise.promisifyAll(require('fs'));
-module.exports = function rebuildWebApi(functionName, functionVersion, functionArn, restApiId, apiConfig, awsRegion) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion) {
 	'use strict';
 	var iam = Promise.promisifyAll(new aws.IAM()),
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'}),
 		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
 		existingResources,
 		rootResourceId,
+		ownerId,
 		paramsInputTemplate,
-		allowApiInvocation = function () {
+		getOwnerId = function () {
 			return iam.getUserAsync().then(function (result) {
-				return lambda.addPermissionPromise({
-					Action: 'lambda:InvokeFunction',
-					FunctionName: functionName,
-					Principal: 'apigateway.amazonaws.com',
-					SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + result.User.UserId + ':' + restApiId + '/*/*/*',
-					Qualifier: functionVersion,
-					StatementId: 'web-api-access'
-				});
+				ownerId = result.User.UserId;
+			});
+		},
+		allowApiInvocation = function () {
+			return lambda.addPermissionPromise({
+				Action: 'lambda:InvokeFunction',
+				FunctionName: functionName,
+				Principal: 'apigateway.amazonaws.com',
+				SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/*/*/*',
+				Qualifier: functionVersion,
+				StatementId: 'web-api-access'
 			});
 		},
 		findByPath = function (resourceItems, path) {
@@ -55,7 +59,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, functionA
 					requestTemplates: {
 						'application/json': paramsInputTemplate
 					},
-					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + functionArn + '/invocations'
+					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
 			}).then(function () {
 				return apiGateway.putMethodResponseAsync({
@@ -103,8 +107,19 @@ module.exports = function rebuildWebApi(functionName, functionVersion, functionA
 			.then(function () {
 				return Promise.map(Object.keys(apiConfig), createPath, {concurrency: 1});
 			});
+		},
+		deployApi = function () {
+			return apiGateway.createDeploymentAsync({
+				restApiId: restApiId,
+				stageName: functionVersion,
+				variables: {
+					lambdaVersion: functionVersion
+				}
+			});
 		};
-	return fs.readFileAsync(templateFile('apigw-params-input.txt'), 'utf8').then(rebuildApi);
+	return getOwnerId().then(function () {
+		return fs.readFileAsync(templateFile('apigw-params-input.txt'), 'utf8');
+	}).then(rebuildApi).then(deployApi);
 };
 
 

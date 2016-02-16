@@ -7,8 +7,8 @@ var Promise = require('bluebird'),
 	collectFiles = require('../tasks/collect-files'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
-	createWebApi = require('../tasks/create-web-api'),
 	templateFile = require('../util/template-file'),
+	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function create(options) {
 	'use strict';
@@ -58,12 +58,26 @@ module.exports = function create(options) {
 			}).then(function (creationResult) {
 				lambdaData = creationResult;
 			}).then(function () {
+				return markAlias(lambdaData.FunctionName, options.region, '$LATEST', 'latest');
+			}).then(function () {
 				if (options.version) {
 					return markAlias(lambdaData.FunctionName, options.region, lambdaData.Version, options.version);
 				}
 			}).then(function () {
-				//TODO: replace FunctionArn with Alias ARN
 				return lambdaData;
+			});
+		},
+		createWebApi = function (lambdaMetadata) {
+			var apiModule = require(path.join(options.source, options['api-module'])),
+				apiConfig = apiModule.apiConfig(),
+				apiGateway = Promise.promisifyAll(new aws.APIGateway({region: options.region}));
+			return apiGateway.createRestApiAsync({
+				name: options.name
+			}).then(function (result) {
+				lambdaMetadata.api = {id: result.id, module: options['api-module']};
+				return rebuildWebApi(lambdaMetadata.FunctionName, options.version || 'latest', result.id, apiConfig, options.region);
+			}).then(function () {
+				return lambdaMetadata;
 			});
 		},
 		saveConfig = function (lambdaMetaData) {
@@ -74,10 +88,8 @@ module.exports = function create(options) {
 					region: options.region
 				}
 			};
-			if (lambdaMetaData.apiId) {
-				config.api = {
-					id: lambdaMetaData.apiId
-				};
+			if (lambdaMetaData.api) {
+				config.api = lambdaMetaData.api;
 			}
 			return fs.writeFileAsync(
 				path.join(source, 'claudia.json'),
@@ -109,7 +121,7 @@ module.exports = function create(options) {
 	})
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
-			return createWebApi(lambdaMetadata, options);
+			return createWebApi(lambdaMetadata);
 		} else {
 			return lambdaMetadata;
 		}

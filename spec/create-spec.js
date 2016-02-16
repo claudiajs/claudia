@@ -162,11 +162,15 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion}));
+		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), apiId,
+			apiUrl = function (path) {
+				return 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/' + path;
+			};
 		beforeEach(function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
 		});
+
 		it('ignores the handler but creates an API if the api-module is provided', function (done) {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				var apiId = creationResult.api && creationResult.api.id;
@@ -181,35 +185,57 @@ describe('create', function () {
 				expect(restApi.name).toEqual(testRunName);
 			}).then(done, done.fail);
 		});
-		it('makes the rest api methods invokable by URL', function (done) {
-			var apiId;
+		it('when no version provided, creates the latest deployment', function (done) {
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+			}).then(function () {
+				return got.get(apiUrl('latest/hello'));
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+		it('when the version is provided, creates the deployment with that name', function (done) {
+			config.version = 'development';
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+			}).then(function () {
+				return got.get(apiUrl('development/hello'));
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+		it('makes it possible to deploy a custom stage, as long as the lambdaVersion is defined', function (done) {
+			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
 				return apiGateway.createDeploymentAsync({
 					restApiId: apiId,
-					stageName: 'fromtest'
+					stageName: 'fromtest',
+					variables: {
+						lambdaVersion: 'development'
+					}
 				});
 			}).then(function () {
-				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/hello';
-				return got.get(resUrl);
+				return got.get(apiUrl('fromtest/hello'));
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
 		it('assembles the parameters in a way accessible to JavaScript', function (done) {
-			var apiId;
 			createFromDir('api-gw-echo').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
 				return apiGateway.createDeploymentAsync({
 					restApiId: apiId,
 					stageName: 'fromtest',
 					variables: {
+						lambdaVersion: 'latest',
 						authKey: 'abs123',
 						authBucket: 'bucket123'
 					}
 				});
 			}).then(function () {
-				var resUrl = 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/fromtest/echo?param1=val1&param2=' + encodeURIComponent('val=2') + '&' + encodeURIComponent ('param&3') + '=val3';
+				var resUrl = apiUrl('fromtest/echo?param1=val1&param2=' + encodeURIComponent('val=2') + '&' + encodeURIComponent ('param&3') + '=val3');
+				console.log('invoking url', resUrl);
 				return got.get(resUrl, {headers: {'auth-head': 'auth-val'}});
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
@@ -219,7 +245,8 @@ describe('create', function () {
 				expect(params.headers['auth-head']).toEqual('auth-val');
 				expect(params.env).toEqual({
 					authKey: 'abs123',
-					authBucket: 'bucket123'
+					authBucket: 'bucket123',
+					lambdaVersion: 'latest'
 				});
 			}).then(done, done.fail);
 		});
