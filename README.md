@@ -1,6 +1,4 @@
-# Claudia.js  
-
-## deploy cloud Node.JS microservices easier
+# Claudia.js: deploy cloud Node.JS microservices easier
 
 Claudia helps you deploy and update Node.js microservices to Amazon Web Services easier. It automates and simplifies deployment workflows and error prone tasks, so you can focus on important problems and not have to worry about AWS service quirks. Here are some of the things it can do for you:
 
