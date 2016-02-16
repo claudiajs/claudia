@@ -126,6 +126,14 @@ describe('create', function () {
 				expect(result.Versions[1].Version).toEqual('1');
 			}).then(done, done.fail);
 		});
+		it('adds the latest alias', function (done) {
+			config.version = 'great';
+			createFromDir('hello-world').then(function () {
+				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'latest'});
+			}).then(function (result) {
+				expect(result.FunctionVersion).toEqual('$LATEST');
+			}).then(done, done.fail);
+		});
 		it('adds the version alias if supplied', function (done) {
 			config.version = 'great';
 			createFromDir('hello-world').then(function () {
@@ -176,6 +184,7 @@ describe('create', function () {
 				var apiId = creationResult.api && creationResult.api.id;
 				newObjects.restApi = apiId;
 				expect(apiId).toBeTruthy();
+				expect(creationResult.api.module).toEqual('main');
 				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8')))
 					.toEqual(creationResult);
 				return apiId;
