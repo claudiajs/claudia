@@ -26,9 +26,13 @@ AWS Lambda and API Gateway are built with great flexibility to support fantastic
 
 Claudia is just a smart deployer, and it doesn't try to be a big framework to control everything. You can organise your code any way you like, and unless you want to use the optional [API Builder](https://github.com/claudiajs/claudia-api-builder) to simplify web routing, there are no additional runtime dependencies for your project. Even the API Builder is structured to be minimal, standalone, and introduce no additional dependencies.
 
+As opposed to [Apex](https://github.com/apex/apex) and similar deployers, Claudia has a much narrower scope. It works only for Node.js, but it does it really well. Generic frameworks support more runtimes, but leave the developers to deal with language-specific quirks. Because Claudia focuses on Node.js, it automatically installs templates to convert parameters and results into objects that Javascript can consume easily.
+
 As opposed to [Serverless](https://github.com/serverless/serverless) and [Seneca](http://senecajs.org/), Claudia is not trying to change the way you structure or run projects. At the same time, those frameworks can help kick-start many standard tasks. Claudia does not have any project templates or plugins for that intentionally, so it can be simpler. One of our key design goals is not to introduce too much magic, and let people structure the code the way they want to.
 
 As opposed to [Swagger](http://swagger.io/), Claudia has fewer features, but does simple stuff easier. Claudia doesn't require you to define APIs in separate interface files. There's no need to learn a special interface syntax, no need to keep your definition spread across multiple files and introduce the overhead of coordination and maintenance -- just [write the code](https://github.com/claudiajs/example-projects/blob/master/web-api/web.js) to handle requests. So, for example, Claudia can help you get started easily with a simple web API, but you won't be able to export it easily into iOS or Android SDKs. If you want to use a heavy interface-definition library you still can, and Claudia can deploy it, but for most of what we needed to do, that was a huge overkill. 
+
+So, as a summary, if you want to build simple services and run them with AWS Lambda, and you're looking for something low-overhead,  easy to get started with, and you only want to use the Node.js runtime, Claudia is a good choice. If you want to create a server API and export SDKs, need a fine-grained control over the distribution, allocation or discovery of services, need support for different runtimes and so on, use one of the alternative tools.
 
 ## Contributing
 
