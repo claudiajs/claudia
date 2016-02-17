@@ -118,7 +118,28 @@ describe('rebuildWebApi', function () {
 				expect(params.context.path).toEqual('/hello');
 			}).then(done, done.fail);
 		});
-
+		it('creates OPTIONS handlers for CORS', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}, 'hello': { methods: ['POST', 'GET']}}, awsRegion)
+			.then(function () {
+				return retry(function () {
+					return got(apiUrl('original/echo'), {method: 'OPTIONS'});
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(function () {
+				return retry(function () {
+					return got(apiUrl('original/hello'), {method: 'OPTIONS'});
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-methods']).toEqual('POST,GET,OPTIONS');
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(done, done.fail);
+		});
 
 	});
 

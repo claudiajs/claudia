@@ -73,16 +73,69 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			});
 		},
+		createCorsHandler = function (resourceId, allowedMethods) {
+			return apiGateway.putMethodAsync({
+				authorizationType: 'NONE', /*todo support config */
+				httpMethod: 'OPTIONS',
+				resourceId: resourceId,
+				restApiId: restApiId
+			}).then(function () {
+				return apiGateway.putIntegrationAsync({
+					restApiId: restApiId,
+					resourceId: resourceId,
+					httpMethod: 'OPTIONS',
+					type: 'MOCK',
+					requestTemplates: {
+						'application/json': '{\"statusCode\": 200}'
+					}
+				});
+			}).then(function () {
+				return apiGateway.putMethodResponseAsync({
+					restApiId: restApiId,
+					resourceId: resourceId,
+					httpMethod: 'OPTIONS',
+					statusCode: '200',
+					responseModels: {
+						'application/json': 'Empty'
+					},
+					responseParameters: {
+						'method.response.header.Access-Control-Allow-Headers': false,
+						'method.response.header.Access-Control-Allow-Methods': false,
+						'method.response.header.Access-Control-Allow-Origin': false
+					}
+				});
+			}).then(function () {
+				return apiGateway.putIntegrationResponseAsync({
+					restApiId: restApiId,
+					resourceId: resourceId,
+					httpMethod: 'OPTIONS',
+					statusCode: '200',
+					responseTemplates: {
+						'application/json': ''
+					},
+					responseParameters: {
+						'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\'',
+						'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
+						'method.response.header.Access-Control-Allow-Origin': '\'*\''
+					}
+				});
+			});
+		},
 		createPath = function (path) {
+			var resourceId;
 			return apiGateway.createResourceAsync({
 				restApiId: restApiId,
 				parentId: rootResourceId,
 				pathPart: path
 			}).then(function (resource) {
+				resourceId = resource.id;
+			}).then(function () {
 				var createMethodMapper = function (methodName) {
-					return createMethod(methodName, resource.id);
+					return createMethod(methodName, resourceId);
 				};
 				return Promise.map(apiConfig[path].methods, createMethodMapper, {concurrency: 1});
+			}).then(function () {
+				return createCorsHandler(resourceId, apiConfig[path].methods);
 			});
 		},
 		dropSubresources = function () {
