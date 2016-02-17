@@ -17,6 +17,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				ownerId = result.User.UserId;
 			});
 		},
+		find = function (array, predicate, context) { /* no .find support in 10.0 */
+			var result;
+			array.forEach(function (element) {
+				if (!result && predicate(element, context)) {
+					result = element;
+				}
+			});
+			return result;
+		},
 		allowApiInvocation = function () {
 			var policy = {
 					Action: 'lambda:InvokeFunction',
@@ -28,17 +37,19 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				matchesPolicy = function (statement) {
 					return statement.Action === policy.Action &&
-						statement.Principal.Service ===  policy.Principal &&
-						statement.ArnLike['AWS:SourceArn'] === policy.SourceArn &&
+						statement.Principal && statement.Principal.Service ===  policy.Principal &&
+						statement.Condition && statement.Condition.ArnLike &&
+						statement.Condition.ArnLike['AWS:SourceArn'] === policy.SourceArn &&
 						statement.Effect === 'Allow';
 				};
 			return lambda.getPolicyPromise({
 				FunctionName: functionName,
 				Qualifier: functionVersion
 			}).then(function (policyResponse) {
-				var currentPolicy = policyResponse && JSON.parse(policyResponse),
-					statements = (currentPolicy.Policy && currentPolicy.Policy.Statement) || [];
-				if (!statements.some(matchesPolicy)) {
+				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
+			}).then(function (currentPolicy) {
+				var statements = (currentPolicy && currentPolicy.Statement) || [];
+				if (!find(statements, matchesPolicy)) {
 					return lambda.addPermissionPromise(policy);
 				}
 			}, function (e) {
@@ -61,8 +72,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		getExistingResources = function () {
 			return apiGateway.getResourcesAsync({restApiId: restApiId, limit: 499});
 		},
-		findRoot = function (resourceItems) {
-			rootResourceId = findByPath(resourceItems, '/').id;
+		findRoot = function () {
+			rootResourceId = findByPath(existingResources, '/').id;
 			return rootResourceId;
 		},
 		createMethod = function (methodName, resourceId) {
@@ -117,6 +128,17 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return Promise.map(apiConfig[path].methods, createMethodMapper, {concurrency: 1});
 			});
 		},
+		dropSubresources = function () {
+			var removeResourceMapper = function (resource) {
+				if (resource.id !== rootResourceId) {
+					return apiGateway.deleteResourceAsync({
+						resourceId: resource.id,
+						restApiId: restApiId
+					});
+				}
+			};
+			return Promise.map(existingResources, removeResourceMapper, {concurrency: 1});
+		},
 		rebuildApi = function () {
 			return allowApiInvocation()
 			.then(getExistingResources)
@@ -125,6 +147,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return existingResources;
 			})
 			.then(findRoot)
+			.then(dropSubresources)
 			.then(function () {
 				return Promise.map(Object.keys(apiConfig), createPath, {concurrency: 1});
 			});

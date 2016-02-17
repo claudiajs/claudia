@@ -12,11 +12,10 @@ var underTest = require('../src/commands/update'),
 	awsRegion = 'us-east-1';
 describe('update', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects;
+	var workingdir, testRunName,  lambda, newObjects;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 		newObjects = {workingdir: workingdir};
