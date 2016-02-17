@@ -15,8 +15,6 @@ describe('rebuildWebApi', function () {
 		apiUrl = function (path) {
 			return 'https://' +	apiId + '.execute-api.us-east-1.amazonaws.com/' + path;
 		};
-
-
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();

@@ -2,11 +2,11 @@
 var aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	templateFile = require('../util/template-file'),
+	allowApiInvocation = require('./allow-api-invocation'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion) {
 	'use strict';
 	var iam = Promise.promisifyAll(new aws.IAM()),
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'}),
 		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
 		existingResources,
 		rootResourceId,
@@ -15,49 +15,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		getOwnerId = function () {
 			return iam.getUserAsync().then(function (result) {
 				ownerId = result.User.UserId;
-			});
-		},
-		find = function (array, predicate, context) { /* no .find support in 10.0 */
-			var result;
-			array.forEach(function (element) {
-				if (!result && predicate(element, context)) {
-					result = element;
-				}
-			});
-			return result;
-		},
-		allowApiInvocation = function () {
-			var policy = {
-					Action: 'lambda:InvokeFunction',
-					FunctionName: functionName,
-					Principal: 'apigateway.amazonaws.com',
-					SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/*/*/*',
-					Qualifier: functionVersion,
-					StatementId: 'web-api-access-' + functionVersion + '-' + Date.now()
-				},
-				matchesPolicy = function (statement) {
-					return statement.Action === policy.Action &&
-						statement.Principal && statement.Principal.Service ===  policy.Principal &&
-						statement.Condition && statement.Condition.ArnLike &&
-						statement.Condition.ArnLike['AWS:SourceArn'] === policy.SourceArn &&
-						statement.Effect === 'Allow';
-				};
-			return lambda.getPolicyPromise({
-				FunctionName: functionName,
-				Qualifier: functionVersion
-			}).then(function (policyResponse) {
-				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
-			}).then(function (currentPolicy) {
-				var statements = (currentPolicy && currentPolicy.Statement) || [];
-				if (!find(statements, matchesPolicy)) {
-					return lambda.addPermissionPromise(policy);
-				}
-			}, function (e) {
-				if (e && e.code === 'ResourceNotFoundException') {
-					return lambda.addPermissionPromise(policy);
-				} else {
-					return Promise.reject(e);
-				}
 			});
 		},
 		findByPath = function (resourceItems, path) {
@@ -140,7 +97,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return Promise.map(existingResources, removeResourceMapper, {concurrency: 1});
 		},
 		rebuildApi = function () {
-			return allowApiInvocation()
+			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
 			.then(getExistingResources)
 			.then(function (resources) {
 				existingResources = resources.items;

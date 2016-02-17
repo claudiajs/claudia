@@ -6,6 +6,8 @@ var underTest = require('../src/commands/set-version'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
+	got = require('got'),
+	retry = require('../src/util/retry'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
@@ -21,6 +23,7 @@ describe('setVersion', function () {
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
+
 	afterEach(function (done) {
 		this.destroyObjects(newObjects).catch(function (err) {
 			console.log('error cleaning up', err);
@@ -52,7 +55,7 @@ describe('setVersion', function () {
 			done();
 		});
 	});
-	describe('when the lambda project exists', function () {
+	describe('when the lambda project does not contain a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
@@ -91,6 +94,63 @@ describe('setVersion', function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'dev'});
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
+			}).then(done, done.fail);
+		});
+	});
+	describe('when the lambda project contains a web api', function () {
+		var apiUrl = function (path) {
+			return 'https://' + newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/' + path;
+		};
+
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+			}).then(done, done.fail);
+		});
+		it('creates a new api deployment', function (done) {
+			underTest({source: workingdir, version: 'dev'})
+			.then(function () {
+				return retry(function () {
+					return got.get(apiUrl('dev/echo'));
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'dev'
+				});
+			}).then(done, done.fail);
+		});
+		it('keeps the old stage variables if they exist', function (done) {
+			var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion}));
+			apiGateway.createDeploymentAsync({
+				restApiId: newObjects.restApi,
+				stageName: 'fromtest',
+				variables: {
+					authKey: 'abs123',
+					authBucket: 'bucket123'
+				}
+			}).then(function () {
+				return underTest({source: workingdir, version: 'fromtest'});
+			}).then(function () {
+				return retry(function () {
+					return got.get(apiUrl('fromtest/echo'));
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'fromtest',
+					authKey: 'abs123',
+					authBucket: 'bucket123'
+				});
 			}).then(done, done.fail);
 		});
 	});

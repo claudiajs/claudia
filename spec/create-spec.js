@@ -244,7 +244,6 @@ describe('create', function () {
 				});
 			}).then(function () {
 				var resUrl = apiUrl('fromtest/echo?param1=val1&param2=' + encodeURIComponent('val=2') + '&' + encodeURIComponent ('param&3') + '=val3');
-				console.log('invoking url', resUrl);
 				return got.get(resUrl, {headers: {'auth-head': 'auth-val'}});
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
