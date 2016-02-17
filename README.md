@@ -14,13 +14,21 @@ A single `claudia create` command can replace [120 lines of shell scripts](https
 
 For some nice examples, see the [Example Projects](https://github.com/claudiajs/example-projects)
 
+## Getting started 
+
+Please read the [getting started guide](getting_started.md).
+
 ## Why?
 
 AWS Lambda and API Gateway are built with great flexibility to support fantastically powerful operations, but they can be tedious to set up, especially for simple scenarios. The basic runtime is oriented towards executing Java code, so running Node.js functions requires ironing out quite a few quirks that aren't exactly well documented. Claudia is essentially a bunch of checklists and troubleshooting tips we've collected while developing microservices designed to run in AWS, automated behind a convenient API. 
 
-## Getting started 
+## How does it compare to ...?
 
-Please read the [getting started guide](getting_started.md).
+Claudia is just a smart deployer, and it doesn't try to be a big framework to control everything. You can organise your code any way you like, and unless you want to use the optional [API Builder](https://github.com/claudiajs/claudia-api-builder) to simplify web routing, there are no additional runtime dependencies for your project. Even the API Builder is structured to be minimal, standalone, and introduce no additional dependencies.
+
+As opposed to [Serverless](https://github.com/serverless/serverless) and [Seneca](http://senecajs.org/), Claudia is not trying to change the way you structure or run projects. At the same time, those frameworks can help kick-start many standard tasks. Claudia does not have any project templates or plugins for that intentionally, so it can be simpler. One of our key design goals is not to introduce too much magic, and let people structure the code the way they want to.
+
+As opposed to [Swagger](http://swagger.io/), Claudia has fewer features, but doesn't require you to define APIs in separate interface files. There's no need to learn a special interface syntax, no need to keep your definition spread across multiple files and introduce the overhead of coordination and maintenance. We believe that the best place to put interface definitions is in the code that handles them, so all you need to create a web API interface with the API Builder is to [write the code](https://github.com/claudiajs/example-projects/blob/master/web-api/web.js). If you want to use a heavy interface-definition library you still can, and Claudia can deploy it, but for most of what we needed to do, that was a huge overkill. 
 
 ## Contributing
 
