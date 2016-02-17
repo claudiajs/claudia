@@ -18,13 +18,35 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			});
 		},
 		allowApiInvocation = function () {
-			return lambda.addPermissionPromise({
-				Action: 'lambda:InvokeFunction',
+			var policy = {
+					Action: 'lambda:InvokeFunction',
+					FunctionName: functionName,
+					Principal: 'apigateway.amazonaws.com',
+					SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/*/*/*',
+					Qualifier: functionVersion,
+					StatementId: 'web-api-access-' + functionVersion + '-' + Date.now()
+				},
+				matchesPolicy = function (statement) {
+					return statement.Action === policy.Action &&
+						statement.Principal.Service ===  policy.Principal &&
+						statement.ArnLike['AWS:SourceArn'] === policy.SourceArn &&
+						statement.Effect === 'Allow';
+				};
+			return lambda.getPolicyPromise({
 				FunctionName: functionName,
-				Principal: 'apigateway.amazonaws.com',
-				SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/*/*/*',
-				Qualifier: functionVersion,
-				StatementId: 'web-api-access'
+				Qualifier: functionVersion
+			}).then(function (policyResponse) {
+				var currentPolicy = policyResponse && JSON.parse(policyResponse),
+					statements = (currentPolicy.Policy && currentPolicy.Policy.Statement) || [];
+				if (!statements.some(matchesPolicy)) {
+					return lambda.addPermissionPromise(policy);
+				}
+			}, function (e) {
+				if (e && e.code === 'ResourceNotFoundException') {
+					return lambda.addPermissionPromise(policy);
+				} else {
+					return Promise.reject(e);
+				}
 			});
 		},
 		findByPath = function (resourceItems, path) {
@@ -95,8 +117,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return Promise.map(apiConfig[path].methods, createMethodMapper, {concurrency: 1});
 			});
 		},
-		rebuildApi = function (inputTemplate) {
-			paramsInputTemplate = inputTemplate;
+		rebuildApi = function () {
 			return allowApiInvocation()
 			.then(getExistingResources)
 			.then(function (resources) {
@@ -119,6 +140,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		};
 	return getOwnerId().then(function () {
 		return fs.readFileAsync(templateFile('apigw-params-input.txt'), 'utf8');
+	}).then(function (inputTemplate) {
+		paramsInputTemplate = inputTemplate;
 	}).then(rebuildApi).then(deployApi);
 };
 

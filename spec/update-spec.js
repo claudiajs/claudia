@@ -2,7 +2,9 @@
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
+	got = require('got'),
 	tmppath = require('../src/util/tmppath'),
+	retry = require('../src/util/retry'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -16,7 +18,7 @@ describe('update', function () {
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
@@ -90,6 +92,91 @@ describe('update', function () {
 				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(done, done.fail);
 		});
-
+	});
+	describe('when the lambda project contains a web api', function () {
+		var originaldir, updateddir,
+			apiUrl = function (path) {
+				return 'https://' +	newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/' + path;
+			};
+		beforeEach(function (done) {
+			originaldir =  path.join(workingdir, 'original');
+			updateddir = path.join(workingdir, 'updated');
+			shell.mkdir(originaldir);
+			shell.mkdir(updateddir);
+			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', originaldir);
+			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', updateddir);
+			create({name: testRunName, version: 'original', region: awsRegion, source: originaldir, 'api-module': 'main'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+				shell.cp(path.join(originaldir, 'claudia.json'), updateddir);
+			}).then(done, done.fail);
+		});
+		it('updates the api using the configuration from the api module', function (done) {
+			return underTest({source: updateddir}).then(function () {
+				return retry(function () {
+					var url = apiUrl('latest/echo?name=mike');
+					return got.get(url);
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'latest'
+				});
+			}).then(done, done.fail);
+		});
+		it('when the version is provided, creates the deployment with that name', function (done) {
+			underTest({source: updateddir, version: 'development'}).then(function () {
+				return retry(function () {
+					var url = apiUrl('development/echo?name=mike');
+					return got.get(url);
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'development'
+				});
+			}).then(done, done.fail);
+		});
+		it('if using a different version, leaves the old one intact', function (done) {
+			underTest({source: updateddir, version: 'development'}).then(function () {
+				return retry(function () {
+					var url = apiUrl('original/hello');
+					return got.get(url);
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+		it('if using the same version, rewrites the old one', function (done) {
+			underTest({source: updateddir, version: 'original'}).then(function () {
+				return retry(function () {
+					var url = apiUrl('original/echo?name=mike');
+					return got.get(url);
+				}, 3000, 5, function (err) {
+					return err.statusCode === 403;
+				});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'original'
+				});
+			}).then(done, done.fail);
+		});
 	});
 });
