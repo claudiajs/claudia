@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "dotenv": "^2.0.0",
-    "got": "^6.1.1",
+    "got": "^5",
     "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.4.0",
     "jscs": "^2.9.0",
