@@ -6,6 +6,7 @@ var Promise = require('bluebird'),
 	path = require('path'),
 	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
+	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	loadConfig = require('../util/loadconfig');
@@ -15,6 +16,10 @@ module.exports = function update(options) {
 		updateLambda = function (fileContents) {
 			return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
 		};
+	options = options || {};
+	if (!options.source) {
+		options.source = shell.pwd();
+	}
 	return loadConfig(options.source, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;

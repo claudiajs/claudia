@@ -85,8 +85,9 @@ describe('update', function () {
 		});
 
 		it('checks the current dir if the source is not provided', function (done) {
-			underTest({source: workingdir}).then(function (lambdaFunc) {
-				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':1$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+			shell.cd(workingdir);
+			underTest().then(function (lambdaFunc) {
+				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
 				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(done, done.fail);

@@ -6,7 +6,7 @@ var	path = require('path'),
 
 module.exports = function loadConfig(sourceDir, validate) {
 	'use strict';
-	sourceDir = sourceDir || shell.cwd();
+	sourceDir = sourceDir || shell.pwd();
 	if (!shell.test('-e', path.join(sourceDir, 'claudia.json'))) {
 		return Promise.reject('claudia.json does not exist in the source folder');
 	}
