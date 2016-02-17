@@ -8,6 +8,8 @@ Claudia helps you deploy and update Node.js microservices to Amazon Web Services
 * Run multiple Rest API operations from a single Node.js project easily, to simplify and speed up coding and deployment, and avoid inconsistencies.
 * Automatically create and configure REST API endpoints, input and output templates and processing to support common web API usage scenarios, such as CORS, query string and form parameters, text responses, HTTP header error codes and more...
 
+Claudia is a deployment utility, not a framework. It doesn't try to abstract away Amazon Web Services, but instead makes is easier to use them in typical background processing and Web API scenarios from Javascript+Node.js.
+
 ## Examples, please!
 
 A single `claudia create` command can replace [120 lines of shell scripts](https://github.com/gojko/nodejs-aws-microservice-examples/blob/master/web-parameter-processing/setup.sh) and all the associated template files required to correctly deploy and set up a API Gateway REST API and an associated Lambda function.
