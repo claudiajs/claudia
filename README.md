@@ -32,7 +32,7 @@ As opposed to [Serverless](https://github.com/serverless/serverless) and [Seneca
 
 As opposed to [Swagger](http://swagger.io/), Claudia has fewer features, but does simple stuff easier. Claudia doesn't require you to define APIs in separate interface files. There's no need to learn a special interface syntax, no need to keep your definition spread across multiple files and introduce the overhead of coordination and maintenance -- just [write the code](https://github.com/claudiajs/example-projects/blob/master/web-api/web.js) to handle requests. So, for example, Claudia can help you get started easily with a simple web API, but you won't be able to export it easily into iOS or Android SDKs. If you want to use a heavy interface-definition library you still can, and Claudia can deploy it, but for most of what we needed to do, that was a huge overkill. 
 
-So, as a summary, if you want to build simple services and run them with AWS Lambda, and you're looking for something low-overhead,  easy to get started with, and you only want to use the Node.js runtime, Claudia is a good choice. If you want to create a server API and export SDKs, need a fine-grained control over the distribution, allocation or discovery of services, need support for different runtimes and so on, use one of the alternative tools.
+So, as a summary, if you want to build simple services and run them with AWS Lambda, and you're looking for something low-overhead,  easy to get started with, and you only want to use the Node.js runtime, Claudia is a good choice. If you want to export SDKs, need a fine-grained control over the distribution, allocation or discovery of services, need support for different runtimes and so on, use one of the alternative tools.
 
 ## Contributing
 
