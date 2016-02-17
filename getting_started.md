@@ -77,6 +77,7 @@ create a `claudia.json` file in the root directory of your Node.js project, and 
     * `region`: AWS region where the function is defined
   * `api`: (optional) API Gateway REST API details
     * `id`: REST API Id
+    * `module`: the module that contains the API definition
 
 #### Example configuration
 
@@ -88,7 +89,8 @@ create a `claudia.json` file in the root directory of your Node.js project, and 
     "region": "us-east-1"
   },
   "api": {
-    "id": "25628xa"
+    "id": "25628xa",
+    "module": "web"
   }
 }
 ````
