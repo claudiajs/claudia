@@ -2,6 +2,7 @@
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
+	querystring = require('querystring'),
 	got = require('got'),
 	tmppath = require('../src/util/tmppath'),
 	retry = require('../src/util/retry'),
@@ -117,6 +118,24 @@ describe('rebuildWebApi', function () {
 						authKey: 'abs123',
 						authBucket: 'bucket123'
 					});
+				}).then(done, done.fail);
+			});
+			it('captures form post variables', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['POST']}}, awsRegion)
+				.then(function () {
+					return retry(
+						function () {
+							return got.post(apiUrl('original/echo'), {
+								headers: {'content-type': 'application/x-www-form-urlencoded'},
+								body: querystring.stringify({name: 'tom', surname: 'bond'})
+							});
+						}, 3000, 5, function (err) {
+							console.log(err);
+							return err.statusCode === 403;
+						});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
 				}).then(done, done.fail);
 			});
 		});
