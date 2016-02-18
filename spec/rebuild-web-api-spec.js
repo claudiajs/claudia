@@ -22,6 +22,12 @@ describe('rebuildWebApi', function () {
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
+	afterEach(function (done) {
+		this.destroyObjects(newObjects).catch(function (err) {
+			console.log('error cleaning up', err);
+		}).finally(done);
+	});
+
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
@@ -42,20 +48,77 @@ describe('rebuildWebApi', function () {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
 			.then(function () {
 				return retry(function () {
-						var url = apiUrl('original/echo?name=mike');
+						var url = apiUrl('original/echo');
 						return got.get(url);
 					}, 3000, 5, function (err) {
 						return err.statusCode === 403;
 					});
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
 				expect(params.context.method).toEqual('GET');
 				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
-					lambdaVersion: 'original'
-				});
 			}).then(done, done.fail);
+		});
+		describe('request parameter processing', function () {
+			it('captures query string parameters', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				.then(function () {
+					return retry(function () {
+							var url = apiUrl('original/echo?name=mike&' + encodeURIComponent('to=m') + '=' + encodeURIComponent('val,a=b'));
+							return got.get(url);
+						}, 3000, 5, function (err) {
+							return err.statusCode === 403;
+						});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.queryString).toEqual({name: 'mike', 'to=m': 'val,a=b'});
+				}).then(done, done.fail);
+			});
+			it('captures headers', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				.then(function () {
+					return retry(
+						function () {
+							return got.get(apiUrl('original/echo'), {
+								headers: {'auth-head': 'auth-val'}
+							});
+						}, 3000, 5, function (err) {
+							return err.statusCode === 403;
+						});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.headers['auth-head']).toEqual('auth-val');
+				}).then(done, done.fail);
+			});
+			it('captures stage variables', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				.then(function () {
+					return apiGateway.createDeploymentAsync({
+						restApiId: apiId,
+						stageName: 'fromtest',
+						variables: {
+							lambdaVersion: 'original',
+							authKey: 'abs123',
+							authBucket: 'bucket123'
+						}
+					});
+				})
+				.then(function () {
+					return retry(
+						function () {
+							return got.get(apiUrl('fromtest/echo'));
+						}, 3000, 5, function (err) {
+							return err.statusCode === 403;
+						});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.env).toEqual({
+						lambdaVersion: 'original',
+						authKey: 'abs123',
+						authBucket: 'bucket123'
+					});
+				}).then(done, done.fail);
+			});
 		});
 		it('creates multiple methods for the same resource', function (done) {
 			var url = apiUrl('original/echo');
@@ -190,11 +253,38 @@ describe('rebuildWebApi', function () {
 				expect(params.context.path).toEqual('/echo');
 			}).then(done, done.fail);
 		});
-	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+
+
+		it('preserves old stage variables', function (done) {
+				return apiGateway.createDeploymentAsync({
+					restApiId: apiId,
+					stageName: 'original',
+					variables: {
+						lambdaVersion: 'original',
+						authKey: 'abs123',
+						authBucket: 'bucket123'
+					}
+				}).then(function () {
+					return underTest(newObjects.lambdaFunction, 'original', apiId, {'extra': { methods: ['GET']}}, awsRegion);
+				})
+				.then(function () {
+					return retry(
+						function () {
+							return got.get(apiUrl('original/extra'));
+						}, 3000, 5, function (err) {
+							return err.statusCode === 403;
+						});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.env).toEqual({
+						lambdaVersion: 'original',
+						authKey: 'abs123',
+						authBucket: 'bucket123'
+					});
+				}).then(done, done.fail);
+			});
+
+
 	});
 
 

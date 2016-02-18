@@ -149,6 +149,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			};
 			return Promise.map(existingResources, removeResourceMapper, {concurrency: 1});
 		},
+		readTemplates = function () {
+			return fs.readFileAsync(templateFile('apigw-params-json.txt'), 'utf8')
+			.then(function (inputTemplate) {
+				paramsInputTemplate = inputTemplate;
+			});
+		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
 			.then(getExistingResources)
@@ -171,11 +177,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		};
-	return getOwnerId().then(function () {
-		return fs.readFileAsync(templateFile('apigw-params-input.txt'), 'utf8');
-	}).then(function (inputTemplate) {
-		paramsInputTemplate = inputTemplate;
-	}).then(rebuildApi).then(deployApi);
+	return getOwnerId()
+		.then(readTemplates)
+		.then(rebuildApi)
+		.then(deployApi);
 };
 
 
