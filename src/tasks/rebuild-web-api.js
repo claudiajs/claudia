@@ -35,6 +35,28 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return rootResourceId;
 		},
 		createMethod = function (methodName, resourceId) {
+			var addCodeMapper = function (response) {
+				return apiGateway.putMethodResponseAsync({
+					restApiId: restApiId,
+					resourceId: resourceId,
+					httpMethod: methodName,
+					statusCode: response.code,
+					responseModels: {
+						'application/json': 'Empty'
+					}
+				}).then(function () {
+					return apiGateway.putIntegrationResponseAsync({
+						restApiId: restApiId,
+						resourceId: resourceId,
+						httpMethod: methodName,
+						statusCode: response.code,
+						selectionPattern: response.pattern,
+						responseTemplates: {
+							'application/json': ''
+						}
+					});
+				});
+			};
 			return apiGateway.putMethodAsync({
 				authorizationType: 'NONE', /*todo support config */
 				httpMethod: methodName,
@@ -54,25 +76,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
 			}).then(function () {
-				return apiGateway.putMethodResponseAsync({
-					restApiId: restApiId,
-					resourceId: resourceId,
-					httpMethod: methodName,
-					statusCode: '200',
-					responseModels: {
-						'application/json': 'Empty'
-					}
-				});
-			}).then(function () {
-				return apiGateway.putIntegrationResponseAsync({
-					restApiId: restApiId,
-					resourceId: resourceId,
-					httpMethod: methodName,
-					statusCode: '200',
-					responseTemplates: {
-						'application/json': ''
-					}
-				});
+				return Promise.map([{code: '200', pattern: '^$'}, {code: '500', pattern: ''}], addCodeMapper, {concurrency: 1});
 			});
 		},
 		createCorsHandler = function (resourceId, allowedMethods) {

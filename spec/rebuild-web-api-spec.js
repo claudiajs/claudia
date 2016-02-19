@@ -3,11 +3,12 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	querystring = require('querystring'),
-	got = require('got'),
 	tmppath = require('../src/util/tmppath'),
 	retry = require('../src/util/retry'),
+	got = require('got'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
+	callApi = require('../src/util/call-api'),
 	awsRegion = 'us-east-1';
 describe('rebuildWebApi', function () {
 	'use strict';
@@ -48,12 +49,7 @@ describe('rebuildWebApi', function () {
 		it('creates and links an API to a lambda version', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
 			.then(function () {
-				return retry(function () {
-						var url = apiUrl('original/echo');
-						return got.get(url);
-					}, 3000, 5, function (err) {
-						return err.statusCode === 403;
-					});
+				return callApi(apiId, awsRegion, '/original/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
 				expect(params.context.method).toEqual('GET');
@@ -176,7 +172,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 
 		});
-		it('creates multiple resources for the same resource', function (done) {
+		it('creates multiple resources for the same api', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}, 'hello': { methods: ['POST']}}, awsRegion)
 			.then(function () {
 				return retry(function () {
@@ -222,7 +218,56 @@ describe('rebuildWebApi', function () {
 				expect(contents.headers['access-control-allow-origin']).toEqual('*');
 			}).then(done, done.fail);
 		});
-
+	});
+	describe('handles errors gracefully', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/error-handling/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		describe('when no error configuration provided', function () {
+			beforeEach(function (done) {
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {'test': { methods: ['GET']}}, awsRegion).then(done, done.fail);
+			});
+			it('responds to successful requests with 200', function (done) {
+				callApi(apiId, awsRegion, '/latest/test?name=timmy').then(function (response) {
+					expect(response.body).toEqual('"timmy is OK"');
+					expect(response.statusCode).toEqual(200);
+				}).then(done, done.fail);
+			});
+			it('responds to text thrown as 500', function (done) {
+				callApi(apiId, awsRegion, '/latest/test', {resolveErrors: true}).then(function (response) {
+					expect(response.body).toEqual('{"errorMessage":"name not provided"}');
+					expect(response.statusCode).toEqual(500);
+					expect(response.headers['content-type']).toEqual('application/json');
+				}).then(done, done.fail);
+			});
+			it('responds to context.fail as 500', function (done) {
+				callApi(apiId, awsRegion, '/latest/test?name=mik', {resolveErrors: true}).then(function (response) {
+					expect(response.body).toEqual('{"errorMessage":"name too short"}');
+					expect(response.statusCode).toEqual(500);
+					expect(response.headers['content-type']).toEqual('application/json');
+				}).then(done, done.fail);
+			});
+			it('responds to Error thrown as 500', function (done) {
+				callApi(apiId, awsRegion, '/latest/test?name=' + encodeURIComponent(' '), {resolveErrors: true}).then(function (response) {
+					var error = JSON.parse(response.body);
+					expect(error.errorMessage).toEqual('name is blank');
+					expect(error.errorType).toEqual('Error');
+					expect(response.statusCode).toEqual(500);
+					expect(response.headers['content-type']).toEqual('application/json');
+				}).then(done, done.fail);
+			});
+		});
 	});
 
 	describe('when working with an existing  api', function () {
