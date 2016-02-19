@@ -15,7 +15,7 @@ Claudia helps you deploy and update Node.js microservices to Amazon Web Services
      * make query string, form post and request headers directly available (instead of having to specify API Gateway models and templates)
      * route errors to HTTP response code 500 (instead of the default 200 which breaks Promise-like request libraries)
 
-Just call `claudia create` or `claudia update`, and Claudia will pack up and post-process your code, grab all the dependencies, clean up irrelevant resources, upload to Lambda, set-up web APIs, and automatically handle process quirks such as retrying while IAM roles are propagating to Lambda. 
+Just call `claudia create` or `claudia update`, and Claudia will pack up and post-process your code, grab all the dependencies, clean up irrelevant resources, upload to Lambda, set-up web APIs, and update version aliases. 
 
 ## Examples, please!
 
