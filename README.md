@@ -10,7 +10,7 @@ Claudia helps you deploy and update Node.js microservices to Amazon Web Services
      * Allow `console.log` to pipe to CloudWatch
      * Add event sources with correct IAM privileges
      * Manage different versions for production, development and testing easier
-  * Automatically set up API Gateway APIs for commonly used scenarios, the way Javascript developers expect them to work:
+  * Automatically set up API Gateway resources the way Javascript developers expect them to work:
      * enable CORS for all endpoints (so you can call the APIs directly from a browser)
      * make query string, form post and request headers directly available (instead of having to specify API Gateway models and templates)
      * route errors to HTTP response code 500 (instead of the default 200 which breaks Promise-like request libraries)
@@ -35,7 +35,7 @@ AWS Lambda and API Gateway are incredibly flexible, but they can be tedious to s
 
 ### How does it compare to ...?
 
-_Claudia is a deployment utility, not a framework._ It does not abstract away AWS services, but instead makes them easier to get started with. As opposed to [Serverless](https://github.com/serverless/serverless) and [Seneca](http://senecajs.org/), Claudia is not trying to change the way you structure or run projects. The optional [API Builder](https://github.com/claudiajs/claudia-api-builder), which simplifies web routing, is the only additional runtime dependencym and it's structured to be minimal and standalone. Microservice frameworks have many nice plugins and extensions that can help kick-start standard tasks, but Claudia intentionally focuses only on deployment. One of our key design goals is not to introduce too much magic, and let people structure the code the way they want to.
+_Claudia is a deployment utility, not a framework._ It does not abstract away AWS services, but instead makes them easier to get started with. As opposed to [Serverless](https://github.com/serverless/serverless) and [Seneca](http://senecajs.org/), Claudia is not trying to change the way you structure or run projects. The optional [API Builder](https://github.com/claudiajs/claudia-api-builder), which simplifies web routing, is the only additional runtime dependency and it's structured to be minimal and standalone. Microservice frameworks have many nice plugins and extensions that can help kick-start standard tasks, but Claudia intentionally focuses only on deployment. One of our key design goals is not to introduce too much magic, and let people structure the code the way they want to.
 
 _Claudia is focused on Node.js_. As opposed to [Apex](https://github.com/apex/apex) and similar deployers, Claudia has a much narrower scope. It works only for Node.js, but it does it really well. Generic frameworks support more runtimes, but leave the developers to deal with language-specific quirks. Because Claudia focuses on Node.js, it automatically installs templates to convert parameters and results into objects that Javascript can consume easily, and makes things work the way Javascript developers expect out of the box.
 
