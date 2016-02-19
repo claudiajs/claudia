@@ -19,11 +19,11 @@ Just call `claudia create` or `claudia update`, and Claudia will pack up and pos
 
 ## Examples, please!
 
-For some nice examples, see the [Example Projects](https://github.com/claudiajs/example-projects)
+For some nice examples, see the [Example Projects](https://github.com/claudiajs/example-projects).
 
 ## Getting started 
 
-Please read the [getting started guide](getting_started.md).
+Please read the [getting started guide](getting_started.md) for information on setting up credentials and initialising your Lambda functions.
 
 ## Contributing
 
