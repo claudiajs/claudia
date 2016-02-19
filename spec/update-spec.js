@@ -2,9 +2,8 @@
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
-	got = require('got'),
 	tmppath = require('../src/util/tmppath'),
-	retry = require('../src/util/retry'),
+	callApi = require('../src/util/call-api'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -12,7 +11,14 @@ var underTest = require('../src/commands/update'),
 	awsRegion = 'us-east-1';
 describe('update', function () {
 	'use strict';
-	var workingdir, testRunName,  lambda, newObjects;
+	var workingdir, testRunName,  lambda, newObjects,
+		invoke = function (url, options) {
+			if (!options) {
+				options = {};
+			}
+			options.retry = 403;
+			return callApi(newObjects.restApi, awsRegion, url, options);
+		};
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -94,10 +100,7 @@ describe('update', function () {
 		});
 	});
 	describe('when the lambda project contains a web api', function () {
-		var originaldir, updateddir,
-			apiUrl = function (path) {
-				return 'https://' +	newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/' + path;
-			};
+		var originaldir, updateddir;
 		beforeEach(function (done) {
 			originaldir =  path.join(workingdir, 'original');
 			updateddir = path.join(workingdir, 'updated');
@@ -114,12 +117,7 @@ describe('update', function () {
 		});
 		it('updates the api using the configuration from the api module', function (done) {
 			return underTest({source: updateddir}).then(function () {
-				return retry(function () {
-					var url = apiUrl('latest/echo?name=mike');
-					return got.get(url);
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('latest/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
 				expect(params.queryString).toEqual({name: 'mike'});
@@ -132,12 +130,7 @@ describe('update', function () {
 		});
 		it('when the version is provided, creates the deployment with that name', function (done) {
 			underTest({source: updateddir, version: 'development'}).then(function () {
-				return retry(function () {
-					var url = apiUrl('development/echo?name=mike');
-					return got.get(url);
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
 				expect(params.queryString).toEqual({name: 'mike'});
@@ -150,24 +143,14 @@ describe('update', function () {
 		});
 		it('if using a different version, leaves the old one intact', function (done) {
 			underTest({source: updateddir, version: 'development'}).then(function () {
-				return retry(function () {
-					var url = apiUrl('original/hello');
-					return got.get(url);
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('original/hello');
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
 		it('if using the same version, rewrites the old one', function (done) {
 			underTest({source: updateddir, version: 'original'}).then(function () {
-				return retry(function () {
-					var url = apiUrl('original/echo?name=mike');
-					return got.get(url);
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('original/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
 				expect(params.queryString).toEqual({name: 'mike'});

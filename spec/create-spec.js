@@ -2,7 +2,7 @@
 var underTest = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	got = require('got'),
+	callApi = require('../src/util/call-api'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -170,10 +170,7 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), apiId,
-			apiUrl = function (path) {
-				return 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/' + path;
-			};
+		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), apiId;
 		beforeEach(function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
@@ -198,7 +195,7 @@ describe('create', function () {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
 			}).then(function () {
-				return got.get(apiUrl('latest/hello'));
+				return callApi(apiId, awsRegion, 'latest/hello');
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
@@ -208,7 +205,7 @@ describe('create', function () {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
 			}).then(function () {
-				return got.get(apiUrl('development/hello'));
+				return callApi(apiId, awsRegion, 'development/hello');
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
@@ -225,37 +222,9 @@ describe('create', function () {
 					}
 				});
 			}).then(function () {
-				return got.get(apiUrl('fromtest/hello'));
+				return callApi(apiId, awsRegion, 'fromtest/hello');
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
-			}).then(done, done.fail);
-		});
-		it('assembles the parameters in a way accessible to JavaScript', function (done) {
-			createFromDir('api-gw-echo').then(function (creationResult) {
-				apiId = creationResult.api && creationResult.api.id;
-				return apiGateway.createDeploymentAsync({
-					restApiId: apiId,
-					stageName: 'fromtest',
-					variables: {
-						lambdaVersion: 'latest',
-						authKey: 'abs123',
-						authBucket: 'bucket123'
-					}
-				});
-			}).then(function () {
-				var resUrl = apiUrl('fromtest/echo?param1=val1&param2=' + encodeURIComponent('val=2') + '&' + encodeURIComponent ('param&3') + '=val3');
-				return got.get(resUrl, {headers: {'auth-head': 'auth-val'}});
-			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({param1: 'val1', param2: 'val=2', 'param&3': 'val3'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.headers['auth-head']).toEqual('auth-val');
-				expect(params.env).toEqual({
-					authKey: 'abs123',
-					authBucket: 'bucket123',
-					lambdaVersion: 'latest'
-				});
 			}).then(done, done.fail);
 		});
 	});

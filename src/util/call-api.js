@@ -28,17 +28,26 @@ var https = require('https'),
 			}).on('error', function (e) {
 				reject(e);
 			});
+			if (callOptions.body) {
+				req.write(callOptions.body);
+			}
 			req.end();
 		});
 	};
 
 module.exports = function callApi(apiId, region, path, options) {
 	'use strict';
-	var callOptions = {hostname: apiId + '.execute-api.' + region + '.amazonaws.com', port: 443, path: path, method: 'GET'};
+	var callOptions = {hostname: apiId + '.execute-api.' + region + '.amazonaws.com', port: 443, path: '/' + path, method: 'GET'};
 	if (options) {
 		Object.keys(options).forEach(function (key) {
 			callOptions[key] = options[key];
 		});
+	}
+	if (callOptions.body) {
+		if (!callOptions.headers) {
+			callOptions.headers = {};
+		}
+		callOptions.headers['Content-Length'] = callOptions.body.length;
 	}
 	if (!callOptions.retry) {
 		return executeCall(callOptions);

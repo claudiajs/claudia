@@ -6,14 +6,20 @@ var underTest = require('../src/commands/set-version'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
-	got = require('got'),
-	retry = require('../src/util/retry'),
+	callApi = require('../src/util/call-api'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('setVersion', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects;
+	var workingdir, testRunName, iam, lambda, newObjects,
+		invoke = function (url, options) {
+			if (!options) {
+				options = {};
+			}
+			options.retry = 403;
+			return callApi(newObjects.restApi, awsRegion, url, options);
+		};
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -98,10 +104,6 @@ describe('setVersion', function () {
 		});
 	});
 	describe('when the lambda project contains a web api', function () {
-		var apiUrl = function (path) {
-			return 'https://' + newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/' + path;
-		};
-
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
@@ -113,11 +115,7 @@ describe('setVersion', function () {
 		it('creates a new api deployment', function (done) {
 			underTest({source: workingdir, version: 'dev'})
 			.then(function () {
-				return retry(function () {
-					return got.get(apiUrl('dev/echo'));
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('dev/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
 				expect(params.context.path).toEqual('/echo');
@@ -138,20 +136,20 @@ describe('setVersion', function () {
 			}).then(function () {
 				return underTest({source: workingdir, version: 'fromtest'});
 			}).then(function () {
-				return retry(function () {
-					return got.get(apiUrl('fromtest/echo'));
-				}, 3000, 5, function (err) {
-					return err.statusCode === 403;
-				});
+				return invoke('fromtest/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				var params;
+				params = JSON.parse(contents.body);
 				expect(params.context.path).toEqual('/echo');
 				expect(params.env).toEqual({
 					lambdaVersion: 'fromtest',
 					authKey: 'abs123',
 					authBucket: 'bucket123'
 				});
-			}).then(done, done.fail);
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail(e);
+			});
 		});
 	});
 });
