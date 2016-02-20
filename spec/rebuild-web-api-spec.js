@@ -10,7 +10,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	awsRegion = 'us-east-1';
 describe('rebuildWebApi', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, apiId,
+	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
 		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
 		invoke = function (url, options) {
 			if (!options) {
@@ -25,6 +25,7 @@ describe('rebuildWebApi', function () {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
+		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(function (done) {
 		this.destroyObjects(newObjects).catch(function (err) {
@@ -32,7 +33,9 @@ describe('rebuildWebApi', function () {
 		}).finally(done);
 	});
 
+
 	describe('when working with a blank api', function () {
+
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
@@ -48,8 +51,9 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 
 		});
+
 		it('creates and links an API to a lambda version', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
@@ -60,7 +64,7 @@ describe('rebuildWebApi', function () {
 		});
 		describe('request parameter processing', function () {
 			it('captures query string parameters', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return invoke('original/echo?name=mike&' + encodeURIComponent('to=m') + '=' + encodeURIComponent('val,a=b'));
 				}).then(function (contents) {
@@ -69,7 +73,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures headers', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'auth-head': 'auth3-val'}
@@ -80,7 +84,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures stage variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return apiGateway.createDeploymentAsync({
 						restApiId: apiId,
@@ -104,7 +108,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures form post variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['POST']}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -118,7 +122,7 @@ describe('rebuildWebApi', function () {
 			});
 		});
 		it('creates multiple methods for the same resource', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET', 'POST', 'PUT']}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
@@ -140,7 +144,8 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('creates multiple resources for the same api', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}, 'hello': { methods: ['POST']}}, awsRegion)
+			apiRouteConfig.routes.hello = {POST: {}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
@@ -156,7 +161,8 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('creates OPTIONS handlers for CORS', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}, 'hello': { methods: ['POST', 'GET']}}, awsRegion)
+			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo', {method: 'OPTIONS'});
 			}).then(function (contents) {
@@ -187,7 +193,7 @@ describe('rebuildWebApi', function () {
 		});
 		describe('when no error configuration provided', function () {
 			beforeEach(function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {'test': { methods: ['GET']}}, awsRegion).then(done, done.fail);
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
 			});
 			it('responds to successful requests with 200', function (done) {
 				callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -235,11 +241,12 @@ describe('rebuildWebApi', function () {
 				apiId = result.id;
 				newObjects.restApi = result.id;
 			}).then(function () {
-				return underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET']}, 'hello': { methods: ['POST']}}, awsRegion);
+				apiRouteConfig.routes.hello = {POST: {}};
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(done, done.fail);
 		});
 		it('adds extra paths from the new definition', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'extra': { methods: ['GET']}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
@@ -249,7 +256,8 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('adds extra methods to an existing path', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': { methods: ['GET', 'POST']}}, awsRegion)
+			apiRouteConfig.routes.echo.POST = {};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo', {method: 'POST'});
 			}).then(function (contents) {
@@ -268,7 +276,7 @@ describe('rebuildWebApi', function () {
 					authBucket: 'bucket123'
 				}
 			}).then(function () {
-				return underTest(newObjects.lambdaFunction, 'original', apiId, {'extra': { methods: ['GET']}}, awsRegion);
+				return underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion);
 			}).then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
@@ -278,6 +286,45 @@ describe('rebuildWebApi', function () {
 					authKey: 'abs123',
 					authBucket: 'bucket123'
 				});
+			}).then(done, done.fail);
+		});
+	});
+	describe('configuration versions', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+
+		it('upgrades v1 configuration if provided', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {'echo': {methods: ['GET', 'POST']}, 'hello': {methods : ['PUT']}}, awsRegion)
+			.then(function () {
+				return invoke('original/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+			}).then(function () {
+				return invoke('original/echo', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/echo');
+			}).then(function () {
+				return invoke('original/hello', {method: 'PUT'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('PUT');
+				expect(params.context.path).toEqual('/hello');
 			}).then(done, done.fail);
 		});
 	});

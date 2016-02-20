@@ -4,10 +4,11 @@ var aws = require('aws-sdk'),
 	templateFile = require('../util/template-file'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	fs = Promise.promisifyAll(require('fs'));
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion) {
 	'use strict';
 	var iam = Promise.promisifyAll(new aws.IAM()),
 		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
+		apiConfig,
 		existingResources,
 		rootResourceId,
 		ownerId,
@@ -128,7 +129,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			});
 		},
 		createPath = function (path) {
-			var resourceId;
+			var resourceId,
+				supportedMethods = Object.keys(apiConfig.routes[path]);
 			return apiGateway.createResourceAsync({
 				restApiId: restApiId,
 				parentId: rootResourceId,
@@ -139,9 +141,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				var createMethodMapper = function (methodName) {
 					return createMethod(methodName, resourceId);
 				};
-				return Promise.map(apiConfig[path].methods, createMethodMapper, {concurrency: 1});
+				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
 			}).then(function () {
-				return createCorsHandler(resourceId, apiConfig[path].methods);
+				return createCorsHandler(resourceId, supportedMethods);
 			});
 		},
 		dropSubresources = function () {
@@ -175,7 +177,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			.then(findRoot)
 			.then(dropSubresources)
 			.then(function () {
-				return Promise.map(Object.keys(apiConfig), createPath, {concurrency: 1});
+				return Promise.map(Object.keys(apiConfig.routes), createPath, {concurrency: 1});
 			});
 		},
 		deployApi = function () {
@@ -186,7 +188,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					lambdaVersion: functionVersion
 				}
 			});
+		},
+		upgradeConfig = function (config) {
+			var result;
+			if (config.version === 2) {
+				return config;
+			}
+			result = { version: 2, routes: {} };
+			Object.keys(config).forEach(function (route) {
+				result.routes[route] = {};
+				config[route].methods.forEach(function (methodName) {
+					result.routes[route][methodName] = {};
+				});
+			});
+			return result;
 		};
+	apiConfig = upgradeConfig(requestedConfig);
 	return getOwnerId()
 		.then(readTemplates)
 		.then(rebuildApi)

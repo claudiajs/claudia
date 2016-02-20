@@ -2,7 +2,8 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		'hello': { methods: ['GET']}
+		version: 2,
+		routes: { hello: { 'GET' : {} }}
 	};
 };
 exports.router = function (event, context) {
