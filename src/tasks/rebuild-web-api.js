@@ -49,6 +49,21 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}
 					return '500';
 				},
+				successCode = function () {
+					if (!methodOptions.success) {
+						return '200';
+					}
+					if (validHttpCode(methodOptions.success)) {
+						return String(methodOptions.success);
+					}
+					if (methodOptions.success && methodOptions.success.code && validHttpCode(methodOptions.success.code)) {
+						return String(methodOptions.success.code);
+					}
+					return '200';
+				},
+				isRedirect = function (code) {
+					return /3[0-9][0-9]/.test(code);
+				},
 				errorContentType = function () {
 					return methodOptions && methodOptions.error && methodOptions.error.contentType;
 				},
@@ -75,12 +90,19 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						responseTemplates = {},
 						responseModels = {},
 						contentType = response.contentType || 'application/json';
-					if (response.contentType) {
-						methodResponseParams['method.response.header.Content-Type'] = false;
-						integrationResponseParams['method.response.header.Content-Type'] = '\'' + response.contentType + '\'';
+
+					if (isRedirect(response.code)) {
+						methodResponseParams['method.response.header.Location'] = false;
+						integrationResponseParams['method.response.header.Location'] = 'integration.response.body';
+						responseTemplates[contentType] = '##';
+					} else {
+						if (response.contentType) {
+							methodResponseParams['method.response.header.Content-Type'] = false;
+							integrationResponseParams['method.response.header.Content-Type'] = '\'' + response.contentType + '\'';
+						}
+						responseTemplates[contentType] = response.template || '';
 					}
 					responseModels[contentType] = 'Empty';
-					responseTemplates[contentType] = response.template || '';
 					return apiGateway.putMethodResponseAsync({
 						restApiId: restApiId,
 						resourceId: resourceId,
@@ -119,8 +141,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
 			}).then(function () {
-				var results = [{code: '200', pattern: '', contentType: successContentType(), template: successTemplate()}];
-				if (errorCode() !== '200') {
+				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate()}];
+				if (errorCode() !== successCode()) {
 					results[0].pattern = '^$';
 					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate()});
 				}

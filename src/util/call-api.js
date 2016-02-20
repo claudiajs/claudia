@@ -19,7 +19,7 @@ var https = require('https'),
 						statusCode: res.statusCode,
 						statusMessage: res.statusMessage
 					};
-					if (callOptions.resolveErrors || response.statusCode == 200) {
+					if (callOptions.resolveErrors || (response.statusCode > 199 && response.statusCode < 400)) {
 						resolve(response);
 					} else {
 						reject(response);
