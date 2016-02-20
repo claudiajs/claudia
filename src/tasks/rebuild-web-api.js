@@ -2,6 +2,7 @@
 var aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	templateFile = require('../util/template-file'),
+	validHttpCode = require('../util/valid-http-code'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion) {
@@ -35,29 +36,70 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			rootResourceId = findByPath(existingResources, '/').id;
 			return rootResourceId;
 		},
-		createMethod = function (methodName, resourceId) {
-			var addCodeMapper = function (response) {
-				return apiGateway.putMethodResponseAsync({
-					restApiId: restApiId,
-					resourceId: resourceId,
-					httpMethod: methodName,
-					statusCode: response.code,
-					responseModels: {
-						'application/json': 'Empty'
+		createMethod = function (methodName, resourceId, methodOptions) {
+			var errorCode = function () {
+					if (!methodOptions.error) {
+						return '500';
 					}
-				}).then(function () {
-					return apiGateway.putIntegrationResponseAsync({
+					if (validHttpCode(methodOptions.error)) {
+						return String(methodOptions.error);
+					}
+					if (methodOptions.error && methodOptions.error.code && validHttpCode(methodOptions.error.code)) {
+						return String(methodOptions.error.code);
+					}
+					return '500';
+				},
+				errorContentType = function () {
+					return methodOptions && methodOptions.error && methodOptions.error.contentType;
+				},
+				successContentType = function () {
+					return methodOptions && methodOptions.success && methodOptions.success.contentType;
+				},
+				successTemplate = function () {
+					var contentType = successContentType();
+					if (!contentType || contentType === 'application/json') {
+						return '';
+					}
+					return '$input.path(\'$\')';
+				},
+				errorTemplate = function () {
+					var contentType = errorContentType();
+					if (!contentType || contentType === 'application/json') {
+						return '';
+					}
+					return '$input.path(\'$.errorMessage\')';
+				},
+				addCodeMapper = function (response) {
+					var methodResponseParams = {},
+						integrationResponseParams = {},
+						responseTemplates = {},
+						responseModels = {},
+						contentType = response.contentType || 'application/json';
+					if (response.contentType) {
+						methodResponseParams['method.response.header.Content-Type'] = false;
+						integrationResponseParams['method.response.header.Content-Type'] = '\'' + response.contentType + '\'';
+					}
+					responseModels[contentType] = 'Empty';
+					responseTemplates[contentType] = response.template || '';
+					return apiGateway.putMethodResponseAsync({
 						restApiId: restApiId,
 						resourceId: resourceId,
 						httpMethod: methodName,
 						statusCode: response.code,
-						selectionPattern: response.pattern,
-						responseTemplates: {
-							'application/json': ''
-						}
+						responseParameters: methodResponseParams,
+						responseModels: responseModels
+					}).then(function () {
+						return apiGateway.putIntegrationResponseAsync({
+							restApiId: restApiId,
+							resourceId: resourceId,
+							httpMethod: methodName,
+							statusCode: response.code,
+							selectionPattern: response.pattern,
+							responseParameters: integrationResponseParams,
+							responseTemplates: responseTemplates
+						});
 					});
-				});
-			};
+				};
 			return apiGateway.putMethodAsync({
 				authorizationType: 'NONE', /*todo support config */
 				httpMethod: methodName,
@@ -77,7 +119,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
 			}).then(function () {
-				return Promise.map([{code: '200', pattern: '^$'}, {code: '500', pattern: ''}], addCodeMapper, {concurrency: 1});
+				var results = [{code: '200', pattern: '', contentType: successContentType(), template: successTemplate()}];
+				if (errorCode() !== '200') {
+					results[0].pattern = '^$';
+					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate()});
+				}
+				return Promise.map(results, addCodeMapper, {concurrency: 1});
 			});
 		},
 		createCorsHandler = function (resourceId, allowedMethods) {
@@ -139,7 +186,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				resourceId = resource.id;
 			}).then(function () {
 				var createMethodMapper = function (methodName) {
-					return createMethod(methodName, resourceId);
+					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
 				};
 				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
 			}).then(function () {

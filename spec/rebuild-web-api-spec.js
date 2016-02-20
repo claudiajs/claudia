@@ -176,10 +176,10 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 	});
-	describe('handles errors gracefully', function () {
+	describe('response customisation', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/error-handling/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
@@ -190,39 +190,169 @@ describe('rebuildWebApi', function () {
 				apiId = result.id;
 				newObjects.restApi = result.id;
 			}).then(done, done.fail);
+
 		});
-		describe('when no error configuration provided', function () {
-			beforeEach(function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
-			});
-			it('responds to successful requests with 200', function (done) {
-				callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
-					expect(response.body).toEqual('"timmy is OK"');
-					expect(response.statusCode).toEqual(200);
+		describe('handles success', function () {
+			it('returns 200 and json template if not customised', function (done) {
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion)
+				.then(function () {
+					return callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+						expect(response.headers['content-type']).toEqual('application/json');
+					});
 				}).then(done, done.fail);
 			});
-			it('responds to text thrown as 500', function (done) {
-				callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
-					expect(response.body).toEqual('{"errorMessage":"name not provided"}');
-					expect(response.statusCode).toEqual(500);
-					expect(response.headers['content-type']).toEqual('application/json');
-				}).then(done, done.fail);
+			['text/html', 'text/plain', 'application/xml', 'text/xml'].forEach(function (contentType) {
+				it('returns unescaped ' + contentType + ' if required', function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: {contentType: contentType}}}}}, awsRegion)
+					.then(function () {
+						return callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+							expect(response.body).toEqual('timmy is OK');
+							expect(response.statusCode).toEqual(200);
+							expect(response.headers['content-type']).toEqual(contentType);
+						});
+					}).then(done, done.fail);
+				});
 			});
-			it('responds to context.fail as 500', function (done) {
-				callApi(apiId, awsRegion, 'latest/test?name=mik', {resolveErrors: true}).then(function (response) {
-					expect(response.body).toEqual('{"errorMessage":"name too short"}');
-					expect(response.statusCode).toEqual(500);
-					expect(response.headers['content-type']).toEqual('application/json');
-				}).then(done, done.fail);
+		});
+		describe('handles errors gracefully', function () {
+			describe('when no error configuration provided', function () {
+				beforeEach(function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
+				});
+				it('responds to successful requests with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+					}).then(done, done.fail);
+				});
+				it('responds to text thrown as 500', function (done) {
+					callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name not provided"}');
+						expect(response.statusCode).toEqual(500);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+				it('responds to context.fail as 500', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=mik', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name too short"}');
+						expect(response.statusCode).toEqual(500);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+				it('responds to Error thrown as 500', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=' + encodeURIComponent(' '), {resolveErrors: true}).then(function (response) {
+						var error = JSON.parse(response.body);
+						expect(error.errorMessage).toEqual('name is blank');
+						expect(error.errorType).toEqual('Error');
+						expect(response.statusCode).toEqual(500);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
 			});
-			it('responds to Error thrown as 500', function (done) {
-				callApi(apiId, awsRegion, 'latest/test?name=' + encodeURIComponent(' '), {resolveErrors: true}).then(function (response) {
-					var error = JSON.parse(response.body);
-					expect(error.errorMessage).toEqual('name is blank');
-					expect(error.errorType).toEqual('Error');
-					expect(response.statusCode).toEqual(500);
-					expect(response.headers['content-type']).toEqual('application/json');
-				}).then(done, done.fail);
+			describe('when the method has an error code', function () {
+				beforeEach(function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: 503}}}}, awsRegion).then(done, done.fail);
+				});
+				it('responds to successful requests with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+					}).then(done, done.fail);
+				});
+				it('responds to text thrown with configured error code', function (done) {
+					callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name not provided"}');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+				it('responds to context.fail with configured error code', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=mik', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name too short"}');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+				it('responds to Error thrown with configured error code', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=' + encodeURIComponent(' '), {resolveErrors: true}).then(function (response) {
+						var error = JSON.parse(response.body);
+						expect(error.errorMessage).toEqual('name is blank');
+						expect(error.errorType).toEqual('Error');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+			});
+			describe('when the method has an error code as an object', function () {
+				beforeEach(function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: {code: 503}}}}}, awsRegion).then(done, done.fail);
+				});
+				it('responds to successful requests with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+					}).then(done, done.fail);
+				});
+				it('responds to text thrown with configured error code', function (done) {
+					callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name not provided"}');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
+			});
+
+			describe('when the method has an error content type text/plain', function () {
+				beforeEach(function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: {code: 503, contentType: 'text/plain'}}}}}, awsRegion).then(done, done.fail);
+				});
+				it('responds to successful requests with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+					}).then(done, done.fail);
+				});
+				it('responds to text thrown with only the text message', function (done) {
+					callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('name not provided');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('text/plain');
+					}).then(done, done.fail);
+				});
+				it('responds to context.fail with only the text message', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=mik', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('name too short');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('text/plain');
+					}).then(done, done.fail);
+				});
+				it('responds to Error thrown with only the text message', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=' + encodeURIComponent(' '), {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('name is blank');
+						expect(response.statusCode).toEqual(503);
+						expect(response.headers['content-type']).toEqual('text/plain');
+					}).then(done, done.fail);
+				});
+			});
+			describe('when the method asks for error code to be 200', function () {
+				beforeEach(function (done) {
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: 200}}}}, awsRegion).then(done, done.fail);
+				});
+				it('responds to successful requests with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
+						expect(response.body).toEqual('"timmy is OK"');
+						expect(response.statusCode).toEqual(200);
+					}).then(done, done.fail);
+				});
+				it('responds to text thrown with 200', function (done) {
+					callApi(apiId, awsRegion, 'latest/test', {resolveErrors: true}).then(function (response) {
+						expect(response.body).toEqual('{"errorMessage":"name not provided"}');
+						expect(response.statusCode).toEqual(200);
+						expect(response.headers['content-type']).toEqual('application/json');
+					}).then(done, done.fail);
+				});
 			});
 		});
 	});
