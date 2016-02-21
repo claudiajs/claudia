@@ -1,7 +1,7 @@
 {
   "name": "claudia",
   "version": "1.0.2",
-  "description": "deploy Node.js microservices to AWS easier",
+  "description": "deploy Node.js microservices to AWS easily",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -16,12 +16,13 @@
     "microservices",
     "lambda",
     "api",
-    "s3"
+    "s3",
+    "claudia"
   ],
   "bugs": {
     "url": "https://github.com/claudiajs/claudia/issues"
   },
-  "homepage": "http://claudiajs.com",
+  "homepage": "https://github.com/claudiajs/claudia",
   "files": [
     "src",
     "*.md",
