@@ -178,6 +178,23 @@ describe('rebuildWebApi', function () {
 				expect(contents.headers['access-control-allow-origin']).toEqual('*');
 			}).then(done, done.fail);
 		});
+		it('appends CORS to all methods', function (done) {
+			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return invoke('original/echo', {method: 'GET'});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(function () {
+				return invoke('original/hello', {method: 'GET'});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(function () {
+				return invoke('original/hello', {method: 'POST'});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(done, done.fail);
+		});
 	});
 	describe('response customisation', function () {
 		beforeEach(function (done) {

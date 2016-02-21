@@ -85,8 +85,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return '$input.path(\'$.errorMessage\')';
 				},
 				addCodeMapper = function (response) {
-					var methodResponseParams = {},
-						integrationResponseParams = {},
+					var methodResponseParams = {
+							'method.response.header.Access-Control-Allow-Origin': false
+						},
+						integrationResponseParams = {
+							'method.response.header.Access-Control-Allow-Origin': '\'*\''
+						},
 						responseTemplates = {},
 						responseModels = {},
 						contentType = response.contentType || 'application/json';
