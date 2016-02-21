@@ -10,7 +10,7 @@ module.exports = function setVersion(options) {
 		iam = Promise.promisifyAll(new aws.IAM()),
 		updateApi = function () {
 			return iam.getUserAsync().then(function (result) {
-				return result.User.UserId;
+				return result.User.Arn.split(':')[4];
 			}).then(function (ownerId) {
 				return allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region);
 			}).then(function () {

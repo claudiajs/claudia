@@ -17,7 +17,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		inputTemplateForm,
 		getOwnerId = function () {
 			return iam.getUserAsync().then(function (result) {
-				ownerId = result.User.UserId;
+				ownerId = result.User.Arn.split(':')[4];
 			});
 		},
 		findByPath = function (resourceItems, path) {
