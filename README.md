@@ -2,16 +2,16 @@
 
 Claudia helps you deploy Node.js microservices to Amazon Web Services easily. It automates and simplifies deployment workflows and error prone tasks, so you can focus on important problems and not have to worry about AWS service quirks. Here are some of the things you can do with Claudia:
 
-  * Create or update a Lambda function and a Web API from Node.js projects hassle-free
+  * Create or update Lambda functions and Web APIs from Node.js projects hassle-free:
     * deploy using a single command (instead of [120 lines of shell scripts](https://github.com/gojko/nodejs-aws-microservice-examples/blob/master/web-parameter-processing/setup.sh))
     * automatically handle AWS service quirks such as waiting for IAM roles to propagate to Lambda
-    * use a single Lambda function for all the web API operations, to simplify code management and avoid downtime and inconsistencies during updates
+    * simplifying code management and avoide inconsistencies by using a single Lambda function for all the web API operations
   * Automatically configure the Lambda function for commonly useful tasks:
      * Allow `console.log` to pipe to CloudWatch
      * Add event sources with correct IAM privileges
-     * Manage different versions for production, development and testing easier
+     * Manage different versions for production, development and testing easily 
   * Automatically set up API Gateway resources the way Javascript developers expect them to work:
-     * enable CORS for all endpoints (so you can call the APIs directly from a browser)
+     * enable CORS for all endpoints (so your users' browsers can call the APIs directly)
      * make query string, form post and request headers directly available (instead of having to specify API Gateway models and templates)
      * route errors to HTTP response code 500 (instead of the default 200 which breaks Promise-like request libraries)
 
@@ -42,5 +42,3 @@ _Claudia is focused on Node.js_. As opposed to [Apex](https://github.com/apex/ap
 _Claudia helps you get simple stuff done, quickly_. As opposed to [Swagger](http://swagger.io/), Claudia has fewer features, but does simple stuff easier. Claudia doesn't require you to define APIs in separate interface files. There's no need to learn a special interface syntax, no need to keep your definition spread across multiple files and introduce the overhead of coordination and maintenance -- just [write the code](https://github.com/claudiajs/example-projects/blob/master/web-api/web.js) to handle requests. So, for example, Claudia can help you get started easily with a simple web API, but you won't be able to export it easily into iOS or Android SDKs. If you want to use a heavy interface-definition library you still can, and Claudia can deploy it, but for most of what we needed to do, that was a huge overkill. 
 
 So, as a summary, if you want to build simple services and run them with AWS Lambda, and you're looking for something low-overhead,  easy to get started with, and you only want to use the Node.js runtime, Claudia is a good choice. If you want to export SDKs, need fine-grained control over the distribution, allocation or discovery of services, need support for different runtimes and so on, use one of the alternative tools.
-
-
