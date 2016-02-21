@@ -5,7 +5,7 @@ Claudia helps you deploy Node.js microservices to Amazon Web Services easily. It
   * Create or update Lambda functions and Web APIs from Node.js projects hassle-free:
     * deploy using a single command (instead of [120 lines of shell scripts](https://github.com/gojko/nodejs-aws-microservice-examples/blob/master/web-parameter-processing/setup.sh))
     * automatically handle AWS service quirks such as waiting for IAM roles to propagate to Lambda
-    * simplifying code management and avoide inconsistencies by using a single Lambda function for all the web API operations
+    * simplify code management and avoid inconsistencies by using a single Lambda function for all the web API operations
   * Automatically configure the Lambda function for commonly useful tasks:
      * Allow `console.log` to pipe to CloudWatch
      * Add event sources with correct IAM privileges
