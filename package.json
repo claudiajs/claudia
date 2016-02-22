@@ -25,6 +25,7 @@
   "homepage": "https://github.com/claudiajs/claudia",
   "files": [
     "src",
+    "logo.png",
     "*.md",
     "*.js",
     "json-templates",
