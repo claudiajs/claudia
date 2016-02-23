@@ -57,4 +57,23 @@ describe('testLambda', function () {
 			done();
 		}, done.fail);
 	});
+	it('invokes a lambda function with a payload', function (done) {
+		var eventData = {
+			who: 'me',
+			sub: {name: 'good', val: 2}
+		};
+		shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+		}).then(function () {
+			var eventFile = path.join(workingdir, 'event.json');
+			fs.writeFileSync(eventFile, JSON.stringify(eventData), 'utf8');
+			return underTest({source: workingdir, event: eventFile});
+		}).then(function (result) {
+			expect(result.StatusCode).toEqual(200);
+			expect(JSON.parse(result.Payload)).toEqual(eventData);
+			done();
+		}, done.fail);
+	});
 });
