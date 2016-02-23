@@ -14,6 +14,8 @@ COMMANDS are:
                           the Claudia API Builder.
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
       --version       [Optional] A version alias to automatically assign to the new function (eg. development)
+      --role          [Optional] The name of an existing role to assign to the function.
+                          If not supplied, Claudia will create a new role
 
     update        Create a new version of the Lambda function using project files. 
       --source       [Optional] Directory with project files. Defaults to current directory.

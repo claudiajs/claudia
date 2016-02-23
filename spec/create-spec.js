@@ -1,8 +1,9 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
 var underTest = require('../src/commands/create'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
+	templateFile = require('../src/util/template-file'),
+	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -25,7 +26,7 @@ describe('create', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
+		iam = Promise.promisifyAll(new aws.IAM());
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		newObjects = {workingdir: workingdir};
@@ -103,11 +104,36 @@ describe('create', function () {
 		});
 		it('creates the IAM role for the lambda', function (done) {
 			createFromDir('hello-world').then(function () {
-				var getRole = Promise.promisify(iam.getRole.bind(iam));
-				return getRole({RoleName: testRunName + '-executor'});
+				return iam.getRoleAsync({RoleName: testRunName + '-executor'});
 			}).then(function (role) {
 				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
 			}).then(done, done.fail);
+		});
+		it('does not create a role if the role option is provided, uses the provided one instead', function (done) {
+			var createdRole;
+
+			return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+			.then(function (lambdaRolePolicy) {
+				return iam.createRoleAsync({
+					RoleName: testRunName + '-manual',
+					AssumeRolePolicyDocument: lambdaRolePolicy
+				});
+			}).then(function (result) {
+				createdRole = result.Role;
+				config.role = testRunName + '-manual';
+				return createFromDir('hello-world');
+			}).then(function (createResult) {
+				expect(createResult.lambda.role).toEqual(testRunName + '-manual');
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaMetadata) {
+				expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
+			}).then(function () {
+				return iam.getRoleAsync({RoleName: testRunName + '-executor'});
+			}).then(function () {
+					done.fail('Executor role was created');
+				},
+				done);
 		});
 		it('configures the function in AWS so it can be invoked', function (done) {
 			createFromDir('hello-world').then(function () {

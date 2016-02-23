@@ -62,6 +62,10 @@ beforeEach(function () {
 				return deleteFunction({FunctionName: newObjects.lambdaFunction});
 			}
 		}).then(function () {
+			if (newObjects.lambdaFunction) {
+				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction});
+			}
+		}).then(function () {
 			if (newObjects.lambdaRole) {
 				return destroyRole(newObjects.lambdaRole);
 			}

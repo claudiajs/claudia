@@ -98,17 +98,25 @@ module.exports = function create(options) {
 			).then(function () {
 				return config;
 			});
+		},
+		loadRole = function () {
+			if (options.role) {
+				return iam.getRoleAsync({RoleName: options.role});
+			} else {
+				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+					.then(function (lambdaRolePolicy) {
+						return iam.createRoleAsync({
+							RoleName: options.name + '-executor',
+							AssumeRolePolicyDocument: lambdaRolePolicy
+						});
+					});
+			}
 		};
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-	.then(function (lambdaRolePolicy) {
-		return iam.createRoleAsync({
-			RoleName: options.name + '-executor',
-			AssumeRolePolicyDocument: lambdaRolePolicy
-		});
-	}).then(function (result) {
+	return loadRole()
+	.then(function (result) {
 		roleMetadata = result;
 	}).then(function () {
 		return addPolicy('log-writer', options.name + '-executor');
