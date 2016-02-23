@@ -49,7 +49,7 @@ module.exports = function create(options) {
 			}
 			return lambda.createFunctionPromise(functionMeta).catch(function (error) {
 				if (error && error.cause && error.cause.message == iamPropagationError) {
-					return Promise.delay(2000).then(function () {
+					return Promise.delay(3000).then(function () {
 						return createLambda(zipFile, roleArn, retriesLeft - 1);
 					});
 				} else {
@@ -111,6 +111,25 @@ module.exports = function create(options) {
 						});
 					});
 			}
+		},
+		addExtraPolicies = function (filePattern) {
+			var files;
+			files = shell.ls('-R', filePattern);
+			if (shell.test('-d', filePattern)) {
+				files = files.map(function (filePath) {
+					return path.join(filePattern, filePath);
+				});
+			}
+			files = files.filter(function (filePath) {
+				return shell.test('-f', filePath);
+			});
+			if (!files.length) {
+				return Promise.reject('no files match additional policies (' + filePattern + ')');
+			}
+			return Promise.map(files, function (fileName) {
+				var policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
+				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
+			});
 		};
 	if (validationError()) {
 		return Promise.reject(validationError());
@@ -119,7 +138,11 @@ module.exports = function create(options) {
 	.then(function (result) {
 		roleMetadata = result;
 	}).then(function () {
-		return addPolicy('log-writer', options.name + '-executor');
+		return addPolicy('log-writer', roleMetadata.Role.RoleName);
+	}).then(function () {
+		if (options.policies) {
+			return addExtraPolicies(options.policies);
+		}
 	}).then(function () {
 		return collectFiles(source);
 	}).then(zipdir)

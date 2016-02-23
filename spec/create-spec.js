@@ -13,7 +13,9 @@ describe('create', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
 		createFromDir = function (dir) {
-			shell.mkdir(workingdir);
+			if (!shell.test('-e', workingdir)) {
+				shell.mkdir('-p', workingdir);
+			}
 			shell.cp('-r', 'spec/test-projects/' + (dir || 'hello-world') + '/*', workingdir);
 			return underTest(config).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
@@ -30,7 +32,7 @@ describe('create', function () {
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
@@ -86,22 +88,7 @@ describe('create', function () {
 			done();
 		});
 	});
-	describe('creating the function', function () {
-		it('returns an object containing the new claudia configuration', function (done) {
-			createFromDir('hello-world').then(function (creationResult) {
-				expect(creationResult.lambda).toEqual({
-					role: testRunName + '-executor',
-					region: awsRegion,
-					name: testRunName
-				});
-				return '';
-			}).then(done, done.fail);
-		});
-		it('saves the configuration into claudia.json', function (done) {
-			createFromDir('hello-world').then(function (creationResult) {
-				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
-			}).then(done, done.fail);
-		});
+	describe('role management', function () {
 		it('creates the IAM role for the lambda', function (done) {
 			createFromDir('hello-world').then(function () {
 				return iam.getRoleAsync({RoleName: testRunName + '-executor'});
@@ -135,6 +122,108 @@ describe('create', function () {
 				},
 				done);
 		});
+		it('allows the function to log to cloudwatch', function (done) {
+			var createLogGroup = Promise.promisify(logs.createLogGroup.bind(logs)),
+				createLogStream = Promise.promisify(logs.createLogStream.bind(logs)),
+				getLogEvents = Promise.promisify(logs.getLogEvents.bind(logs));
+			createLogGroup({logGroupName: testRunName + '-group'}).then(function () {
+				newObjects.logGroup = testRunName + '-group';
+				return createLogStream({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+			}).then(function () {
+				return createFromDir('cloudwatch-log');
+			}).then(function () {
+				return lambda.invokePromise({
+					FunctionName: testRunName,
+					Payload: JSON.stringify({
+						region: awsRegion,
+						stream: testRunName + '-stream',
+						group: testRunName + '-group',
+						message: 'hello ' + testRunName
+					})
+				});
+			}).then(function () {
+				return getLogEvents({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+			}).then(function (logEvents) {
+				expect(logEvents.events.length).toEqual(1);
+				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
+			}).then(done, done.fail);
+		});
+		it('loads additional policies from a policies directory recursively, if provided', function (done) {
+			var sesPolicy = {
+					'Version': '2012-10-17',
+					'Statement': [{
+						'Effect': 'Allow',
+						'Action': [
+							'ses:SendEmail'
+						],
+						'Resource': ['*']
+					}]
+				},
+				policiesDir = path.join(workingdir, 'policies');
+			shell.mkdir('-p', path.join(policiesDir, 'subdir'));
+			fs.writeFileSync(path.join(workingdir, 'policies', 'subdir', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
+			config.policies = policiesDir;
+			createFromDir('hello-world').then(function () {
+				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+			}).then(function (result) {
+				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
+			}).then(function () {
+				return iam.getRolePolicyAsync({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'});
+			}).then(function (policy) {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
+			}).then(done, done.fail);
+		});
+		it('loads additional policies from a file pattern, if provided', function (done) {
+			var sesPolicy = {
+					'Version': '2012-10-17',
+					'Statement': [{
+						'Effect': 'Allow',
+						'Action': [
+							'ses:SendEmail'
+						],
+						'Resource': ['*']
+					}]
+				},
+				policiesDir = path.join(workingdir, 'policies');
+			shell.mkdir('-p', path.join(policiesDir));
+			fs.writeFileSync(path.join(workingdir, 'policies', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
+			config.policies = path.join(policiesDir, '*.json');
+			createFromDir('hello-world').then(function () {
+				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+			}).then(function (result) {
+				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
+			}).then(function () {
+				return iam.getRolePolicyAsync({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'});
+			}).then(function (policy) {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
+			}).then(done, done.fail);
+		});
+		it('fails if the policies argument does not match any files', function (done) {
+			config.policies = path.join('*.NOT');
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('no files match additional policies (*.NOT)');
+				done();
+			});
+		});
+
+
+	});
+	describe('creating the function', function () {
+		it('returns an object containing the new claudia configuration', function (done) {
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: testRunName + '-executor',
+					region: awsRegion,
+					name: testRunName
+				});
+				return '';
+			}).then(done, done.fail);
+		});
+		it('saves the configuration into claudia.json', function (done) {
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
+			}).then(done, done.fail);
+		});
 		it('configures the function in AWS so it can be invoked', function (done) {
 			createFromDir('hello-world').then(function () {
 				return lambda.invokePromise({FunctionName: testRunName});
@@ -166,32 +255,6 @@ describe('create', function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
-			}).then(done, done.fail);
-		});
-		it('allows the function to log to cloudwatch', function (done) {
-			var createLogGroup = Promise.promisify(logs.createLogGroup.bind(logs)),
-				createLogStream = Promise.promisify(logs.createLogStream.bind(logs)),
-				getLogEvents = Promise.promisify(logs.getLogEvents.bind(logs));
-			createLogGroup({logGroupName: testRunName + '-group'}).then(function () {
-				newObjects.logGroup = testRunName + '-group';
-				return createLogStream({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
-			}).then(function () {
-				return createFromDir('cloudwatch-log');
-			}).then(function () {
-				return lambda.invokePromise({
-					FunctionName: testRunName,
-					Payload: JSON.stringify({
-						region: awsRegion,
-						stream: testRunName + '-stream',
-						group: testRunName + '-group',
-						message: 'hello ' + testRunName
-					})
-				});
-			}).then(function () {
-				return getLogEvents({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
-			}).then(function (logEvents) {
-				expect(logEvents.events.length).toEqual(1);
-				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
 			}).then(done, done.fail);
 		});
 	});

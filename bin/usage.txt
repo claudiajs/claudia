@@ -7,13 +7,14 @@ COMMANDS are:
     create        Create the initial lambda function and related security role.
       --name          lambda function name (eg awesome-microservice)
       --region        AWS region where to create the lambda (eg us-east-1)
+      --version       [Optional] A version alias to automatically assign to the new function (eg. development)
       --handler       [Optional] Main function for Lambda to execute, as module.function 
                           (Eg if it's in the main.js file and exported as router, this would be main.router)
       --api-module    [Optional] The main module to use when creating Web APIs. If you provide this
                           parameter, the --handler option is ignored. This should be a module created using
                           the Claudia API Builder.
       --source        [Optional] Directory with project files (optional. Defaults to current directory.
-      --version       [Optional] A version alias to automatically assign to the new function (eg. development)
+      --policies      [Optional] A directory or file pattern for additional IAM policies to automatically include
       --role          [Optional] The name of an existing role to assign to the function.
                           If not supplied, Claudia will create a new role
 

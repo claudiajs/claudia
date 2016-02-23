@@ -63,7 +63,9 @@ beforeEach(function () {
 			}
 		}).then(function () {
 			if (newObjects.lambdaFunction) {
-				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction});
+				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).catch(function () {
+					return true;
+				});
 			}
 		}).then(function () {
 			if (newObjects.lambdaRole) {
