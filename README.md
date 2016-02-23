@@ -1,4 +1,4 @@
-[![Claudia.js logo](logo.png)](https://vimeo.com/156232471)
+[![Claudia.js logo](logo-300px.png)](https://vimeo.com/156232471){:style="width:150px; height:150px;float: left;margin-right: 1em;margin-bottom: 1em;"}
 
 Claudia helps you deploy Node.js microservices to Amazon Web Services easily. It automates and simplifies deployment workflows and error prone tasks, so you can focus on important problems and not have to worry about AWS service quirks. [Check out this video to see how to create and deploy a microservice in under 5 minutes](https://vimeo.com/156232471).
 
