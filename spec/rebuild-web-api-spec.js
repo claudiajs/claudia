@@ -148,6 +148,7 @@ describe('rebuildWebApi', function () {
 		});
 		it('creates multiple resources for the same api', function (done) {
 			apiRouteConfig.routes.hello = {POST: {}};
+			apiRouteConfig.routes[''] = {GET: {}};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
@@ -161,7 +162,16 @@ describe('rebuildWebApi', function () {
 				var params = JSON.parse(contents.body);
 				expect(params.context.method).toEqual('POST');
 				expect(params.context.path).toEqual('/hello');
-			}).then(done, done.fail);
+			}).then(function () {
+				return invoke('original/');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/');
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail(e);
+			});
 		});
 		it('creates OPTIONS handlers for CORS', function (done) {
 			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
@@ -180,6 +190,7 @@ describe('rebuildWebApi', function () {
 		});
 		it('appends CORS to all methods', function (done) {
 			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+			apiRouteConfig.routes[''] = {GET: {}};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
 				return invoke('original/echo', {method: 'GET'});
@@ -191,6 +202,10 @@ describe('rebuildWebApi', function () {
 				expect(contents.headers['access-control-allow-origin']).toEqual('*');
 			}).then(function () {
 				return invoke('original/hello', {method: 'POST'});
+			}).then(function (contents) {
+				expect(contents.headers['access-control-allow-origin']).toEqual('*');
+			}).then(function () {
+				return invoke('original/', {method: 'GET'});
 			}).then(function (contents) {
 				expect(contents.headers['access-control-allow-origin']).toEqual('*');
 			}).then(done, done.fail);
@@ -422,6 +437,7 @@ describe('rebuildWebApi', function () {
 				newObjects.restApi = result.id;
 			}).then(function () {
 				apiRouteConfig.routes.hello = {POST: {}};
+				apiRouteConfig.routes[''] = {GET: {}, PUT: {}};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(done, done.fail);
 		});
@@ -444,6 +460,27 @@ describe('rebuildWebApi', function () {
 				var params = JSON.parse(contents.body);
 				expect(params.context.method).toEqual('POST');
 				expect(params.context.path).toEqual('/echo');
+			}).then(done, done.fail);
+		});
+		it('replaces root path handlers', function (done) {
+			apiRouteConfig.routes[''] = { POST: {}, GET: {} };
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return invoke('original/', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/');
+			}).then(function () {
+				return invoke('original/', {method: 'GET'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/');
+			}).then(function () {
+				return invoke('original/', {method: 'PUT', retry: false, resolveErrors: true});
+			}).then(function (response) {
+				expect(response.statusCode).toEqual(403);
 			}).then(done, done.fail);
 		});
 		it('preserves old stage variables', function (done) {

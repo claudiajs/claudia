@@ -33,7 +33,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return apiGateway.getResourcesAsync({restApiId: restApiId, limit: 499});
 		},
 		findRoot = function () {
-			rootResourceId = findByPath(existingResources, '/').id;
+			var rootResource = findByPath(existingResources, '/');
+			rootResourceId = rootResource.id;
 			return rootResourceId;
 		},
 		createMethod = function (methodName, resourceId, methodOptions) {
@@ -201,23 +202,41 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			});
 		},
-		createPath = function (path) {
-			var resourceId,
-				supportedMethods = Object.keys(apiConfig.routes[path]);
-			return apiGateway.createResourceAsync({
-				restApiId: restApiId,
-				parentId: rootResourceId,
-				pathPart: path
-			}).then(function (resource) {
-				resourceId = resource.id;
-			}).then(function () {
-				var createMethodMapper = function (methodName) {
+		configurePath = function (path) {
+			var resourceId, findResource,
+				supportedMethods = Object.keys(apiConfig.routes[path]),
+				createMethodMapper = function (methodName) {
 					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
 				};
+			if (path === '') {
+				resourceId = rootResourceId;
+				findResource = Promise.resolve();
+			} else {
+				findResource = apiGateway.createResourceAsync({
+					restApiId: restApiId,
+					parentId: rootResourceId,
+					pathPart: path
+				}).then(function (resource) {
+					resourceId = resource.id;
+				});
+			}
+			return findResource.then(function () {
 				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
 			}).then(function () {
 				return createCorsHandler(resourceId, supportedMethods);
 			});
+		},
+		dropMethods = function (resource) {
+			var dropMethodMapper = function (method) {
+				return apiGateway.deleteMethodAsync({
+					resourceId: resource.id,
+					restApiId: restApiId,
+					httpMethod: method
+				});
+			};
+			if (resource.resourceMethods) {
+				return Promise.map(Object.keys(resource.resourceMethods), dropMethodMapper, {concurrency: 1});
+			}
 		},
 		dropSubresources = function () {
 			var removeResourceMapper = function (resource) {
@@ -226,6 +245,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						resourceId: resource.id,
 						restApiId: restApiId
 					});
+				} else {
+					return dropMethods(resource);
 				}
 			};
 			return Promise.map(existingResources, removeResourceMapper, {concurrency: 1});
@@ -246,11 +267,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			.then(function (resources) {
 				existingResources = resources.items;
 				return existingResources;
-			})
-			.then(findRoot)
+			}).then(findRoot)
 			.then(dropSubresources)
 			.then(function () {
-				return Promise.map(Object.keys(apiConfig.routes), createPath, {concurrency: 1});
+				return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
 			});
 		},
 		deployApi = function () {
