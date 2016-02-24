@@ -15,6 +15,7 @@ beforeEach(function () {
 			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
 			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
 			s3 = Promise.promisifyAll(new aws.S3()),
+			events = Promise.promisifyAll(new aws.CloudWatchEvents({region: awsRegion})),
 			destroyRole = function (roleName) {
 				var deleteSinglePolicy = function (policyName) {
 					return iam.deleteRolePolicyAsync({
@@ -26,6 +27,18 @@ beforeEach(function () {
 					return Promise.map(result.PolicyNames, deleteSinglePolicy);
 				}).then(function () {
 					return iam.deleteRoleAsync({RoleName: roleName});
+				});
+			},
+			destroyRule = function (ruleName) {
+				return events.listTargetsByRuleAsync({Rule: ruleName}).then(function (config) {
+					var ids = config.Targets.map(function (target) {
+						return target.Id;
+					});
+					if (ids.length) {
+						return events.removeTargetsAsync({Rule: ruleName, Ids: ids });
+					}
+				}).then(function () {
+					return events.deleteRuleAsync({Name: ruleName});
 				});
 			},
 			destroyBucket = function (bucketName) {
@@ -66,6 +79,10 @@ beforeEach(function () {
 				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).catch(function () {
 					return true;
 				});
+			}
+		}).then(function () {
+			if (newObjects.eventRule) {
+				return destroyRule(newObjects.eventRule);
 			}
 		}).then(function () {
 			if (newObjects.lambdaRole) {
