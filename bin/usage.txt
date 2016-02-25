@@ -28,12 +28,13 @@ COMMANDS are:
 
     add-s3-event-source Add a notification event to Lambda when a file is added to a S3 bucket
       --bucket       Bucket name
-      --source       [Optional] Directory with project files. Defaults to current directory. 
       --prefix       [Optional] Prefix filter for S3 keys that will cause the event
       --version      [Optional] Bind to a particular version (eg testing or production)
+      --source       [Optional] Directory with project files. Defaults to current directory. 
 
     add-sns-event-source Add a notification event to Lambda when a message is published on a SNS topic
       --topic        the ARN of the SNS topic
+      --version      Alias for the version name (eg. dev or production)
       --source       [Optional] Directory with project files. Defaults to current directory.
 
     add-scheduled-event Add a recurring notification event
