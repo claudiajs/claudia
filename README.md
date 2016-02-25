@@ -23,7 +23,7 @@ Just call `claudia create` and Claudia will pack up and post-process your code, 
 
 ## Questions/Comments?
 
-* [![](https://badges.gitter.im/gitterHQ/gitter.svg)](https://gitter.im/claudiajs/claudia)
+[![Join the chat at https://gitter.im/claudiajs/claudia](https://badges.gitter.im/claudiajs/claudia.svg)](https://gitter.im/claudiajs/claudia?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## Examples, please!
 
