@@ -22,7 +22,7 @@ describe('rebuildWebApi', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 70000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
@@ -146,7 +146,42 @@ describe('rebuildWebApi', function () {
 				expect(params.context.path).toEqual('/echo');
 			}).then(done, done.fail);
 		});
+		it('maps sub-resources with intermediate paths', function (done) {
+			apiRouteConfig.routes['echo/sub/res'] = {POST: {}};
+			apiRouteConfig.routes['echo/hello'] = {POST: {}};
+			apiRouteConfig.routes['sub/hello'] = {POST: {}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return invoke('original/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+			}).then(function () {
+				return invoke('original/echo/sub/res', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/echo/sub/res');
+			}).then(function () {
+				return invoke('original/sub/hello', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/sub/hello');
+			}).then(function () {
+				return invoke('original/echo/hello', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/echo/hello');
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail(e);
+			});
+		});
 		it('creates multiple resources for the same api', function (done) {
+			apiRouteConfig.routes['hello/res'] = {POST: {}};
 			apiRouteConfig.routes.hello = {POST: {}};
 			apiRouteConfig.routes[''] = {GET: {}};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
@@ -162,6 +197,12 @@ describe('rebuildWebApi', function () {
 				var params = JSON.parse(contents.body);
 				expect(params.context.method).toEqual('POST');
 				expect(params.context.path).toEqual('/hello');
+			}).then(function () {
+				return invoke('original/hello/res', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('POST');
+				expect(params.context.path).toEqual('/hello/res');
 			}).then(function () {
 				return invoke('original/');
 			}).then(function (contents) {
@@ -438,6 +479,8 @@ describe('rebuildWebApi', function () {
 			}).then(function () {
 				apiRouteConfig.routes.hello = {POST: {}};
 				apiRouteConfig.routes[''] = {GET: {}, PUT: {}};
+				apiRouteConfig.routes.sub = {GET: {}, PUT: {}};
+				apiRouteConfig.routes['sub/mapped/sub2'] = {GET: {}, PUT: {}};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(done, done.fail);
 		});
@@ -450,6 +493,19 @@ describe('rebuildWebApi', function () {
 				expect(params.context.method).toEqual('GET');
 				expect(params.context.path).toEqual('/extra');
 			}).then(done, done.fail);
+		});
+		it('adds subresources mapped with intermediate paths', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'sub/map2/map3': { GET: {}}}}, awsRegion)
+			.then(function () {
+				return invoke('original/sub/map2/map3');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/sub/map2/map3');
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail(e);
+			});
 		});
 		it('adds extra methods to an existing path', function (done) {
 			apiRouteConfig.routes.echo.POST = {};

@@ -4,6 +4,7 @@ var aws = require('aws-sdk'),
 	templateFile = require('../util/template-file'),
 	validHttpCode = require('../util/valid-http-code'),
 	allowApiInvocation = require('./allow-api-invocation'),
+	pathSplitter = require('../util/path-splitter'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion) {
 	'use strict';
@@ -11,8 +12,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
 		apiConfig,
 		existingResources,
-		rootResourceId,
 		ownerId,
+		knownIds = {},
 		inputTemplateJson,
 		inputTemplateForm,
 		getOwnerId = function () {
@@ -34,8 +35,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		findRoot = function () {
 			var rootResource = findByPath(existingResources, '/');
-			rootResourceId = rootResource.id;
-			return rootResourceId;
+			knownIds[''] = rootResource.id;
+			return rootResource.id;
 		},
 		createMethod = function (methodName, resourceId, methodOptions) {
 			var errorCode = function () {
@@ -202,25 +203,33 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			});
 		},
+		findResourceByPath = function (path) {
+			var pathComponents = pathSplitter(path);
+			if (knownIds[path]) {
+				return Promise.resolve(knownIds[path]);
+			} else {
+				return findResourceByPath(pathComponents.parentPath)
+				.then(function (parentId) {
+					return apiGateway.createResourceAsync({
+						restApiId: restApiId,
+						parentId: parentId,
+						pathPart: pathComponents.pathPart
+					});
+				}).then(function (resource) {
+					knownIds[path] = resource.id;
+					return resource.id;
+				});
+			}
+		},
 		configurePath = function (path) {
-			var resourceId, findResource,
+			var resourceId,
 				supportedMethods = Object.keys(apiConfig.routes[path]),
 				createMethodMapper = function (methodName) {
 					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
 				};
-			if (path === '') {
-				resourceId = rootResourceId;
-				findResource = Promise.resolve();
-			} else {
-				findResource = apiGateway.createResourceAsync({
-					restApiId: restApiId,
-					parentId: rootResourceId,
-					pathPart: path
-				}).then(function (resource) {
-					resourceId = resource.id;
-				});
-			}
-			return findResource.then(function () {
+			return findResourceByPath(path).then(function (r) {
+				resourceId = r;
+			}).then(function () {
 				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
 			}).then(function () {
 				return createCorsHandler(resourceId, supportedMethods);
@@ -236,20 +245,32 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			};
 			if (resource.resourceMethods) {
 				return Promise.map(Object.keys(resource.resourceMethods), dropMethodMapper, {concurrency: 1});
+			} else {
+				return Promise.resolve();
+			}
+		},
+		removeResource = function (resource) {
+			if (resource.path !== '/') {
+				return apiGateway.deleteResourceAsync({
+					resourceId: resource.id,
+					restApiId: restApiId
+				});
+			} else {
+				return dropMethods(resource);
 			}
 		},
 		dropSubresources = function () {
-			var removeResourceMapper = function (resource) {
-				if (resource.id !== rootResourceId) {
-					return apiGateway.deleteResourceAsync({
-						resourceId: resource.id,
-						restApiId: restApiId
-					});
-				} else {
-					return dropMethods(resource);
-				}
-			};
-			return Promise.map(existingResources, removeResourceMapper, {concurrency: 1});
+			var currentResource;
+			if (existingResources.length === 0) {
+				return Promise.resolve();
+			} else {
+				currentResource = existingResources.pop();
+				return removeResource(currentResource).then(function () {
+					if (existingResources.length > 0) {
+						return dropSubresources();
+					}
+				});
+			}
 		},
 		readTemplates = function () {
 			return fs.readFileAsync(templateFile('apigw-params-json.txt'), 'utf8')
@@ -261,11 +282,20 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				inputTemplateForm = inputTemplate;
 			});
 		},
+		pathSort = function (resA, resB) {
+			if (resA.path > resB.path) {
+				return 1;
+			} else if (resA.path === resB.path) {
+				return 0;
+			}
+			return -1;
+		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
 			.then(getExistingResources)
 			.then(function (resources) {
 				existingResources = resources.items;
+				existingResources.sort(pathSort);
 				return existingResources;
 			}).then(findRoot)
 			.then(dropSubresources)
