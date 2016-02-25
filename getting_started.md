@@ -1,5 +1,7 @@
 # Getting started
 
+![](https://nodei.co/npm/claudia.svg?downloads=true&downloadRank=true&stars=true)
+
 ## Node.JS version
 
 AWS Lambda currently runs on Node.js 0.10.36. To avoid nasty surprises, we strongly suggest using that version for development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment
