@@ -32,6 +32,10 @@ COMMANDS are:
       --prefix       [Optional] Prefix filter for S3 keys that will cause the event
       --version      [Optional] Bind to a particular version (eg testing or production)
 
+    add-sns-event-source Add a notification event to Lambda when a message is published on a SNS topic
+      --topic        the ARN of the SNS topic
+      --source       [Optional] Directory with project files. Defaults to current directory.
+
     add-scheduled-event Add a recurring notification event
       --event        Path to a JSON event file that will be sent to lambda periodically
       --name         Name of the scheduled event rule
