@@ -8,7 +8,13 @@
   "post": {  
     #foreach($param in $input.path('$').split('&'))
       #set ($kv = $param.split('='))
-      "$util.urlDecode($kv[0])": #if($kv.size() > 1)"$util.escapeJavaScript($util.urlDecode($kv[1]))"#{else}null#end#if($foreach.hasNext),#end
+      "$util.urlDecode($kv[0])": 
+        #if($kv.size() > 1)
+          "$util.escapeJavaScript($util.urlDecode($kv[1]))"
+        #else
+          ""
+        #end
+        #if($foreach.hasNext),#end
     #end
   },
   "headers": { 

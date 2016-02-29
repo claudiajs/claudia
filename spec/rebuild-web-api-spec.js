@@ -75,6 +75,17 @@ describe('rebuildWebApi', function () {
 					done.fail(e);
 				});
 			});
+			it('captures path parameters', function (done) {
+				apiRouteConfig.routes['people/{personId}'] = {'GET': {} };
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/people/Marcus');
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.pathParams.personId).toEqual('Marcus');
+				}).then(done, done.fail);
+
+			});
 			it('captures headers', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
@@ -123,6 +134,20 @@ describe('rebuildWebApi', function () {
 					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
 				}).then(done, done.fail);
 			});
+			it('captures blank form POST variables', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'content-type': 'application/x-www-form-urlencoded'},
+						body: 'name=tom&surname=&title=mr',
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.post).toEqual({name: 'tom', title: 'mr', surname: ''});
+				}).then(done, done.fail);
+			});
+
 		});
 		it('creates multiple methods for the same resource', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
