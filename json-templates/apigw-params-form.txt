@@ -6,10 +6,10 @@
   }, 
   "v": "2",
   "post": {  
-      #foreach($param in $input.path('$').split('&'))
-        #set ($kv = $param.split('='))
-        "$util.urlDecode($kv[0])": "$util.escapeJavaScript($util.urlDecode($kv[1]))" #if($foreach.hasNext), #end 
-      #end 
+    #foreach($param in $input.path('$').split('&'))
+      #set ($kv = $param.split('='))
+      "$util.urlDecode($kv[0])": #if($kv.size() > 1)"$util.escapeJavaScript($util.urlDecode($kv[1]))"#{else}null#end#if($foreach.hasNext),#end
+    #end
   },
   "headers": { 
     #foreach($param in $input.params().header.entrySet()) 
