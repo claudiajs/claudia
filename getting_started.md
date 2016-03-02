@@ -14,7 +14,7 @@ Although any approach described in the guide will work, we recommend creating a 
 
 ## Project structure
 
-Claudia tries very hard to stay our of your way and let you define the projects the way you want to. If you do not want to use automatically generated API Gateway definitions, there are no special constraints or dependencies that you need to think about -- just follow the regular NPM packaging practices.
+Claudia tries very hard to stay out of your way and let you define the projects the way you want to. If you do not want to use automatically generated API Gateway definitions, there are no special constraints or dependencies that you need to think about -- just follow the regular NPM packaging practices.
 
 Claudia expects the standard NPM `package.json` file, and requires the resources you want to deploy to be included in the `files` property. See the [files section of the NPM configuration guide](https://docs.npmjs.com/files/package.json#files) for more information. This is to avoid deploying test and development resources and local configuration files. 
 
