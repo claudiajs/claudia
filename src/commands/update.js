@@ -20,7 +20,7 @@ module.exports = function update(options) {
 	if (!options.source) {
 		options.source = shell.pwd();
 	}
-	return loadConfig(options.source, {lambda: {name: true, region: true}}).then(function (config) {
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});

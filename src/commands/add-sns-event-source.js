@@ -16,7 +16,7 @@ module.exports = function addSNSEventSource(options) {
 			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
 		},
 		readConfig = function () {
-			return loadConfig(options.source, {lambda: {name: true, region: true}})
+			return loadConfig(options, {lambda: {name: true, region: true}})
 				.then(function (config) {
 					lambdaConfig = config.lambda;
 				}).then(initServices)

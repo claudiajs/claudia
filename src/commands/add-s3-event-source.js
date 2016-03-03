@@ -14,7 +14,7 @@ module.exports = function addS3EventSource(options) {
 			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
 		},
 		readConfig = function () {
-			return loadConfig(options.source, {lambda: {name: true, region: true, role: true}})
+			return loadConfig(options, {lambda: {name: true, region: true, role: true}})
 				.then(function (config) {
 					lambdaConfig = config;
 					return config;

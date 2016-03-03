@@ -40,6 +40,6 @@ module.exports = function loadConfig(options, validate) {
 		if (validate.lambda && validate.lambda.role && !role) {
 			return Promise.reject('invalid configuration -- lambda.role missing from claudia.json');
 		}
-		return Promise.resolve(config);
+		return config;
 	});
 };

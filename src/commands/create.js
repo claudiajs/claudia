@@ -12,7 +12,8 @@ var Promise = require('bluebird'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function create(options) {
 	'use strict';
-	var source = options.source || shell.pwd(),
+	var source = (options && options.source) || shell.pwd(),
+		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = Promise.promisifyAll(new aws.IAM()),
 		lambda = Promise.promisifyAll(new aws.Lambda({region: options.region}), {suffix: 'Promise'}),
 		roleMetadata,
@@ -26,7 +27,10 @@ module.exports = function create(options) {
 			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
 			}
-			if (shell.test('-e', path.join(source, 'claudia.json'))) {
+			if (shell.test('-e', configFile)) {
+				if (options && options.config) {
+					return options.config + ' already exists';
+				}
 				return 'claudia.json already exists in the source folder';
 			}
 			if (!shell.test('-e', path.join(source, 'package.json'))) {
@@ -92,7 +96,7 @@ module.exports = function create(options) {
 				config.api = lambdaMetaData.api;
 			}
 			return fs.writeFileAsync(
-				path.join(source, 'claudia.json'),
+				configFile,
 				JSON.stringify(config, null, 2),
 				'utf8'
 			).then(function () {

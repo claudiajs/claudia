@@ -70,6 +70,25 @@ describe('create', function () {
 			done();
 		});
 	});
+	it('works if claudia.json already exists in the source folder but alternative config provided', function (done) {
+		shell.mkdir(workingdir);
+		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
+		shell.cd(workingdir);
+		config.config = 'lambda.json';
+		underTest(config).then(done, done.fail);
+	});
+	it('fails if the alternative config is provided but the file already exists', function (done) {
+		shell.mkdir(workingdir);
+		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
+		shell.cd(workingdir);
+		config.config = 'lambda.json';
+		underTest(config).then(done.fail, function (message) {
+			expect(message).toEqual('lambda.json already exists');
+			done();
+		});
+	});
 	it('checks the current folder if the source parameter is not defined', function (done) {
 		shell.mkdir(workingdir);
 		shell.cd(workingdir);
@@ -222,6 +241,13 @@ describe('create', function () {
 		it('saves the configuration into claudia.json', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
+			}).then(done, done.fail);
+		});
+		it('saves the configuration into an alternative configuration file if provided', function (done) {
+			config.config = path.join(workingdir, 'lambda.json');
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy();
+				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'lambda.json'), 'utf8'))).toEqual(creationResult);
 			}).then(done, done.fail);
 		});
 		it('configures the function in AWS so it can be invoked', function (done) {
