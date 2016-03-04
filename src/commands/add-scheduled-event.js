@@ -57,6 +57,9 @@ module.exports = function addScheduledEvent(options) {
 				]
 			});
 		};
+	if (options.rate) {
+		options.schedule = 'rate(' + options.rate + ')';
+	}
 	if (!options.event) {
 		return Promise.reject('event file not specified. please provide it with --event');
 	}

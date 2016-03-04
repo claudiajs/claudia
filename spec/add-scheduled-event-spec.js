@@ -103,6 +103,34 @@ describe('addScheduledEvent', function () {
 			createConfig = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 		});
+		it('uses the schedule expression to configure the rule', function (done) {
+			createLambda()
+			.then(function () {
+				return underTest(config);
+			}).then(function () {
+				return events.describeRuleAsync({
+					Name: newObjects.eventRule
+				});
+			}).then(function (eventConfig) {
+				expect(eventConfig.State).toEqual('ENABLED');
+				expect(eventConfig.ScheduleExpression).toEqual('rate(5 minutes)');
+			}).then(done, done.fail);
+		});
+		it('uses the rate argument as a shorthand for the schedule expression', function (done) {
+			config.schedule = '';
+			config.rate = '10 minutes';
+			createLambda()
+			.then(function () {
+				return underTest(config);
+			}).then(function () {
+				return events.describeRuleAsync({
+					Name: newObjects.eventRule
+				});
+			}).then(function (eventConfig) {
+				expect(eventConfig.State).toEqual('ENABLED');
+				expect(eventConfig.ScheduleExpression).toEqual('rate(10 minutes)');
+			}).then(done, done.fail);
+		});
 		it('sets up privileges and rule notifications', function (done) {
 			var functionArn;
 
