@@ -131,6 +131,21 @@ describe('addScheduledEvent', function () {
 				expect(eventConfig.ScheduleExpression).toEqual('rate(10 minutes)');
 			}).then(done, done.fail);
 		});
+		it('uses the cron argument as a shorthand for the schedule expression', function (done) {
+			config.schedule = '';
+			config.cron = '0 8 1 * ? *';
+			createLambda()
+			.then(function () {
+				return underTest(config);
+			}).then(function () {
+				return events.describeRuleAsync({
+					Name: newObjects.eventRule
+				});
+			}).then(function (eventConfig) {
+				expect(eventConfig.State).toEqual('ENABLED');
+				expect(eventConfig.ScheduleExpression).toEqual('cron(0 8 1 * ? *)');
+			}).then(done, done.fail);
+		});
 		it('sets up privileges and rule notifications', function (done) {
 			var functionArn;
 

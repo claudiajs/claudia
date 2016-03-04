@@ -49,6 +49,8 @@ COMMANDS are:
                        http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/ScheduledEvents.html)
       --rate         [Optional] a shorthand for rate-based expressions, without the brackets (eg "5 minutes"). 
                        If this is specified, the --schedule argument is ignored
+      --cron         [Optional] a shorthand for cron-based expressions, without the brackets (eg "0 8 1 * ? *").
+                       If this is specified, the --schedule argument is ignored
       --version      [Optional] Bind to a particular version (eg testing or production)
       --source       [Optional] Directory with project files. Defaults to current directory.
       --config       [Optional] Config file containing the resource names. Defaults to claudia.json
