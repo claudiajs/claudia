@@ -46,7 +46,7 @@ COMMANDS are:
       --event        Path to a JSON event file that will be sent to lambda periodically
       --name         Name of the scheduled event rule
       --schedule     A schedule expression, for example "rate(5 minutes)". For syntax options, see
-                       http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/ScheduledEvents.html)
+                       http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/ScheduledEvents.html
       --rate         [Optional] a shorthand for rate-based expressions, without the brackets (eg "5 minutes"). 
                        If this is specified, the --schedule argument is ignored
       --cron         [Optional] a shorthand for cron-based expressions, without the brackets (eg "0 8 1 * ? *").
