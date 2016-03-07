@@ -147,8 +147,22 @@ describe('rebuildWebApi', function () {
 					expect(params.post).toEqual({name: 'tom', title: 'mr', surname: ''});
 				}).then(done, done.fail);
 			});
-
+			it('captures text/xml request bodies', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
+					return invoke('original/echo', {
+						headers: {'Content-Type': 'text/xml'},
+						body: xml,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.body).toEqual('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>');
+				}).then(done, done.fail);
+			});
 		});
+
 		it('creates multiple methods for the same resource', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
 			.then(function () {
