@@ -16,6 +16,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		knownIds = {},
 		inputTemplateJson,
 		inputTemplateForm,
+		inputTemplateTextXml,
 		getOwnerId = function () {
 			return iam.getUserAsync().then(function (result) {
 				ownerId = result.User.Arn.split(':')[4];
@@ -142,7 +143,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					integrationHttpMethod: 'POST',
 					requestTemplates: {
 						'application/json': inputTemplateJson,
-						'application/x-www-form-urlencoded': inputTemplateForm
+						'application/x-www-form-urlencoded': inputTemplateForm,
+						'text/xml': inputTemplateTextXml
 					},
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
@@ -280,6 +282,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return fs.readFileAsync(templateFile('apigw-params-form.txt'), 'utf8');
 			}).then(function (inputTemplate) {
 				inputTemplateForm = inputTemplate;
+			}).then(function () {
+				return fs.readFileAsync(templateFile('apigw-params-textxml.txt'), 'utf8');
+			}).then(function (inputTemplate) {
+				inputTemplateTextXml = inputTemplate;
 			});
 		},
 		pathSort = function (resA, resB) {
@@ -332,5 +338,3 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		.then(rebuildApi)
 		.then(deployApi);
 };
-
-
