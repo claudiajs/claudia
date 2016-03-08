@@ -14,9 +14,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		existingResources,
 		ownerId,
 		knownIds = {},
-		inputTemplateJson,
-		inputTemplateForm,
-		inputTemplateTextXml,
+		inputTemplate,
 		getOwnerId = function () {
 			return iam.getUserAsync().then(function (result) {
 				ownerId = result.User.Arn.split(':')[4];
@@ -142,9 +140,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					type: 'AWS',
 					integrationHttpMethod: 'POST',
 					requestTemplates: {
-						'application/json': inputTemplateJson,
-						'application/x-www-form-urlencoded': inputTemplateForm,
-						'text/xml': inputTemplateTextXml
+						'application/json': inputTemplate,
+						'application/x-www-form-urlencoded': inputTemplate,
+						'text/xml': inputTemplate
 					},
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
@@ -275,17 +273,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 		},
 		readTemplates = function () {
-			return fs.readFileAsync(templateFile('apigw-params-json.txt'), 'utf8')
-			.then(function (inputTemplate) {
-				inputTemplateJson = inputTemplate;
-			}).then(function () {
-				return fs.readFileAsync(templateFile('apigw-params-form.txt'), 'utf8');
-			}).then(function (inputTemplate) {
-				inputTemplateForm = inputTemplate;
-			}).then(function () {
-				return fs.readFileAsync(templateFile('apigw-params-textxml.txt'), 'utf8');
-			}).then(function (inputTemplate) {
-				inputTemplateTextXml = inputTemplate;
+			return fs.readFileAsync(templateFile('apigw-params.txt'), 'utf8')
+			.then(function (fileContents) {
+				inputTemplate = fileContents;
 			});
 		},
 		pathSort = function (resA, resB) {

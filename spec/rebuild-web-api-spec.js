@@ -33,9 +33,7 @@ describe('rebuildWebApi', function () {
 		}).finally(done);
 	});
 
-
 	describe('when working with a blank api', function () {
-
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {

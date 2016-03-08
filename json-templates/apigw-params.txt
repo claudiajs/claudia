@@ -4,8 +4,26 @@
     "path": "$context.resourcePath", 
     "sourceIp":"$context.identity.sourceIp"
   }, 
-  "body" : $input.json('$'), 
   "v": "2",
+  #set ($type=$input.params().header.get('Content-Type'))
+  #if($type == "application/x-www-form-urlencoded")
+   "post": {  
+    #foreach($param in $input.path('$').split('&'))
+      #set ($kv = $param.split('='))
+      "$util.urlDecode($kv[0])": 
+        #if($kv.size() > 1)
+          "$util.escapeJavaScript($util.urlDecode($kv[1]))"
+        #else
+          ""
+        #end
+        #if($foreach.hasNext),#end
+    #end
+  },
+  #elseif($type == "application/xml")
+    "body" : "$util.escapeJavaScript($input.path('$'))", 
+  #else
+    "body" : $input.json('$'), 
+  #end
   "headers": { 
     #foreach($param in $input.params().header.entrySet()) 
       "$param.getKey()": "$util.escapeJavaScript($param.getValue())" #if($foreach.hasNext),#end 
