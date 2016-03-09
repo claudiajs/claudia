@@ -1,0 +1,5 @@
+{
+  "name": "api-gw-no-export",
+  "private": true,
+  "files": ["main.js"]
+}

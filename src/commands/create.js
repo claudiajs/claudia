@@ -73,8 +73,11 @@ module.exports = function create(options) {
 		},
 		createWebApi = function (lambdaMetadata) {
 			var apiModule = require(path.join(options.source, options['api-module'])),
-				apiConfig = apiModule.apiConfig(),
 				apiGateway = Promise.promisifyAll(new aws.APIGateway({region: options.region}));
+			if(!apiModule.apiConfig){
+				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing an module.exports?');
+			};			
+			var apiConfig = apiModule.apiConfig();
 			return apiGateway.createRestApiAsync({
 				name: options.name
 			}).then(function (result) {
