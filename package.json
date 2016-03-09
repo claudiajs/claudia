@@ -36,9 +36,6 @@
     "test": "node spec/support/jasmine-runner.js"
   },
   "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
-  "engines" : { 
-  	"node" : "~0.10.36" 
-  },
   "dependencies": {
     "archiver": "^0.21.0",
     "aws-sdk": "^2.2.33",
