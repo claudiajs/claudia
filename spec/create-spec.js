@@ -290,7 +290,12 @@ describe('create', function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
 		});
-
+		it('fails if no APIConfig is found on the module', function (done) {
+			createFromDir('api-gw-no-export').then(done.fail, function (error) {
+				expect(error).toEqual('No apiConfig defined on module \'main\'. Are you missing a module.exports?');
+				done();
+			});
+		});
 		it('ignores the handler but creates an API if the api-module is provided', function (done) {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				var apiId = creationResult.api && creationResult.api.id;

@@ -3,3 +3,4 @@ node_modules
 SpecRunner.html
 .grunt
 *.log
+.DS_Store
