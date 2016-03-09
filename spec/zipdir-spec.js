@@ -3,7 +3,7 @@ var tmppath = require('../src/util/tmppath'),
 	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path'),
-	os = require('os'),
+	os = require('./helpers/tmpdir.js'),
 	underTest = require('../src/tasks/zipdir');
 describe('zipdir', function () {
 	'use strict';

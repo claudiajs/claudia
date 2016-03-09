@@ -1,7 +1,7 @@
 /*global describe, it, expect, require */
 var underTest = require ('../src/util/tmppath'),
 	path = require('path'),
-	os = require('os'),
+	os = require('./helpers/tmpdir.js'),
 	fs = require('fs');
 describe('tmppath', function () {
 	'use strict';
