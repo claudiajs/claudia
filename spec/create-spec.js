@@ -289,11 +289,10 @@ describe('create', function () {
 		beforeEach(function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
-		});		
-		it('fails if no APIConfig is found on the module', function(done) {
+		});
+		it('fails if no APIConfig is found on the module', function (done) {
 			createFromDir('api-gw-no-export').then(done.fail, function (error) {
-				console.log(error);
-				expect(error).toEqual('No apiConfig defined on module \'main\'. Are you missing an module.exports?');
+				expect(error).toEqual('No apiConfig defined on module \'main\'. Are you missing a module.exports?');
 				done();
 			});
 		});
