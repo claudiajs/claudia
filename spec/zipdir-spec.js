@@ -4,6 +4,7 @@ var tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
 	os = require('os'),
+	tmpdir = require('./helpers/tmpdir.js'),
 	underTest = require('../src/tasks/zipdir');
 describe('zipdir', function () {
 	'use strict';
@@ -53,7 +54,7 @@ describe('zipdir', function () {
 				done.fail('invalid archive');
 			}
 
-			expect(path.dirname(argpath)).toEqual(os.tmpdir());
+			expect(path.dirname(argpath)).toEqual(tmpdir.normalize());
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 
