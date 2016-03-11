@@ -1,10 +1,12 @@
 /*global describe, it, expect, beforeEach, afterEach, require */
-var tmppath = require('../src/util/tmppath'),
-	shell = require('shelljs'),
+var shell = require('shelljs'),
 	fs = require('fs'),
+	os = require('os'),
 	path = require('path'),
-	tmpdir = require('./helpers/tmpdir.js'),
+	tmppath = require('../src/util/tmppath'),
+	trimSlash = require('../src/util/trimslash'),
 	underTest = require('../src/tasks/zipdir');
+
 describe('zipdir', function () {
 	'use strict';
 	var workingdir, zipfile, pwd;
@@ -53,7 +55,7 @@ describe('zipdir', function () {
 				done.fail('invalid archive');
 			}
 
-			expect(path.dirname(argpath)).toEqual(tmpdir.normalize());
+			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 
