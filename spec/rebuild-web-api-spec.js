@@ -217,6 +217,39 @@ describe('rebuildWebApi', function () {
 				done.fail(e);
 			});
 		});
+		it('sets apiKeyRequired if requested', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {apiKeyRequired: true};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.apiKeyRequired).toBeFalsy();
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.apiKeyRequired).toBeTruthy();
+			}).then(done, done.fail);
+		});
 		it('creates multiple resources for the same api', function (done) {
 			apiRouteConfig.routes['hello/res'] = {POST: {}};
 			apiRouteConfig.routes.hello = {POST: {}};

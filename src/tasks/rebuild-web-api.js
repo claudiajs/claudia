@@ -62,6 +62,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}
 					return '200';
 				},
+				apiKeyRequired = function () {
+					return methodOptions && methodOptions.apiKeyRequired;
+				},
 				isRedirect = function (code) {
 					return /3[0-9][0-9]/.test(code);
 				},
@@ -131,7 +134,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizationType: 'NONE', /*todo support config */
 				httpMethod: methodName,
 				resourceId: resourceId,
-				restApiId: restApiId
+				restApiId: restApiId,
+				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
 				return apiGateway.putIntegrationAsync({
 					restApiId: restApiId,
