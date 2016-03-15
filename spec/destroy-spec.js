@@ -3,7 +3,6 @@ var underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	callApi = require('../src/util/call-api'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -11,14 +10,7 @@ var underTest = require('../src/commands/destroy'),
 	awsRegion = 'us-east-1';
 describe('destroy', function () {
 	'use strict';
-	var workingdir, testRunName,  lambda, newObjects,
-		invoke = function (url, options) {
-			if (!options) {
-				options = {};
-			}
-			options.retry = 403;
-			return callApi(newObjects.restApi, awsRegion, url, options);
-		};
+	var workingdir, testRunName,  lambda, newObjects;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -27,18 +19,12 @@ describe('destroy', function () {
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
-	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
 			expect(reason).toEqual('claudia.json does not exist in the source folder');
 			done();
 		});
 	});
-
 	it('fails when the project config file does not contain the lambda name', function (done) {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -53,52 +39,50 @@ describe('destroy', function () {
 			done();
 		});
 	});
-	// describe('when the lambda project exists', function () {
-	// 	beforeEach(function (done) {
-	// 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-	// 		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-	// 			newObjects.lambdaRole = result.lambda && result.lambda.role;
-	// 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
-	// 			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
-	// 		}).then(done, done.fail);
-	// 	});
-	// 	it('creates a new version of the lambda function', function (done) {
-	// 		underTest({source: workingdir}).then(function (lambdaFunc) {
-	// 			expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
-	// 		}).then(function () {
-	// 			return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
-	// 		}).then(function (result) {
-	// 			expect(result.Versions.length).toEqual(3);
-	// 			expect(result.Versions[0].Version).toEqual('$LATEST');
-	// 			expect(result.Versions[1].Version).toEqual('1');
-	// 			expect(result.Versions[2].Version).toEqual('2');
-	// 		}).then(done, done.fail);
-	// 	});
-	// 	it('updates the lambda with a new version', function (done) {
-	// 		underTest({source: workingdir}).then(function () {
-	// 			return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
-	// 		}).then(function (lambdaResult) {
-	// 			expect(lambdaResult.StatusCode).toEqual(200);
-	// 			expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
-	// 		}).then(done, done.fail);
-	// 	});
-	// 	it('adds the version alias if supplied', function (done) {
-	// 		underTest({source: workingdir, version: 'great'}).then(function () {
-	// 			return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
-	// 		}).then(function (result) {
-	// 			expect(result.FunctionVersion).toEqual('2');
-	// 		}).then(done, done.fail);
-	// 	});
+	describe('when the lambda project exists', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			}).then(done, done.fail);
+		});
+		it('destroys the lambda function', function (done) {
+			underTest({source: workingdir}).then(function () {
+			 	return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+			}).catch(function (expectedException) {
+				expect(expectedException.message).toContain(testRunName);
+			})
+			// }).then(function (result) {
+			// 	expect(result.Versions.length).toEqual(0);
+			.then(done, done.fail);
+		});
+		// it('updates the lambda with a new version', function (done) {
+		// 	underTest({source: workingdir}).then(function () {
+		// 		return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+		// 	}).then(function (lambdaResult) {
+		// 		expect(lambdaResult.StatusCode).toEqual(200);
+		// 		expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+		// 	}).then(done, done.fail);
+		// });
+		// it('adds the version alias if supplied', function (done) {
+		// 	underTest({source: workingdir, version: 'great'}).then(function () {
+		// 		return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+		// 	}).then(function (result) {
+		// 		expect(result.FunctionVersion).toEqual('2');
+		// 	}).then(done, done.fail);
+		// });
 
-	// 	it('checks the current dir if the source is not provided', function (done) {
-	// 		shell.cd(workingdir);
-	// 		underTest().then(function (lambdaFunc) {
-	// 			expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
-	// 			expect(lambdaFunc.FunctionName).toEqual(testRunName);
-	// 			return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
-	// 		}).then(done, done.fail);
-	// 	});
-	// });
+		// it('checks the current dir if the source is not provided', function (done) {
+		// 	shell.cd(workingdir);
+		// 	underTest().then(function (lambdaFunc) {
+		// 		expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+		// 		expect(lambdaFunc.FunctionName).toEqual(testRunName);
+		// 		return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+		// 	}).then(done, done.fail);
+		// });
+	});
 	// describe('when the lambda project contains a web api', function () {
 	// 	var originaldir, updateddir;
 	// 	beforeEach(function (done) {
