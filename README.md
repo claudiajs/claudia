@@ -10,16 +10,17 @@ Here are some of the things you can do with Claudia:
     * deploy using a single command (instead of [120 lines of shell scripts](https://github.com/gojko/nodejs-aws-microservice-examples/blob/master/web-parameter-processing/setup.sh))
     * automatically handle AWS service quirks such as waiting for IAM roles to propagate to Lambda
     * simplify code management and avoid inconsistencies by using a single Lambda function for all the web API operations
+    * destroys the lambda function, web api and IAM roles/policies with a single command too
   * Automatically configure the Lambda function for commonly useful tasks:
      * Allow `console.log` to pipe to CloudWatch
      * Add event sources with correct IAM privileges
-     * Manage different versions for production, development and testing easily 
+     * Manage different versions for production, development and testing easily
   * Automatically set up API Gateway resources the way Javascript developers expect them to work:
      * enable CORS for all endpoints (so your users' browsers can call the APIs directly)
      * make query string, form post and request headers directly available (instead of having to specify API Gateway models and templates)
      * route errors to HTTP response code 500 (instead of the default 200 which breaks Promise-like request libraries)
 
-Just call `claudia create` and Claudia will pack up and post-process your code, grab all the dependencies, clean up irrelevant resources, upload to Lambda, set-up web APIs, and update version aliases. 
+Just call `claudia create` and Claudia will pack up and post-process your code, grab all the dependencies, clean up irrelevant resources, upload to Lambda, set-up web APIs, and update version aliases.
 
 ## Questions/Comments?
 
@@ -29,7 +30,7 @@ Just call `claudia create` and Claudia will pack up and post-process your code, 
 
 For some nice examples, see the [Example Projects](https://github.com/claudiajs/example-projects).
 
-## Getting started 
+## Getting started
 
 ![](https://nodei.co/npm/claudia.svg?downloads=true&downloadRank=true&stars=true)
 
