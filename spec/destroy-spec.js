@@ -58,14 +58,20 @@ describe('destroy', function() {
                 expect(expectedException.message).toContain(newObjects.lambdaFunction);
             }).then(done, done.fail);
         });
-        it('destroys the IAM roles and policies for the lambda function', function(done) {
+        it('destroys the roles for the lambda function', function(done) {
             underTest({ source: workingdir }).then(function() {
                 return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
             }).catch(function(expectedException) {
                 expect(expectedException.message).toContain(newObjects.lambdaRole);
             }).then(done, done.fail);
         });
-
+        it('destroys the policies for the lambda function', function(done) {
+            underTest({ source: workingdir }).then(function() {
+                return iam.listRolePoliciesAsync({ RoleName: newObjects.lambdaRole });
+            }).catch(function(expectedException) {
+                expect(expectedException.message).toContain(newObjects.lambdaRole);
+            }).then(done, done.fail);
+        });
     });
     describe('when the lambda project contains a web api', function() {
         beforeEach(function(done) {
@@ -84,9 +90,16 @@ describe('destroy', function() {
                 expect(expectedException.message).toContain(newObjects.restApi);
             }).then(done, done.fail);
         });
-        it('destroys the IAM roles and policies for the lambda function', function(done) {
+        it('destroys the roles for the lambda function', function(done) {
             underTest({ source: workingdir }).then(function() {
                 return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
+            }).catch(function(expectedException) {
+                expect(expectedException.message).toContain(newObjects.lambdaRole);
+            }).then(done, done.fail);
+        });
+        it('destroys the policies for the lambda function', function(done) {
+            underTest({ source: workingdir }).then(function() {
+                return iam.listRolePoliciesAsync({ RoleName: newObjects.lambdaRole });
             }).catch(function(expectedException) {
                 expect(expectedException.message).toContain(newObjects.lambdaRole);
             }).then(done, done.fail);
