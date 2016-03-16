@@ -1,5 +1,9 @@
 # Release history
 
+### 1.0.16  16 March 2016
+
+- utility destroy command for undeploying lambda and removing the API and associated roles. 
+
 ### 1.0.15  11 March 2016
 
 - support for apiKeyRequired option in the apiBuilder methods. See [Requiring Api Keys](https://github.com/claudiajs/claudia-api-builder#requiring-api-keys) for more information
