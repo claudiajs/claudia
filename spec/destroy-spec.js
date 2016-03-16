@@ -10,12 +10,13 @@ var underTest = require('../src/commands/destroy'),
     awsRegion = 'us-east-1';
 describe('destroy', function() {
     'use strict';
-    var workingdir, testRunName, lambda, config, newObjects, apiGateway;
+    var workingdir, testRunName, lambda, config, newObjects, apiGateway, iam;
     beforeEach(function() {
         workingdir = tmppath();
         testRunName = 'test' + Date.now();
         lambda = Promise.promisifyAll(new aws.Lambda({ region: awsRegion }), { suffix: 'Promise' });
         apiGateway = Promise.promisifyAll(new aws.APIGateway({ region: awsRegion }));
+        iam = Promise.promisifyAll(new aws.IAM());
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
         newObjects = { workingdir: workingdir };
         shell.mkdir(workingdir);
@@ -45,6 +46,8 @@ describe('destroy', function() {
         beforeEach(function(done) {
             shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
             create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(function(result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
                 shell.cp('-rf', 'spec/test-projects/hello-world/*', workingdir);
             }).then(done, done.fail);
         });
@@ -52,10 +55,17 @@ describe('destroy', function() {
             underTest({ source: workingdir }).then(function() {
                 return lambda.listVersionsByFunctionPromise({ FunctionName: testRunName });
             }).catch(function(expectedException) {
-                expect(expectedException.message).toContain(testRunName);
-            })
-            .then(done, done.fail);
+                expect(expectedException.message).toContain(newObjects.lambdaFunction);
+            }).then(done, done.fail);
         });
+        it('destroys the IAM roles and policies for the lambda function', function(done) {
+            underTest({ source: workingdir }).then(function() {
+                return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
+            }).catch(function(expectedException) {
+                expect(expectedException.message).toContain(newObjects.lambdaRole);
+            }).then(done, done.fail);
+        });
+
     });
     describe('when the lambda project contains a web api', function() {
         beforeEach(function(done) {
@@ -72,55 +82,14 @@ describe('destroy', function() {
                 return apiGateway.getRestApi({ restApiId: newObjects.restApi });
             }).catch(function(expectedException) {
                 expect(expectedException.message).toContain(newObjects.restApi);
-            })
-            .then(done, done.fail);
+            }).then(done, done.fail);
+        });
+        it('destroys the IAM roles and policies for the lambda function', function(done) {
+            underTest({ source: workingdir }).then(function() {
+                return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
+            }).catch(function(expectedException) {
+                expect(expectedException.message).toContain(newObjects.lambdaRole);
+            }).then(done, done.fail);
         });
     });
-    // 	it('updates the api using the configuration from the api module', function (done) {
-    // 		return underTest({source: updateddir}).then(function () {
-    // 			return invoke('latest/echo?name=mike');
-    // 		}).then(function (contents) {
-    // 			var params = JSON.parse(contents.body);
-    // 			expect(params.queryString).toEqual({name: 'mike'});
-    // 			expect(params.context.method).toEqual('GET');
-    // 			expect(params.context.path).toEqual('/echo');
-    // 			expect(params.env).toEqual({
-    // 				lambdaVersion: 'latest'
-    // 			});
-    // 		}).then(done, done.fail);
-    // 	});
-    // 	it('when the version is provided, creates the deployment with that name', function (done) {
-    // 		underTest({source: updateddir, version: 'development'}).then(function () {
-    // 			return invoke('development/echo?name=mike');
-    // 		}).then(function (contents) {
-    // 			var params = JSON.parse(contents.body);
-    // 			expect(params.queryString).toEqual({name: 'mike'});
-    // 			expect(params.context.method).toEqual('GET');
-    // 			expect(params.context.path).toEqual('/echo');
-    // 			expect(params.env).toEqual({
-    // 				lambdaVersion: 'development'
-    // 			});
-    // 		}).then(done, done.fail);
-    // 	});
-    // 	it('if using a different version, leaves the old one intact', function (done) {
-    // 		underTest({source: updateddir, version: 'development'}).then(function () {
-    // 			return invoke('original/hello');
-    // 		}).then(function (contents) {
-    // 			expect(contents.body).toEqual('"hello world"');
-    // 		}).then(done, done.fail);
-    // 	});
-    // 	it('if using the same version, rewrites the old one', function (done) {
-    // 		underTest({source: updateddir, version: 'original'}).then(function () {
-    // 			return invoke('original/echo?name=mike');
-    // 		}).then(function (contents) {
-    // 			var params = JSON.parse(contents.body);
-    // 			expect(params.queryString).toEqual({name: 'mike'});
-    // 			expect(params.context.method).toEqual('GET');
-    // 			expect(params.context.path).toEqual('/echo');
-    // 			expect(params.env).toEqual({
-    // 				lambdaVersion: 'original'
-    // 			});
-    // 		}).then(done, done.fail);
-    // 	});
-    // });
 });

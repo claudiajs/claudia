@@ -1,4 +1,4 @@
-/*global module, require*/
+/*global module, require, console */
 var Promise = require('bluebird'),
     aws = require('aws-sdk'),
     loadConfig = require('../util/loadconfig');
@@ -23,7 +23,6 @@ module.exports = function destroy(options) {
     return loadConfig(options, { lambda: { name: true, region: true, role: true } }).then(function(config) {
         lambdaConfig = config.lambda;
         apiConfig = config.api;
-        console.log(config);
     }).then(function() {
         lambda = Promise.promisifyAll(new aws.Lambda({ region: lambdaConfig.region }), { suffix: 'Promise' });
         deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda));
