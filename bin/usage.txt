@@ -59,4 +59,7 @@ COMMANDS are:
       --version      Alias for the version name (eg. dev or production)
       --source       [Optional] Directory with project files. Defaults to current directory. 
       --config       [Optional] Config file containing the resource names. Defaults to claudia.json
-
+    
+    destroy          Undeploy the lambda function and destroy the API and security roles
+      --source       [Optional] Directory with project files. Defaults to current directory. 
+      --config       [Optional] Config file containing the resource names. Defaults to claudia.json
