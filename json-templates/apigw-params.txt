@@ -6,6 +6,9 @@
   }, 
   "v": "2",
   #set ($type=$input.params().header.get('Content-Type'))
+  #if($type.contains(";"))
+	#set ($type=$type.split(";")[0])
+  #end
   #if($type == "application/x-www-form-urlencoded")
    "post": {  
     #foreach($param in $input.path('$').split('&'))

@@ -132,6 +132,19 @@ describe('rebuildWebApi', function () {
 					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
 				}).then(done, done.fail);
 			});
+			it('captures form post variables even when the charset is provided with the content type', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+						body: querystring.stringify({name: 'tom', surname: 'bond'}),
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
+				}).then(done, done.fail);
+			});
 			it('captures blank form POST variables', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
