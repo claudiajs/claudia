@@ -35,6 +35,8 @@ For some nice examples, see the [Example Projects](https://github.com/claudiajs/
 
 Please read the [Getting started guide](getting_started.md) for information on setting up credentials and initialising your Lambda functions.
 
+Check out [Command Line Usage](docs) for details about command line options.
+
 ## Further reading
 
 See [Related Articles](FURTHER_READING.md) for more articles, reviews and tutorials.
