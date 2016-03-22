@@ -82,3 +82,57 @@ module.exports = function addScheduledEvent(options) {
 		}).then(addInvokePermission)
 		.then(addRuleTarget);
 };
+
+module.exports.doc = {
+	description: 'Add a recurring notification event',
+	priority: 7,
+	args: [
+		{
+			argument: 'event',
+			description: 'Path to a JSON event file that will be sent to lambda periodically'
+		},
+		{
+			argument: 'name',
+			description: 'Name for the scheduled event rule that will be created'
+		},
+		{
+			argument: 'schedule',
+			description: 'A schedule expression. For syntax options, see\n' +
+				'http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/ScheduledEvents.html',
+			example: 'rate(5 minutes)'
+		},
+		{
+			argument: 'rate',
+			optional: true,
+			description: 'a shorthand for rate-based expressions, without the brackets\n' +
+				'If this is specified, the schedule argument is not required/ignored',
+			example: '5 minutes'
+		},
+		{
+			argument: 'cron',
+			optional: true,
+			description: 'a shorthand for cron-based expressions, without the brackets\n' +
+				'If this is specified, the schedule argument is not required/ignored',
+			example: '0 8 1 * ? *'
+		},
+		{
+			argument: 'version',
+			optional: true,
+			description: 'Bind to a particular version',
+			example: 'production',
+			default: 'latest version'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

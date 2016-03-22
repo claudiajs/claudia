@@ -20,6 +20,35 @@ module.exports = function testLambda(options) {
 	.then(function (payload) {
 		var lambda = new aws.Lambda({region: lambdaConfig.region}),
 			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-		return invokeLambda({FunctionName: lambdaConfig.name, Payload: payload});
+		return invokeLambda({FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version});
 	});
+};
+module.exports.doc = {
+	description: 'Execute the lambda function and print out the response',
+	priority: 8,
+	args: [
+		{
+			argument: 'event',
+			optional: true,
+			description: 'Path to a file containing the JSON test event'
+		},
+		{
+			argument: 'version',
+			optional: true,
+			description: 'A version alias to test',
+			default: 'latest version'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
 };

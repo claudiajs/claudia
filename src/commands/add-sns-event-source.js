@@ -50,3 +50,32 @@ module.exports = function addSNSEventSource(options) {
 		.then(addInvokePermission)
 		.then(addSubscription);
 };
+module.exports.doc = {
+	description: 'Add a notification event to Lambda when a message is published on a SNS topic',
+	priority: 5,
+	args: [
+		{
+			argument: 'topic',
+			description: 'the ARN of the SNS topic'
+		},
+		{
+			argument: 'version',
+			optional: true,
+			description: 'Bind to a particular version',
+			example: 'production',
+			default: 'latest version'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

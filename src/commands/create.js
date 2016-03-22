@@ -166,3 +166,65 @@ module.exports = function create(options) {
 	})
 	.then(saveConfig);
 };
+
+module.exports.doc = {
+	description: 'Create the initial lambda function and related security role.',
+	priority: 1,
+	args: [
+		{
+			argument: 'name',
+			description: 'lambda function name',
+			example: 'awesome-microservice'
+		},
+		{
+			argument: 'region',
+			description: 'AWS region where to create the lambda',
+			example: 'us-east-1'
+		},
+		{
+			argument: 'version',
+			optional: true,
+			description: 'A version alias to automatically assign to the new function',
+			example: 'development'
+		},
+		{
+			argument: 'handler',
+			optional: true,
+			description: 'Main function for Lambda to execute, as module.function',
+			example: 'if it is in the main.js file and exported as router, this would be main.router'
+		},
+		{
+			argument: 'api-module',
+			optional: true,
+			description: 'The main module to use when creating Web APIs. \n' +
+				'If you provide this parameter, the handler option is ignored.\n' +
+				'This should be a module created using the Claudia API Builder.',
+			example: 'if the api is defined in web.js, this would be web'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			'default': 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file where the creation result will be saved',
+			'default': 'claudia.json'
+		},
+		{
+			argument: 'policies',
+			optional: true,
+			description: 'A directory or file pattern for additional IAM policies\n' +
+				'which will automatically be included into the security role for the function',
+			example: 'policies/*.xml'
+		},
+		{
+			argument: 'role',
+			optional: true,
+			description: 'The name of an existing role to assign to the function. \n' +
+				'If not supplied, Claudia will create a new role'
+		}
+	]
+};

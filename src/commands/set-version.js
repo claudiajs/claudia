@@ -42,3 +42,26 @@ module.exports = function setVersion(options) {
 		}
 	});
 };
+module.exports.doc = {
+	description: 'Create or update a lambda alias/api stage to point to the latest deployed version',
+	priority: 3,
+	args: [
+		{
+			argument: 'version',
+			description: 'the alias to update or create',
+			example: 'production'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

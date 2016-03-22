@@ -40,3 +40,21 @@ module.exports = function destroy(options) {
 			}
 		});
 };
+module.exports.doc = {
+	description: 'Undeploy the lambda function and destroy the API and security roles',
+	priority: 9,
+	args: [
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

@@ -47,4 +47,27 @@ module.exports = function update(options) {
 		return updateResult;
 	});
 };
-
+module.exports.doc = {
+	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',
+	priority: 2,
+	args: [
+		{
+			argument: 'version',
+			optional: true,
+			description: 'A version alias to automatically assign to the new deployment',
+			example: 'development'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

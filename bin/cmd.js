@@ -2,21 +2,22 @@
 /* global process, __dirname, require, console */
 var minimist = require('minimist'),
 	shell = require('shelljs'),
-	fs = require('fs'),
 	path = require('path'),
+	docTxt = require('../src/util/doc-txt'),
 	readCommands = function () {
 		'use strict';
 		var result = {};
 		shell.ls(path.join(__dirname, '../src/commands')).forEach(function (fileName) {
 			var cmdName = path.basename(fileName, '.js');
 			result[cmdName] = require('../src/commands/' + cmdName);
+			result[cmdName].command = cmdName;
 		});
 		return result;
 	},
 	readArgs = function () {
 		'use strict';
 		return minimist(process.argv.slice(2), {
-			alias: { h: 'help' },
+			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region'],
 			default: { 'source': shell.pwd() }
 		});
@@ -26,18 +27,30 @@ var minimist = require('minimist'),
 		var args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0];
-		if (args.help) {
-			fs.createReadStream(path.join(__dirname, '/usage.txt')).pipe(process.stdout);
+		if (args.version) {
+			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
 		}
+		if (command && !commands[command]) {
+			console.error('unsupported command ' + command + '. re-run with --help for usage information');
+			process.exit(1);
+			return;
+		}
+		if (args.help) {
+			if (command) {
+				console.log(docTxt.commandDoc(commands[command]));
+			} else {
+				console.log(docTxt.index(commands));
+			}
+			return;
+		}
+
 		if (!command) {
 			console.error('command not provided. re-run with --help for usage information');
 			process.exit(1);
+			return;
 		}
-		if (!commands[command]) {
-			console.error('unsupported command ' + command + '. re-run with --help for usage information');
-			process.exit(1);
-		}
+
 		commands[command](args).then(function (result) {
 			if (result) {
 				console.log(JSON.stringify(result));

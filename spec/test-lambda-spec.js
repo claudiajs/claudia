@@ -1,6 +1,7 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
 var underTest = require('../src/commands/test-lambda'),
 	create = require('../src/commands/create'),
+	update = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
@@ -51,6 +52,22 @@ describe('testLambda', function () {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			return underTest({source: workingdir});
+		}).then(function (result) {
+			expect(result.StatusCode).toEqual(200);
+			expect(result.Payload).toEqual('"hello world"');
+			done();
+		}, done.fail);
+	});
+	it('tests a specific version of the lambda function and returns the result', function (done) {
+		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'original'}).then(function (result) {
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+		}).then(function () {
+			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			return update({source: workingdir, version: 'updated'});
+		}).then(function () {
+			return underTest({source: workingdir, version: 'original'});
 		}).then(function (result) {
 			expect(result.StatusCode).toEqual(200);
 			expect(result.Payload).toEqual('"hello world"');
