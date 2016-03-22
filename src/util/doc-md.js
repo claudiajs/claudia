@@ -92,9 +92,7 @@ var fs = require('fs'),
 		lines.push(' * --help           print this help screen');
 		lines.push(' * --version        print out the current version');
 		lines.push('');
-		lines.push('Run with a command name to see options of a specific command');
-		lines.push('');
-		lines.push('For example:');
+		lines.push('Run with a command name to see options of a specific command, for example:');
 		lines.push('```bash');
 		lines.push('claudia create --help');
 		lines.push('```');

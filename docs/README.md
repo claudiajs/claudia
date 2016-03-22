@@ -23,9 +23,7 @@ claudia [command] {OPTIONS}
  * --help           print this help screen
  * --version        print out the current version
 
-Run with a command name to see options of a specific command
-
-For example:
+Run with a command name to see options of a specific command, for example:
 ```bash
 claudia create --help
 ```
