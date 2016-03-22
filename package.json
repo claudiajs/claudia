@@ -29,9 +29,11 @@
     "*.md",
     "*.js",
     "json-templates",
-    "bin"
+    "bin",
+    "docs"
   ],
   "scripts": {
+    "prepublish": "node src/util/doc-md.js",
     "pretest": "jshint src spec && jscs src spec",
     "test": "node spec/support/jasmine-runner.js"
   },
