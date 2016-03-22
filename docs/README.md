@@ -1,8 +1,11 @@
 # Claudia.js command line usage
 
-usage: `claudia [command] {OPTIONS}`
-
 Deploy a Node.JS project to AWS as a lambda microservice, optionally updating APIs/event hooks.
+
+## Usage
+```bash
+claudia [command] {OPTIONS}
+```
 
 ## _COMMANDS_ are:
 

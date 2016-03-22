@@ -1,8 +1,12 @@
 #test-lambda
 
-usage: `claudia test-lambda {OPTIONS}`
-
 Execute the lambda function and print out the response
+
+## Usage
+
+```bash
+claudia test-lambda {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

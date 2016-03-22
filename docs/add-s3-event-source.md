@@ -1,8 +1,12 @@
 #add-s3-event-source
 
-usage: `claudia add-s3-event-source {OPTIONS}`
-
 Add a notification event to Lambda when a file is added to a S3 bucket, and set up access permissions
+
+## Usage
+
+```bash
+claudia add-s3-event-source {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

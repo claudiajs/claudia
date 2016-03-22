@@ -1,8 +1,12 @@
 #update
 
-usage: `claudia update {OPTIONS}`
-
 Deploy a new version of the Lambda function using project files, update any associated web APIs
+
+## Usage
+
+```bash
+claudia update {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

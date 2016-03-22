@@ -1,8 +1,12 @@
 #set-version
 
-usage: `claudia set-version {OPTIONS}`
-
 Create or update a lambda alias/api stage to point to the latest deployed version
+
+## Usage
+
+```bash
+claudia set-version {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

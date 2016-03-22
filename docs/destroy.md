@@ -1,8 +1,12 @@
 #destroy
 
-usage: `claudia destroy {OPTIONS}`
-
 Undeploy the lambda function and destroy the API and security roles
+
+## Usage
+
+```bash
+claudia destroy {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

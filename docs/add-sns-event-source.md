@@ -1,8 +1,12 @@
 #add-sns-event-source
 
-usage: `claudia add-sns-event-source {OPTIONS}`
-
 Add a notification event to Lambda when a message is published on a SNS topic
+
+## Usage
+
+```bash
+claudia add-sns-event-source {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 

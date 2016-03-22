@@ -1,8 +1,12 @@
 #add-scheduled-event
 
-usage: `claudia add-scheduled-event {OPTIONS}`
-
 Add a recurring notification event
+
+## Usage
+
+```bash
+claudia add-scheduled-event {OPTIONS}
+```
 
 ## _OPTIONS_ are:
 
