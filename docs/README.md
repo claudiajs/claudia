@@ -7,7 +7,7 @@ Deploy a Node.JS project to AWS as a lambda microservice, optionally updating AP
 claudia [command] {OPTIONS}
 ```
 
-## _COMMANDS_ are:
+## Supported commands
 
 * [`create`](create.md) Create the initial lambda function and related security role.
 * [`update`](update.md) Deploy a new version of the Lambda function using project files, update any associated web APIs
@@ -18,12 +18,14 @@ claudia [command] {OPTIONS}
 * [`test-lambda`](test-lambda.md) Execute the lambda function and print out the response
 * [`destroy`](destroy.md) Undeploy the lambda function and destroy the API and security roles
 
-## _OPTIONS_ are:
+## Options:
 
  * --help           print this help screen
  * --version        print out the current version
 
 Run with a command name to see options of a specific command
 
-For example: `claudia create --help`
-
+For example:
+```bash
+claudia create --help
+```

@@ -8,7 +8,7 @@ Execute the lambda function and print out the response
 claudia test-lambda {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--event`:  _optional_ Path to a file containing the JSON test event
 *  `--version`:  _optional_ A version alias to test

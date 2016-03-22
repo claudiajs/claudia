@@ -8,7 +8,7 @@ Add a notification event to Lambda when a message is published on a SNS topic
 claudia add-sns-event-source {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--topic`:  the ARN of the SNS topic
 *  `--version`:  _optional_ Bind to a particular version

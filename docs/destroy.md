@@ -8,7 +8,7 @@ Undeploy the lambda function and destroy the API and security roles
 claudia destroy {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--source`:  _optional_ Directory with project files
   * _Defaults to_: current directory

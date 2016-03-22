@@ -8,7 +8,7 @@ Add a notification event to Lambda when a file is added to a S3 bucket, and set 
 claudia add-s3-event-source {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--bucket`:  S3 Bucket name which will push notifications to Lambda
 *  `--prefix`:  _optional_ Prefix filter for S3 keys that will cause the event

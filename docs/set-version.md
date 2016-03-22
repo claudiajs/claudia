@@ -8,7 +8,7 @@ Create or update a lambda alias/api stage to point to the latest deployed versio
 claudia set-version {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--version`:  the alias to update or create
   * _For example_: production

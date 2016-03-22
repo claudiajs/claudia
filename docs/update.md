@@ -8,7 +8,7 @@ Deploy a new version of the Lambda function using project files, update any asso
 claudia update {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--version`:  _optional_ A version alias to automatically assign to the new deployment
   * _For example_: development

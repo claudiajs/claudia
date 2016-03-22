@@ -8,7 +8,7 @@ Create the initial lambda function and related security role.
 claudia create {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--name`:  lambda function name
   * _For example_: awesome-microservice

@@ -33,7 +33,7 @@ var fs = require('fs'),
 		lines.push('claudia ' + command.command + ' {OPTIONS}');
 		lines.push('```');
 		lines.push('');
-		lines.push('## _OPTIONS_ are:');
+		lines.push('## Options');
 		lines.push('');
 		command.doc.args.forEach(function (argDoc) {
 			var components = [], descLines;
@@ -69,7 +69,7 @@ var fs = require('fs'),
 		lines.push('claudia [command] {OPTIONS}');
 		lines.push('```');
 		lines.push('');
-		lines.push('## _COMMANDS_ are:');
+		lines.push('## Supported commands');
 		lines.push('');
 		Object.keys(commands).map(function (key) {
 			return commands[key];
@@ -87,15 +87,17 @@ var fs = require('fs'),
 			lines.push(components.join(''));
 		});
 		lines.push('');
-		lines.push('## _OPTIONS_ are:');
+		lines.push('## Options:');
 		lines.push('');
 		lines.push(' * --help           print this help screen');
 		lines.push(' * --version        print out the current version');
 		lines.push('');
 		lines.push('Run with a command name to see options of a specific command');
 		lines.push('');
-		lines.push('For example: `claudia create --help`');
-		lines.push('');
+		lines.push('For example:');
+		lines.push('```bash');
+		lines.push('claudia create --help');
+		lines.push('```');
 		lines.push('');
 		return lines.join('\n');
 	},

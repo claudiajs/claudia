@@ -8,7 +8,7 @@ Add a recurring notification event
 claudia add-scheduled-event {OPTIONS}
 ```
 
-## _OPTIONS_ are:
+## Options
 
 *  `--event`:  Path to a JSON event file that will be sent to lambda periodically
 *  `--name`:  Name for the scheduled event rule that will be created
