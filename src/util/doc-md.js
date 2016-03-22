@@ -35,7 +35,7 @@ var fs = require('fs'),
 			var components = [], descLines;
 			components.push('*  `--' + argDoc.argument + '`: ');
 			if (argDoc.optional) {
-				components.push('_[OPTIONAL]_');
+				components.push('_optional_');
 			}
 			descLines = argDoc.description.split('\n');
 			components.push(descLines.shift());
@@ -44,10 +44,10 @@ var fs = require('fs'),
 				pushLines(indent(descLines, 2));
 			}
 			if (argDoc.example) {
-				pushLines(indent('_For example_: ' + argDoc.example, 2));
+				pushLines(indent('* _For example_: ' + argDoc.example, 2));
 			}
 			if (argDoc.default) {
-				pushLines(indent('_Defaults to_: ' + argDoc.default, 2));
+				pushLines(indent('* _Defaults to_: ' + argDoc.default, 2));
 			}
 		});
 		lines.push('');
@@ -70,14 +70,14 @@ var fs = require('fs'),
 			return cmd1.doc.priority - cmd2.doc.priority;
 		}).forEach(function (command) {
 			var components = [], descLines;
-			components.push('* [--');
+			components.push('* [`');
 			components.push(command.command);
-			components.push(' ](');
+			components.push('`](');
 			components.push(command.command);
 			components.push('.md) ');
 			descLines = command.doc.description.split('\n');
 			components.push(descLines.shift());
-			lines.push(components.join(' '));
+			lines.push(components.join(''));
 		});
 		lines.push('');
 		lines.push('## _OPTIONS_ are:');
@@ -86,6 +86,7 @@ var fs = require('fs'),
 		lines.push(' * --version        print out the current version');
 		lines.push('');
 		lines.push('Run with a command name to see options of a specific command');
+		lines.push('');
 		lines.push('For example: `claudia create --help`');
 		lines.push('');
 		lines.push('');

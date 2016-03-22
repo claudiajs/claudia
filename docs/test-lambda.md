@@ -6,10 +6,10 @@ Execute the lambda function and print out the response
 
 ## _OPTIONS_ are:
 
-*  `--event` _[OPTIONAL]_ Path to a file containing the JSON test event
-*  `--version` _[OPTIONAL]_ A version alias to test
-  _Defaults to_: latest version
-*  `--source` _[OPTIONAL]_ Directory with project files
-  _Defaults to_: current directory
-*  `--config` _[OPTIONAL]_ Config file containing the resource names
-  _Defaults to_: claudia.json
+*  `--event`:  _optional_ Path to a file containing the JSON test event
+*  `--version`:  _optional_ A version alias to test
+  * _Defaults to_: latest version
+*  `--source`:  _optional_ Directory with project files
+  * _Defaults to_: current directory
+*  `--config`:  _optional_ Config file containing the resource names
+  * _Defaults to_: claudia.json
