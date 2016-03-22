@@ -3,17 +3,8 @@
 var minimist = require('minimist'),
 	shell = require('shelljs'),
 	path = require('path'),
+	readCommands = require('../src/util/read-commands'),
 	docTxt = require('../src/util/doc-txt'),
-	readCommands = function () {
-		'use strict';
-		var result = {};
-		shell.ls(path.join(__dirname, '../src/commands')).forEach(function (fileName) {
-			var cmdName = path.basename(fileName, '.js');
-			result[cmdName] = require('../src/commands/' + cmdName);
-			result[cmdName].command = cmdName;
-		});
-		return result;
-	},
 	readArgs = function () {
 		'use strict';
 		return minimist(process.argv.slice(2), {

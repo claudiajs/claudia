@@ -1,5 +1,10 @@
 # Release history
 
+### 1.0.18
+
+- test-lambda now accepts --version
+- documentation re-structured so individual commands now print out options with --help
+
 ### 1.0.17, 21 March 2016
 
 - bugfix to handle correctly POST operations with a charset (jQuery Ajax does this)
