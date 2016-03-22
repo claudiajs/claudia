@@ -18,7 +18,7 @@ var minimist = require('minimist'),
 		var args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0];
-		if (args.version) {
+		if (args.version && !command) {
 			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
 		}

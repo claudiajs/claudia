@@ -1,9 +1,11 @@
 # Release history
 
-### 1.0.18
+### 1.0.18, 22 March 2016
 
+- use --version to print current version
 - test-lambda now accepts --version
 - documentation re-structured so individual commands now print out options with --help
+- markdown docs for the API on github
 
 ### 1.0.17, 21 March 2016
 
