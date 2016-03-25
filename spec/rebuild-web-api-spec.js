@@ -25,17 +25,16 @@ describe('rebuildWebApi', function () {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 70000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
-		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
+		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(function (done) {
 		this.destroyObjects(newObjects).catch(function (err) {
 			console.log('error cleaning up', err);
 		}).finally(done);
 	});
-
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -49,7 +48,20 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 
 		});
-
+		describe('v2 processing', function () {
+			it('maps the entire response object to the lambda response body', function (done) {
+				apiRouteConfig.version = 2;
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo');
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.response.context.method).toEqual('GET');
+					expect(params.response.context.path).toEqual('/echo');
+					expect(params.headers.v).toEqual('3');
+				}).then(done, done.fail);
+			});
+		});
 		it('creates and links an API to a lambda version', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
@@ -60,6 +72,7 @@ describe('rebuildWebApi', function () {
 				expect(params.context.path).toEqual('/echo');
 			}).then(done, done.fail);
 		});
+
 		describe('request parameter processing', function () {
 			it('captures query string parameters', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
@@ -120,7 +133,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures form post variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -133,7 +146,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures form post variables even when the charset is provided with the content type', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'},
@@ -146,7 +159,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures blank form POST variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -159,7 +172,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures text/xml request bodies', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
 					return invoke('original/echo', {
@@ -175,7 +188,7 @@ describe('rebuildWebApi', function () {
 		});
 
 		it('creates multiple methods for the same resource', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
@@ -337,7 +350,7 @@ describe('rebuildWebApi', function () {
 	});
 	describe('response customisation', function () {
 		beforeEach(function (done) {
-			shell.cp('-r', 'spec/test-projects/error-handling/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/error-handling-v3/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -353,7 +366,7 @@ describe('rebuildWebApi', function () {
 		});
 		describe('handles success', function () {
 			it('returns 200 and json template if not customised', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -363,7 +376,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('returns a custom code when specified as a number', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: 202}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: 202}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -373,7 +386,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('returns a custom code when specified as an object', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: {code: 202}}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: {code: 202}}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -383,7 +396,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('resolves with the location header for 3xx codes', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: 301}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: 301}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -394,7 +407,7 @@ describe('rebuildWebApi', function () {
 			});
 			['text/html', 'text/plain', 'application/xml', 'text/xml'].forEach(function (contentType) {
 				it('returns unescaped ' + contentType + ' if required', function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: {contentType: contentType}}}}}, awsRegion)
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: {contentType: contentType}}}}}, awsRegion)
 					.then(function () {
 						return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 					}).then(function (response) {
@@ -408,7 +421,7 @@ describe('rebuildWebApi', function () {
 		describe('handles errors gracefully', function () {
 			describe('when no error configuration provided', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -442,7 +455,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method has an error code', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: 503}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: 503}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -476,7 +489,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method has an error code as an object', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: {code: 503}}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: {code: 503}}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -495,7 +508,7 @@ describe('rebuildWebApi', function () {
 
 			describe('when the method has an error content type text/plain', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: {code: 503, contentType: 'text/plain'}}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: {code: 503, contentType: 'text/plain'}}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -527,7 +540,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method asks for error code to be 200', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {error: 200}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: 200}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -548,7 +561,7 @@ describe('rebuildWebApi', function () {
 
 	describe('when working with an existing api', function () {
 		beforeEach(function (done) {
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -568,7 +581,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('adds extra paths from the new definition', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
@@ -578,7 +591,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('adds subresources mapped with intermediate paths', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'sub/map2/map3': { GET: {}}}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'sub/map2/map3': { GET: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/sub/map2/map3');
 			}).then(function (contents) {
@@ -632,7 +645,7 @@ describe('rebuildWebApi', function () {
 					authBucket: 'bucket123'
 				}
 			}).then(function () {
-				return underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion);
+				return underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}}, awsRegion);
 			}).then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
@@ -647,7 +660,7 @@ describe('rebuildWebApi', function () {
 	});
 	describe('configuration versions', function () {
 		beforeEach(function (done) {
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;

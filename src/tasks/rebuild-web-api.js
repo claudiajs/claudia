@@ -74,12 +74,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				successContentType = function () {
 					return methodOptions && methodOptions.success && methodOptions.success.contentType;
 				},
-				successTemplate = function () {
+				successTemplateV2 = function () {
 					var contentType = successContentType();
 					if (!contentType || contentType === 'application/json') {
 						return '';
 					}
 					return '$input.path(\'$\')';
+				},
+				successTemplate = function () {
+					var contentType = successContentType();
+					if (requestedConfig.version === 2) {
+						return successTemplateV2();
+					}
+					if (!contentType || contentType === 'application/json') {
+						return '$input.json(\'$.response\')';
+					}
+					return '$input.path(\'$.response\')';
 				},
 				errorTemplate = function () {
 					var contentType = errorContentType();
@@ -314,10 +324,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		upgradeConfig = function (config) {
 			var result;
-			if (config.version === 2) {
+			if (config.version >= 2) {
 				return config;
 			}
-			result = { version: 2, routes: {} };
+			result = { version: 3, routes: {} };
 			Object.keys(config).forEach(function (route) {
 				result.routes[route] = {};
 				config[route].methods.forEach(function (methodName) {
