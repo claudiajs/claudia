@@ -7,11 +7,12 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	callApi = require('../src/util/call-api'),
+	retriableWrap = require('../src/util/wrap'),
 	awsRegion = 'us-east-1';
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
+		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};

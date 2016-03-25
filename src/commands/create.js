@@ -82,7 +82,7 @@ module.exports = function create(options) {
 				name: options.name
 			}).then(function (result) {
 				lambdaMetadata.api = {id: result.id, module: options['api-module']};
-				return rebuildWebApi(lambdaMetadata.FunctionName, options.version || 'latest', result.id, apiConfig, options.region);
+				return rebuildWebApi(lambdaMetadata.FunctionName, options.version || 'latest', result.id, apiConfig, options.region, options.verbose);
 			}).then(function () {
 				return lambdaMetadata;
 			});

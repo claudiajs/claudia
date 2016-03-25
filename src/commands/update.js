@@ -41,7 +41,7 @@ module.exports = function update(options) {
 		if (apiConfig && apiConfig.id && apiConfig.module) {
 			apiModule = require(path.join(options.source, apiConfig.module));
 			apiDef = apiModule.apiConfig();
-			return rebuildWebApi(lambdaConfig.name, options.version || 'latest', apiConfig.id, apiDef, lambdaConfig.region);
+			return rebuildWebApi(lambdaConfig.name, options.version || 'latest', apiConfig.id, apiDef, lambdaConfig.region, options.verbose);
 		}
 	}).then(function () {
 		return updateResult;
