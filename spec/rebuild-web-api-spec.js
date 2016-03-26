@@ -400,6 +400,57 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 
 		});
+		describe('custom headers', function () {
+			it('adds headers specified as arrays', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': { success: { headers: ['name', 'surname']}}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo?name=timmy', {
+						headers: {'content-type': 'application/json'},
+						body: JSON.stringify({headers: {name: 'tom', surname: 'bond'}}),
+						method: 'POST'
+					});
+				}).then(function (response) {
+					expect(response.headers.name).toEqual('tom');
+					expect(response.headers.surname).toEqual('bond');
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+			});
+			it('adds headers specified as objects', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': { success: { headers: {name: 'Mike', surname: 'Smith'}}}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo?name=timmy', {
+						headers: {'content-type': 'application/json'},
+						body: JSON.stringify({headers: {name: 'tom', surname: 'bond'}}),
+						method: 'POST'
+					});
+				}).then(function (response) {
+					expect(response.headers.name).toEqual('tom');
+					expect(response.headers.surname).toEqual('bond');
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+			});
+			it('can override standard headers', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {'echo': { 'POST': { success: { headers: ['Content-Type', 'Access-Control-Allow-Origin']}}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo?name=timmy', {
+						headers: {'content-type': 'application/json'},
+						body: JSON.stringify({headers: {'Content-Type': 'text/markdown', 'Access-Control-Allow-Origin': 'customCors'}}),
+						method: 'POST'
+					});
+				}).then(function (response) {
+					expect(response.headers['content-type']).toEqual('text/markdown');
+					expect(response.headers['access-control-allow-origin']).toEqual('customCors');
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+
+			});
+		});
 		describe('handles success', function () {
 			it('returns 200 and json template if not customised', function (done) {
 				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {}}}}, awsRegion)

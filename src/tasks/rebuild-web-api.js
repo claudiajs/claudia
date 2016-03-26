@@ -72,6 +72,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				errorContentType = function () {
 					return methodOptions && methodOptions.error && methodOptions.error.contentType;
 				},
+				headers = function (responseType) {
+					var headers = methodOptions && methodOptions[responseType] && methodOptions[responseType].headers;
+					if (headers && !Array.isArray(headers)) {
+						headers = Object.keys(headers);
+					}
+					return headers;
+				},
 				successContentType = function () {
 					return methodOptions && methodOptions.success && methodOptions.success.contentType;
 				},
@@ -130,6 +137,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						}
 						responseTemplates[contentType] = response.template || '';
 					}
+					if (response.headers) {
+						response.headers.forEach(function (headerName) {
+							methodResponseParams['method.response.header.' + headerName] = false;
+							integrationResponseParams['method.response.header.' + headerName] = 'integration.response.body.headers.' + headerName;
+						});
+					}
 					responseModels[contentType] = 'Empty';
 					return apiGateway.putMethodResponseAsync({
 						restApiId: restApiId,
@@ -171,10 +184,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 				});
 			}).then(function () {
-				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate()}];
+				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(), headers: headers('success')}];
 				if (errorCode() !== successCode()) {
 					results[0].pattern = '^$';
-					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate()});
+					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate(), headers: headers('error')});
 				}
 				return Promise.map(results, addCodeMapper, {concurrency: 1});
 			});
