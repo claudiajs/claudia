@@ -83,14 +83,19 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return '$input.path(\'$\')';
 				},
 				successTemplate = function () {
-					var contentType = successContentType();
+					// success codes can also be used as error codes, so this has to work for both
+					var contentType = successContentType(), extractor = 'path';
 					if (requestedConfig.version === 2) {
 						return successTemplateV2();
 					}
 					if (!contentType || contentType === 'application/json') {
-						return '$input.json(\'$.response\')';
+						extractor = 'json';
 					}
-					return '$input.path(\'$.response\')';
+					return '#if($input.path(\'$.errorMessage\')!="")' +
+							'$input.' + extractor + '(\'$\')' +
+							'#{else}' +
+							'$input.' + extractor + '(\'$.response\')' +
+							'#{end}';
 				},
 				errorTemplate = function () {
 					var contentType = errorContentType();
@@ -112,7 +117,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 
 					if (isRedirect(response.code)) {
 						methodResponseParams['method.response.header.Location'] = false;
-						integrationResponseParams['method.response.header.Location'] = 'integration.response.body';
+						if (requestedConfig.version < 3) {
+							integrationResponseParams['method.response.header.Location'] = 'integration.response.body';
+						} else {
+							integrationResponseParams['method.response.header.Location'] = 'integration.response.body.response';
+						}
 						responseTemplates[contentType] = '##';
 					} else {
 						if (response.contentType) {

@@ -348,6 +348,43 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('legacy v2 response customisation', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/error-handling/*', workingdir);
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+
+		});
+		it('returns 200 and json template if not customised', function (done) {
+			underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {}}}}, awsRegion)
+			.then(function () {
+				return callApi(apiId, awsRegion, 'latest/test?name=timmy');
+			}).then(function (response) {
+				expect(response.body).toEqual('"timmy is OK"');
+				expect(response.statusCode).toEqual(200);
+				expect(response.headers['content-type']).toEqual('application/json');
+			}).then(done, done.fail);
+		});
+		it('resolves with the location header for 3xx codes', function (done) {
+			underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 2, routes: {test: {GET: {success: 301}}}}, awsRegion)
+			.then(function () {
+				return callApi(apiId, awsRegion, 'latest/test?name=timmy');
+			}).then(function (response) {
+				expect(response.body).toEqual('');
+				expect(response.statusCode).toEqual(301);
+				expect(response.headers.location).toEqual('timmy is OK');
+			}).then(done, done.fail);
+		});
+
+	});
 	describe('response customisation', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/error-handling-v3/*', workingdir);
