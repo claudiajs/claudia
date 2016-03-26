@@ -1,5 +1,9 @@
 # Release history
 
+### 1.0.19, 25 March 2016
+
+- retry TooManyRequestsException automatically, AWS SDK seems to have a recurring bug to not retry those 
+
 ### 1.0.18, 22 March 2016
 
 - use --version to print current version

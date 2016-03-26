@@ -5,12 +5,13 @@ beforeEach(function () {
 	var aws = require('aws-sdk'),
 		Promise = require('bluebird'),
 		shell = require('shelljs'),
+		retriableWrap = require('../../src/util/wrap'),
 		awsRegion = 'us-east-1';
 
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
 			logs = new aws.CloudWatchLogs({region: awsRegion}),
-			apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})),
+			apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), false),
 			iam = Promise.promisifyAll(new aws.IAM()),
 			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
 			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
