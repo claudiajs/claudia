@@ -2,10 +2,10 @@
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
+	Promise = require('bluebird'),
 	querystring = require('querystring'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/wrap'),
 	awsRegion = 'us-east-1';
@@ -36,8 +36,7 @@ describe('rebuildWebApi', function () {
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
-			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({
@@ -352,8 +351,7 @@ describe('rebuildWebApi', function () {
 	describe('response customisation', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/error-handling-v3/*', workingdir);
-			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({
@@ -563,8 +561,7 @@ describe('rebuildWebApi', function () {
 	describe('when working with an existing api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
-			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({
@@ -662,8 +659,7 @@ describe('rebuildWebApi', function () {
 	describe('configuration versions', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/echo-v3/*', workingdir);
-			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({

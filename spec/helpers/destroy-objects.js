@@ -58,12 +58,12 @@ beforeEach(function () {
 			};
 
 
-		if (newObjects.workingdir && shell.test('-e', newObjects.workingdir)) {
-			shell.rm('-rf', newObjects.workingdir);
-		}
-
 		if (!newObjects) {
 			return Promise.resolve();
+		}
+
+		if (newObjects.workingdir && shell.test('-e', newObjects.workingdir)) {
+			shell.rm('-rf', newObjects.workingdir);
 		}
 
 		return Promise.resolve().then(function () {

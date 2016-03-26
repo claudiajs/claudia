@@ -4,10 +4,10 @@ var underTest = require('../src/commands/create'),
 	callApi = require('../src/util/call-api'),
 	templateFile = require('../src/util/template-file'),
 	shell = require('shelljs'),
-	fs = require('fs'),
+	Promise = require('bluebird'),
+	fs = Promise.promisifyAll(require('fs')),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
