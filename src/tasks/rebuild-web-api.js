@@ -113,10 +113,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				addCodeMapper = function (response) {
 					var methodResponseParams = {
-							'method.response.header.Access-Control-Allow-Origin': false
+							'method.response.header.Access-Control-Allow-Origin': false,
+							'method.response.header.Access-Control-Allow-Headers': false
 						},
 						integrationResponseParams = {
-							'method.response.header.Access-Control-Allow-Origin': '\'*\''
+							'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+							'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\''
 						},
 						responseTemplates = {},
 						responseModels = {},

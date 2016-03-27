@@ -310,43 +310,6 @@ describe('rebuildWebApi', function () {
 				done.fail(e);
 			});
 		});
-		it('creates OPTIONS handlers for CORS', function (done) {
-			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return invoke('original/echo', {method: 'OPTIONS'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(function () {
-				return invoke('original/hello', {method: 'OPTIONS'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-methods']).toEqual('POST,GET,OPTIONS');
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(done, done.fail);
-		});
-		it('appends CORS to all methods', function (done) {
-			apiRouteConfig.routes.hello = {POST: {}, GET: {}};
-			apiRouteConfig.routes[''] = {GET: {}};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return invoke('original/echo', {method: 'GET'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(function () {
-				return invoke('original/hello', {method: 'GET'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(function () {
-				return invoke('original/hello', {method: 'POST'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(function () {
-				return invoke('original/', {method: 'GET'});
-			}).then(function (contents) {
-				expect(contents.headers['access-control-allow-origin']).toEqual('*');
-			}).then(done, done.fail);
-		});
 	});
 	describe('legacy v2 response customisation', function () {
 		beforeEach(function (done) {
@@ -399,6 +362,56 @@ describe('rebuildWebApi', function () {
 				newObjects.restApi = result.id;
 			}).then(done, done.fail);
 
+		});
+		describe('CORS handling', function () {
+			describe('without custom CORS options', function () {
+				it('creates OPTIONS handlers for CORS', function (done) {
+					apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo', {method: 'OPTIONS'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					}).then(function () {
+						return invoke('original/hello', {method: 'OPTIONS'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-methods']).toEqual('POST,GET,OPTIONS');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					}).then(done, done.fail);
+				});
+				it('appends CORS to all methods', function (done) {
+					apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+					apiRouteConfig.routes[''] = {GET: {}};
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo?name=timmy', {method: 'GET'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(function () {
+						return invoke('original/hello?name=timmu', {method: 'GET'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(function () {
+						return invoke('original/hello?name=timmy', {method: 'POST'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(function () {
+						return invoke('original/?name=timmy', {method: 'GET'});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(done, function (e) {
+						console.log(e);
+						done.fail();
+					});
+				});
+			});
 		});
 		describe('custom headers', function () {
 			it('adds headers specified as arrays', function (done) {
