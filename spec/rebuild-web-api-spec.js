@@ -46,7 +46,7 @@ describe('rebuildWebApi', function () {
 				apiId = result.id;
 				newObjects.restApi = result.id;
 			}).then(done, done.fail);
-
+			apiRouteConfig.corsHandlers = false;
 		});
 		describe('v2 processing', function () {
 			it('maps the entire response object to the lambda response body', function (done) {
@@ -548,7 +548,7 @@ describe('rebuildWebApi', function () {
 		});
 		describe('handles success', function () {
 			it('returns 200 and json template if not customised', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -558,7 +558,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('returns a custom code when specified as a number', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: 202}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {success: 202}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -568,7 +568,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('returns a custom code when specified as an object', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: {code: 202}}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {success: {code: 202}}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -578,7 +578,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('resolves with the location header for 3xx codes', function (done) {
-				underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: 301}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {success: 301}}}}, awsRegion)
 				.then(function () {
 					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 				}).then(function (response) {
@@ -589,7 +589,7 @@ describe('rebuildWebApi', function () {
 			});
 			['text/html', 'text/plain', 'application/xml', 'text/xml'].forEach(function (contentType) {
 				it('returns unescaped ' + contentType + ' if required', function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {success: {contentType: contentType}}}}}, awsRegion)
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {success: {contentType: contentType}}}}}, awsRegion)
 					.then(function () {
 						return callApi(apiId, awsRegion, 'latest/test?name=timmy');
 					}).then(function (response) {
@@ -603,7 +603,7 @@ describe('rebuildWebApi', function () {
 		describe('handles errors gracefully', function () {
 			describe('when no error configuration provided', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -637,7 +637,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method has an error code', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: 503}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {error: 503}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -671,7 +671,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method has an error code as an object', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: {code: 503}}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {error: {code: 503}}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -690,7 +690,7 @@ describe('rebuildWebApi', function () {
 
 			describe('when the method has an error content type text/plain', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: {code: 503, contentType: 'text/plain'}}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {error: {code: 503, contentType: 'text/plain'}}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -722,7 +722,7 @@ describe('rebuildWebApi', function () {
 			});
 			describe('when the method asks for error code to be 200', function () {
 				beforeEach(function (done) {
-					underTest(newObjects.lambdaFunction, 'latest', apiId, {version: 3, routes: {test: {GET: {error: 200}}}}, awsRegion).then(done, done.fail);
+					underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 3, routes: {test: {GET: {error: 200}}}}, awsRegion).then(done, done.fail);
 				});
 				it('responds to successful requests with 200', function (done) {
 					callApi(apiId, awsRegion, 'latest/test?name=timmy').then(function (response) {
@@ -758,6 +758,7 @@ describe('rebuildWebApi', function () {
 				apiRouteConfig.routes[''] = {GET: {}, PUT: {}};
 				apiRouteConfig.routes.sub = {GET: {}, PUT: {}};
 				apiRouteConfig.routes['sub/mapped/sub2'] = {GET: {}, PUT: {}};
+				apiRouteConfig.corsHandlers = false;
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(done, done.fail);
 		});
@@ -826,7 +827,7 @@ describe('rebuildWebApi', function () {
 					authBucket: 'bucket123'
 				}
 			}).then(function () {
-				return underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}}, awsRegion);
+				return underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {extra: { GET: {}}}}, awsRegion);
 			}).then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
