@@ -38,6 +38,35 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			knownIds[''] = rootResource.id;
 			return rootResource.id;
 		},
+		supportsCors = function () {
+			return (apiConfig.corsHandlers !== false);
+		},
+		putMockIntegration = function (resourceId, httpMethod) {
+			return apiGateway.putIntegrationAsync({
+				restApiId: restApiId,
+				resourceId: resourceId,
+				httpMethod: httpMethod,
+				type: 'MOCK',
+				requestTemplates: {
+					'application/json': '{\"statusCode\": 200}'
+				}
+			});
+		},
+		putLambdaIntegration = function (resourceId, methodName) {
+			return apiGateway.putIntegrationAsync({
+				restApiId: restApiId,
+				resourceId: resourceId,
+				httpMethod: methodName,
+				type: 'AWS',
+				integrationHttpMethod: 'POST',
+				requestTemplates: {
+					'application/json': inputTemplate,
+					'application/x-www-form-urlencoded': inputTemplate,
+					'text/xml': inputTemplate
+				},
+				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
+			});
+		},
 		createMethod = function (methodName, resourceId, methodOptions) {
 			var errorCode = function () {
 					if (!methodOptions.error) {
@@ -112,18 +141,28 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return '$input.path(\'$.errorMessage\')';
 				},
 				addCodeMapper = function (response) {
-					var methodResponseParams = {
-							'method.response.header.Access-Control-Allow-Origin': false,
-							'method.response.header.Access-Control-Allow-Headers': false
-						},
-						integrationResponseParams = {
-							'method.response.header.Access-Control-Allow-Origin': '\'*\'',
-							'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\''
-						},
+					var methodResponseParams = { },
+						integrationResponseParams = { },
 						responseTemplates = {},
 						responseModels = {},
 						contentType = response.contentType || 'application/json';
-
+					if (supportsCors()) {
+						methodResponseParams = {
+							'method.response.header.Access-Control-Allow-Origin': false,
+							'method.response.header.Access-Control-Allow-Headers': false
+						};
+						if (apiConfig.corsHandlers) {
+							integrationResponseParams = {
+								'method.response.header.Access-Control-Allow-Headers': 'integration.response.body.headers.Access-Control-Allow-Headers',
+								'method.response.header.Access-Control-Allow-Origin': 'integration.response.body.headers.Access-Control-Allow-Origin'
+							};
+						} else {
+							integrationResponseParams = {
+								'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+								'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\''
+							};
+						}
+					}
 					if (isRedirect(response.code)) {
 						methodResponseParams['method.response.header.Location'] = false;
 						if (requestedConfig.version < 3) {
@@ -172,19 +211,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				restApiId: restApiId,
 				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
-				return apiGateway.putIntegrationAsync({
-					restApiId: restApiId,
-					resourceId: resourceId,
-					httpMethod: methodName,
-					type: 'AWS',
-					integrationHttpMethod: 'POST',
-					requestTemplates: {
-						'application/json': inputTemplate,
-						'application/x-www-form-urlencoded': inputTemplate,
-						'text/xml': inputTemplate
-					},
-					uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
-				});
+				return putLambdaIntegration(resourceId, methodName);
 			}).then(function () {
 				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(), headers: headers('success')}];
 				if (errorCode() !== successCode()) {
@@ -201,15 +228,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				resourceId: resourceId,
 				restApiId: restApiId
 			}).then(function () {
-				return apiGateway.putIntegrationAsync({
-					restApiId: restApiId,
-					resourceId: resourceId,
-					httpMethod: 'OPTIONS',
-					type: 'MOCK',
-					requestTemplates: {
-						'application/json': '{\"statusCode\": 200}'
-					}
-				});
+				if (apiConfig.corsHandlers) {
+					return putLambdaIntegration(resourceId, 'OPTIONS');
+				} else {
+					return putMockIntegration(resourceId, 'OPTIONS');
+				}
 			}).then(function () {
 				return apiGateway.putMethodResponseAsync({
 					restApiId: restApiId,
@@ -226,6 +249,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}
 				});
 			}).then(function () {
+				var responseParams = {
+						'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\'',
+						'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
+						'method.response.header.Access-Control-Allow-Origin': '\'*\''
+					};
+				if (apiConfig.corsHandlers) {
+					responseParams['method.response.header.Access-Control-Allow-Headers'] = 'integration.response.body.headers.Access-Control-Allow-Headers';
+					responseParams['method.response.header.Access-Control-Allow-Origin'] = 'integration.response.body.headers.Access-Control-Allow-Origin';
+				}
 				return apiGateway.putIntegrationResponseAsync({
 					restApiId: restApiId,
 					resourceId: resourceId,
@@ -234,11 +266,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					responseTemplates: {
 						'application/json': ''
 					},
-					responseParameters: {
-						'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key\'',
-						'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
-						'method.response.header.Access-Control-Allow-Origin': '\'*\''
-					}
+					responseParameters: responseParams
 				});
 			});
 		},
@@ -271,7 +299,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}).then(function () {
 				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
 			}).then(function () {
-				return createCorsHandler(resourceId, supportedMethods);
+				if (supportsCors()) {
+					return createCorsHandler(resourceId, supportedMethods);
+				}
 			});
 		},
 		dropMethods = function (resource) {

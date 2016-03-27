@@ -382,7 +382,7 @@ describe('rebuildWebApi', function () {
 						expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					}).then(done, done.fail);
 				});
-				it('appends CORS to all methods', function (done) {
+				it('appends CORS to all success methods', function (done) {
 					apiRouteConfig.routes.hello = {POST: {}, GET: {}};
 					apiRouteConfig.routes[''] = {GET: {}};
 					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
@@ -406,6 +406,88 @@ describe('rebuildWebApi', function () {
 					}).then(function (contents) {
 						expect(contents.headers['access-control-allow-origin']).toEqual('*');
 						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(done, function (e) {
+						console.log(e);
+						done.fail();
+					});
+				});
+				it('appends CORS to all error methods', function (done) {
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo', {method: 'GET', resolveErrors: true});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,X-Amz-Date,Authorization,X-Api-Key');
+					}).then(done, function (e) {
+						console.log(e);
+						done.fail();
+					});
+				});
+			});
+			describe('when corsHandlers are set to false', function () {
+				beforeEach(function (done) {
+					apiRouteConfig.corsHandlers = false;
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion).then(done, done.fail);
+				});
+				it('creates OPTIONS handlers for CORS', function (done) {
+					invoke('original/echo', {method: 'OPTIONS', resolveErrors: true})
+					.then(function (response) {
+						expect(response.statusCode).toEqual(403);
+						expect(response.headers['content-type']).toEqual('application/json');
+						expect(response.headers['access-control-allow-methods']).toBeFalsy();
+						expect(response.headers['access-control-allow-headers']).toBeFalsy();
+						expect(response.headers['access-control-allow-origin']).toBeFalsy();
+					}).then(done, done.fail);
+				});
+				it('does not append CORS headers to success methods', function (done) {
+					invoke('original/echo?name=timmy', {method: 'GET'})
+					.then(function (response) {
+						expect(response.headers['access-control-allow-origin']).toBeFalsy();
+						expect(response.headers['access-control-allow-headers']).toBeFalsy();
+					}).then(done, function (e) {
+						console.log(e);
+						done.fail();
+					});
+				});
+			});
+			describe('when corsHandlers is set to true', function () {
+				beforeEach(function () {
+					apiRouteConfig.corsHandlers = true;
+				});
+				it('routes the OPTIONS handler to Lambda', function (done) {
+					apiRouteConfig.routes.hello = {POST: {}, GET: {}};
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo?name=timmy', {
+							method: 'OPTIONS',
+							body: JSON.stringify({headers: {'Access-Control-Allow-Origin': 'tom', 'Access-Control-Allow-Headers': 'bond'}})
+						});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+						expect(contents.headers['access-control-allow-headers']).toEqual('bond');
+						expect(contents.headers['access-control-allow-origin']).toEqual('tom');
+					}).then(function () {
+						return invoke('original/hello?name=timmy', {
+							method: 'OPTIONS',
+							body: JSON.stringify({headers: {'Access-Control-Allow-Origin': 'tom2', 'Access-Control-Allow-Headers': 'bond2'}})
+						});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-methods']).toEqual('POST,GET,OPTIONS');
+						expect(contents.headers['access-control-allow-headers']).toEqual('bond2');
+						expect(contents.headers['access-control-allow-origin']).toEqual('tom2');
+					}).then(done, done.fail);
+				});
+				it('allows success methods to override CORS headers', function (done) {
+					apiRouteConfig.routes.echo = {POST: {}};
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo?name=timmy', {
+							method: 'POST',
+							body: JSON.stringify({headers: {'Access-Control-Allow-Origin': 'tom2', 'Access-Control-Allow-Headers': 'bond2'}})
+						});
+					}).then(function (contents) {
+						expect(contents.headers['access-control-allow-origin']).toEqual('tom2');
+						expect(contents.headers['access-control-allow-headers']).toEqual('bond2');
 					}).then(done, function (e) {
 						console.log(e);
 						done.fail();
