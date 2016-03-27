@@ -4,6 +4,7 @@ var underTest = require('../src/commands/set-version'),
 	update = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	retriableWrap = require('../src/util/wrap'),
 	fs = require('fs'),
 	path = require('path'),
 	callApi = require('../src/util/call-api'),
@@ -25,7 +26,7 @@ describe('setVersion', function () {
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
@@ -64,8 +65,7 @@ describe('setVersion', function () {
 	describe('when the lambda project does not contain a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', role: this.genericRole}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
 		});
@@ -106,8 +106,7 @@ describe('setVersion', function () {
 	describe('when the lambda project contains a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: this.genericRole}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
 			}).then(done, done.fail);
@@ -125,13 +124,14 @@ describe('setVersion', function () {
 			}).then(done, done.fail);
 		});
 		it('keeps the old stage variables if they exist', function (done) {
-			var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion}));
+			var apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion})));
 			apiGateway.createDeploymentAsync({
 				restApiId: newObjects.restApi,
 				stageName: 'fromtest',
 				variables: {
 					authKey: 'abs123',
-					authBucket: 'bucket123'
+					authBucket: 'bucket123',
+					lambdaVersion: 'fromtest'
 				}
 			}).then(function () {
 				return underTest({source: workingdir, version: 'fromtest'});

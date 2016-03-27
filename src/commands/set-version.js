@@ -3,6 +3,7 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
+	retriableWrap = require('../util/wrap'),
 	markAlias = require('../tasks/mark-alias');
 module.exports = function setVersion(options) {
 	'use strict';
@@ -31,7 +32,7 @@ module.exports = function setVersion(options) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-		apiGateway = Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region}));
+		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
 	}).then(function () {
 		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
 	}).then(function (versionResult) {

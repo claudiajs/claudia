@@ -8,14 +8,16 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
+	retriableWrap = require('../util/wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
+	validatePackage = require('../tasks/validate-package'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options) {
 	'use strict';
-	var lambda, lambdaConfig, apiConfig, updateResult,
+	var lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
 		updateLambda = function (fileContents) {
 			return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
-		};
+		}, functionConfig;
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
@@ -24,8 +26,19 @@ module.exports = function update(options) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
+		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
+	}).then(function () {
+		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
+	}).then(function (result) {
+		functionConfig = result;
+	}).then(function () {
+		if (apiConfig) {
+			return apiGateway.getRestApiAsync({restApiId: apiConfig.id});
+		}
 	}).then(function () {
 		return collectFiles(options.source);
+	}).then(function (dir) {
+		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
 	}).then(zipdir)
 	.then(readFile)
 	.then(updateLambda)

@@ -6,6 +6,7 @@ var underTest = require('../src/commands/create'),
 	shell = require('shelljs'),
 	Promise = require('bluebird'),
 	fs = Promise.promisifyAll(require('fs')),
+	retriableWrap = require('../src/util/wrap'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	awsRegion = 'us-east-1';
@@ -40,71 +41,102 @@ describe('create', function () {
 			console.log('error cleaning up', err);
 		}).finally(done);
 	});
-	it('fails if name is not given', function (done) {
-		config.name = undefined;
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('project name is missing. please specify with --name');
-			done();
+	describe('config validation', function () {
+		it('fails if name is not given', function (done) {
+			config.name = undefined;
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('project name is missing. please specify with --name');
+				done();
+			});
 		});
-	});
-	it('fails if the region is not given', function (done) {
-		config.region = undefined;
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('AWS region is missing. please specify with --region');
-			done();
+		it('fails if the region is not given', function (done) {
+			config.region = undefined;
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('AWS region is missing. please specify with --region');
+				done();
+			});
 		});
-	});
-	it('fails if the handler is not given', function (done) {
-		config.handler = undefined;
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('Lambda handler is missing. please specify with --handler');
-			done();
+		it('fails if the handler is not given', function (done) {
+			config.handler = undefined;
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('Lambda handler is missing. please specify with --handler');
+				done();
+			});
 		});
-	});
+		it('fails if the handler contains a folder', function (done) {
+			config.handler = 'api/main.router';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('Lambda handler module has to be in the main project directory');
+			}).then(done);
+		});
+		it('fails if the api module contains a folder', function (done) {
+			config.handler = undefined;
+			config['api-module'] = 'api/main';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('API module has to be in the main project directory');
+			}).then(done);
+		});
 
-	it('fails if claudia.json already exists in the source folder', function (done) {
-		shell.mkdir(workingdir);
-		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('claudia.json already exists in the source folder');
-			done();
+		it('fails if claudia.json already exists in the source folder', function (done) {
+			shell.mkdir(workingdir);
+			fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('claudia.json already exists in the source folder');
+				done();
+			});
 		});
-	});
-	it('works if claudia.json already exists in the source folder but alternative config provided', function (done) {
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
-		shell.cd(workingdir);
-		config.config = 'lambda.json';
-		underTest(config).then(done, done.fail);
-	});
-	it('fails if the alternative config is provided but the file already exists', function (done) {
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
-		shell.cd(workingdir);
-		config.config = 'lambda.json';
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('lambda.json already exists');
-			done();
+		it('works if claudia.json already exists in the source folder but alternative config provided', function (done) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
+			shell.cd(workingdir);
+			config.config = 'lambda.json';
+			underTest(config).then(done, done.fail);
 		});
-	});
-	it('checks the current folder if the source parameter is not defined', function (done) {
-		shell.mkdir(workingdir);
-		shell.cd(workingdir);
-		fs.writeFileSync(path.join('claudia.json'), '{}', 'utf8');
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('claudia.json already exists in the source folder');
-			done();
+		it('fails if the alternative config is provided but the file already exists', function (done) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
+			shell.cd(workingdir);
+			config.config = 'lambda.json';
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('lambda.json already exists');
+				done();
+			});
 		});
-	});
-	it('fails if package.json does not exist in the target folder', function (done) {
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		shell.rm(path.join(workingdir, 'package.json'));
-		underTest(config).then(done.fail, function (message) {
-			expect(message).toEqual('package.json does not exist in the source folder');
-			done();
+		it('checks the current folder if the source parameter is not defined', function (done) {
+			shell.mkdir(workingdir);
+			shell.cd(workingdir);
+			fs.writeFileSync(path.join('claudia.json'), '{}', 'utf8');
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('claudia.json already exists in the source folder');
+				done();
+			});
+		});
+		it('fails if package.json does not exist in the target folder', function (done) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			shell.rm(path.join(workingdir, 'package.json'));
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('package.json does not exist in the source folder');
+				done();
+			});
+		});
+		it('validates the package before creating the role or the function', function (done) {
+			createFromDir('echo-dependency-problem').then(function () {
+				done.fail('create succeeded');
+			}, function (reason) {
+				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+			}).then(function () {
+				return iam.getRoleAsync({RoleName: testRunName + '-executor'}).then(function () {
+					done.fail('iam role was created');
+				}, function () {});
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName}).then(function () {
+					done.fail('function was created');
+				}, function () {});
+			}).
+			then(done);
 		});
 	});
 	describe('role management', function () {
@@ -221,11 +253,16 @@ describe('create', function () {
 			config.policies = path.join('*.NOT');
 			createFromDir('hello-world').then(done.fail, function (error) {
 				expect(error).toEqual('no files match additional policies (*.NOT)');
-				done();
-			});
+			}).then(function () {
+				return iam.getRoleAsync({RoleName: testRunName + '-executor'}).then(function () {
+					done.fail('iam role was created');
+				}, function () {});
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName}).then(function () {
+					done.fail('function was created');
+				}, function () {});
+			}).then(done);
 		});
-
-
 	});
 	describe('creating the function', function () {
 		it('returns an object containing the new claudia configuration', function (done) {
@@ -285,16 +322,11 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), apiId;
+		var apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+			apiId;
 		beforeEach(function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
-		});
-		it('fails if no APIConfig is found on the module', function (done) {
-			createFromDir('api-gw-no-export').then(done.fail, function (error) {
-				expect(error).toEqual('No apiConfig defined on module \'main\'. Are you missing a module.exports?');
-				done();
-			});
 		});
 		it('ignores the handler but creates an API if the api-module is provided', function (done) {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
@@ -342,10 +374,13 @@ describe('create', function () {
 					}
 				});
 			}).then(function () {
-				return callApi(apiId, awsRegion, 'fromtest/hello');
+				return callApi(apiId, awsRegion, 'fromtest/hello', {retry: 403});
 			}).then(function (contents) {
 				expect(contents.body).toEqual('"hello world"');
-			}).then(done, done.fail);
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail();
+			});
 		});
 	});
 });

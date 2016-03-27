@@ -8,6 +8,8 @@ var Promise = require('bluebird'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
 	templateFile = require('../util/template-file'),
+	validatePackage = require('../tasks/validate-package'),
+	retriableWrap = require('../util/wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function create(options) {
@@ -17,6 +19,17 @@ module.exports = function create(options) {
 		iam = Promise.promisifyAll(new aws.IAM()),
 		lambda = Promise.promisifyAll(new aws.Lambda({region: options.region}), {suffix: 'Promise'}),
 		roleMetadata,
+		policyFiles = function () {
+			var files = shell.ls('-R', options.policies);
+			if (shell.test('-d', options.policies)) {
+				files = files.map(function (filePath) {
+					return path.join(options.policies, filePath);
+				});
+			}
+			return files.filter(function (filePath) {
+				return shell.test('-f', filePath);
+			});
+		},
 		validationError = function () {
 			if (!options.name) {
 				return 'project name is missing. please specify with --name';
@@ -27,6 +40,12 @@ module.exports = function create(options) {
 			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
 			}
+			if (options.handler && options.handler.indexOf('/') >= 0) {
+				return 'Lambda handler module has to be in the main project directory';
+			}
+			if (options['api-module'] && options['api-module'].indexOf('/') >= 0) {
+				return 'API module has to be in the main project directory';
+			}
 			if (shell.test('-e', configFile)) {
 				if (options && options.config) {
 					return options.config + ' already exists';
@@ -35,6 +54,9 @@ module.exports = function create(options) {
 			}
 			if (!shell.test('-e', path.join(source, 'package.json'))) {
 				return 'package.json does not exist in the source folder';
+			}
+			if (options.policies && !policyFiles().length) {
+				return 'no files match additional policies (' + options.policies + ')';
 			}
 		},
 		createLambda = function (zipFile, roleArn, retriesLeft) {
@@ -73,7 +95,7 @@ module.exports = function create(options) {
 		},
 		createWebApi = function (lambdaMetadata) {
 			var apiModule = require(path.join(options.source, options['api-module'])),
-				apiGateway = Promise.promisifyAll(new aws.APIGateway({region: options.region})),
+				apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: options.region}))),
 				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
 			if (!apiConfig) {
 				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
@@ -119,42 +141,34 @@ module.exports = function create(options) {
 					});
 			}
 		},
-		addExtraPolicies = function (filePattern) {
-			var files;
-			files = shell.ls('-R', filePattern);
-			if (shell.test('-d', filePattern)) {
-				files = files.map(function (filePath) {
-					return path.join(filePattern, filePath);
-				});
-			}
-			files = files.filter(function (filePath) {
-				return shell.test('-f', filePath);
-			});
-			if (!files.length) {
-				return Promise.reject('no files match additional policies (' + filePattern + ')');
-			}
-			return Promise.map(files, function (fileName) {
+		addExtraPolicies = function () {
+			return Promise.map(policyFiles(), function (fileName) {
 				var policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			});
-		};
+		},
+		packageArchive;
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return loadRole()
+	return collectFiles(source)
+	.then(function (dir) {
+		return validatePackage(dir, options.handler, options['api-module']);
+	})
+	.then(zipdir).then(function (zipFile) {
+		packageArchive = zipFile;
+	}).then(loadRole)
 	.then(function (result) {
 		roleMetadata = result;
 	}).then(function () {
 		return addPolicy('log-writer', roleMetadata.Role.RoleName);
 	}).then(function () {
 		if (options.policies) {
-			return addExtraPolicies(options.policies);
+			return addExtraPolicies();
 		}
 	}).then(function () {
-		return collectFiles(source);
-	}).then(zipdir)
-	.then(fs.readFileAsync)
-	.then(function (fileContents) {
+		return fs.readFileAsync(packageArchive);
+	}).then(function (fileContents) {
 		return createLambda(fileContents, roleMetadata.Role.Arn, 10);
 	})
 	.then(function (lambdaMetadata) {

@@ -4,10 +4,10 @@ var underTest = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
-	fs = require('fs'),
+	Promise = require('bluebird'),
+	fs = Promise.promisifyAll(require('fs')),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('update', function () {
 	'use strict';
@@ -53,13 +53,39 @@ describe('update', function () {
 			done();
 		});
 	});
-	describe('when the lambda project exists', function () {
+	describe('when the config exists', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			}).then(done, done.fail);
+		});
+		it('fails if the lambda no longer exists', function (done) {
+			fs.readFileAsync(path.join(workingdir, 'claudia.json'), 'utf8')
+			.then(JSON.parse)
+			.then(function (contents) {
+				contents.lambda.name = contents.lambda.name + '-xxx';
+				return contents;
+			}).then(JSON.stringify)
+			.then(function (contents) {
+				return fs.writeFileAsync(path.join(workingdir, 'claudia.json'), contents, 'utf8');
+			}).then(function () {
+				return underTest({source: workingdir});
+			}).then(done.fail, function (reason) {
+				expect(reason.code).toEqual('ResourceNotFoundException');
+			}).then(done);
+		});
+		it('validates the package before updating the lambda', function (done) {
+			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', workingdir);
+			underTest({source: workingdir})
+			.then(done.fail, function (reason) {
+				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+			}).then(function () {
+				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+			}).then(function (result) {
+				expect(result.Versions.length).toEqual(2);
 			}).then(done, done.fail);
 		});
 		it('creates a new version of the lambda function', function (done) {
@@ -115,6 +141,41 @@ describe('update', function () {
 				shell.cp(path.join(originaldir, 'claudia.json'), updateddir);
 			}).then(done, done.fail);
 		});
+		it('fails if the api no longer exists', function (done) {
+			fs.readFileAsync(path.join(updateddir, 'claudia.json'), 'utf8')
+			.then(JSON.parse)
+			.then(function (contents) {
+				contents.api.id = contents.api.id + '-xxx';
+				return contents;
+			}).then(JSON.stringify)
+			.then(function (contents) {
+				return fs.writeFileAsync(path.join(updateddir, 'claudia.json'), contents, 'utf8');
+			}).then(function () {
+				return underTest({source: updateddir});
+			}).then(done.fail, function (reason) {
+				expect(reason.code).toEqual('NotFoundException');
+			}).then(function () {
+				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+			}).then(function (result) {
+				expect(result.Versions.length).toEqual(2);
+				expect(result.Versions[0].Version).toEqual('$LATEST');
+				expect(result.Versions[1].Version).toEqual('1');
+			}).then(done, done.fail);
+		});
+		it('validates the package before creating a new lambda version', function (done) {
+			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', updateddir);
+			underTest({source: updateddir}).then(done.fail, function (reason) {
+				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+			}).then(function () {
+				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+			}).then(function (result) {
+				expect(result.Versions.length).toEqual(2);
+				expect(result.Versions[0].Version).toEqual('$LATEST');
+				expect(result.Versions[1].Version).toEqual('1');
+			}).then(done, done.fail);
+		});
+
+
 		it('updates the api using the configuration from the api module', function (done) {
 			return underTest({source: updateddir}).then(function () {
 				return invoke('latest/echo?name=mike');
