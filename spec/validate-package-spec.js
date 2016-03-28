@@ -45,5 +45,21 @@ describe('validatePackage', function () {
 			var dir = path.join(__dirname, 'test-projects/api-gw-echo');
 			expect(underTest(dir, 'main.router', 'main')).toEqual(dir);
 		});
+		it('fails if the headers are specified with defaults as an empty object', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-success-headers-empty'), 'main.router', 'main');
+			}).toThrow('main.js GET /echo requests custom headers but does not enumerate any headers');
+		});
+		it('fails if the headers are specified with defaults as an empty object', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-headers-empty'), 'main.router', 'main');
+			}).toThrow('main.js GET /echo error template requests custom headers but does not enumerate any headers');
+		});
+		it('fails if the headers are specified with defaults as an empty object', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-headers-no-defaults'), 'main.router', 'main');
+			}).toThrow('main.js GET /echo error template requests custom headers but does not provide defaults');
+		});
+
 	});
 });

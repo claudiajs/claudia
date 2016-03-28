@@ -32,9 +32,29 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		if (!apiConfig || !apiConfig.routes || !Object.keys(apiConfig.routes).length) {
 			throw apiModulePath + '.js does not configure any API methods';
 		}
-		if (apiConfig.version && apiConfig.version > 3) {
+		if (apiConfig.version && apiConfig.version > 2) {
 			throw apiModulePath + '.js uses an unsupported API version. Upgrade your claudia installation';
 		}
+		Object.keys(apiConfig.routes).forEach(function (route) {
+			var routeConfig = apiConfig.routes[route];
+			Object.keys(routeConfig).forEach(function (method) {
+				var methodConfig = routeConfig[method];
+				if (methodConfig.success && methodConfig.success.headers) {
+					if (Object.keys(methodConfig.success.headers).length === 0) {
+						throw apiModulePath + '.js ' + method + ' /' + route + ' requests custom headers but does not enumerate any headers';
+					}
+				}
+				if (methodConfig.error && methodConfig.error.headers) {
+					if (Object.keys(methodConfig.error.headers).length === 0) {
+						throw apiModulePath + '.js ' + method + ' /' + route + ' error template requests custom headers but does not enumerate any headers';
+					}
+					if (Array.isArray(methodConfig.error.headers)) {
+						throw apiModulePath + '.js ' + method + ' /' + route + ' error template requests custom headers but does not provide defaults';
+					}
+				}
+
+			});
+		});
 	}
 	return dir;
 };

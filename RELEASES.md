@@ -1,5 +1,20 @@
 # Release history
 
+### 1.1.0
+
+- all validations are executed before any objects are created/updated, to avoid partially created functions
+- web API handlers can now set custom headers (requires API Builder )
+- web API handlers can now set custom CORS origins, or completely disable CORS (requires API Builder )
+- web API now accepts text/plain content for POST, PUT and PATCH
+- create and update prevent several common user errors and report more meaningfully on those
+  - when the lambda handler can't be required (eg package dependency issue or syntax error)
+  - when the API module does not export a Claudia API Builder-compatible interface (eg forgot to do module.exports)
+  - when the API module does not contain any configured methods
+  - when the API module does not contain the configured handler method
+  - when the custom policies argument is specified but no files match it
+  - when updating over a non-existent (eg removed) function or API definition
+  - when working with an incompatible API version (eg claudia needs to be updated)
+
 ### 1.0.19, 25 March 2016
 
 - retry TooManyRequestsException automatically, AWS SDK seems to have a recurring bug to not retry those 

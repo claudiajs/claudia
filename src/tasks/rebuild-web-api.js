@@ -62,7 +62,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				requestTemplates: {
 					'application/json': inputTemplate,
 					'application/x-www-form-urlencoded': inputTemplate,
-					'text/xml': inputTemplate
+					'text/xml': inputTemplate,
+					'text/plain': inputTemplate
 				},
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 			});
@@ -102,36 +103,26 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return methodOptions && methodOptions.error && methodOptions.error.contentType;
 				},
 				headers = function (responseType) {
-					var headers = methodOptions && methodOptions[responseType] && methodOptions[responseType].headers;
-					if (headers && !Array.isArray(headers)) {
-						headers = Object.keys(headers);
-					}
-					return headers;
+					return methodOptions && methodOptions[responseType] && methodOptions[responseType].headers;
 				},
 				successContentType = function () {
 					return methodOptions && methodOptions.success && methodOptions.success.contentType;
 				},
-				successTemplateV2 = function () {
-					var contentType = successContentType();
-					if (!contentType || contentType === 'application/json') {
-						return '';
-					}
-					return '$input.path(\'$\')';
-				},
-				successTemplate = function () {
+				successTemplate = function (headers) {
 					// success codes can also be used as error codes, so this has to work for both
 					var contentType = successContentType(), extractor = 'path';
-					if (requestedConfig.version === 2) {
-						return successTemplateV2();
-					}
 					if (!contentType || contentType === 'application/json') {
 						extractor = 'json';
 					}
-					return '#if($input.path(\'$.errorMessage\')!="")' +
+					if (headers && Array.isArray(headers)) {
+						return '#if($input.path(\'$.errorMessage\')!="")' +
 							'$input.' + extractor + '(\'$\')' +
 							'#{else}' +
 							'$input.' + extractor + '(\'$.response\')' +
 							'#{end}';
+					} else {
+						return '$input.' + extractor + '(\'$\')';
+					}
 				},
 				errorTemplate = function () {
 					var contentType = errorContentType();
@@ -145,7 +136,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						integrationResponseParams = { },
 						responseTemplates = {},
 						responseModels = {},
-						contentType = response.contentType || 'application/json';
+						contentType = response.contentType || 'application/json',
+						headersInBody = function () {
+							return response.headers && Array.isArray(response.headers);
+						},
+						headerNames = response.headers && (Array.isArray(response.headers) ? response.headers : Object.keys(response.headers));
 					if (supportsCors()) {
 						methodResponseParams = {
 							'method.response.header.Access-Control-Allow-Origin': false,
@@ -165,7 +160,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}
 					if (isRedirect(response.code)) {
 						methodResponseParams['method.response.header.Location'] = false;
-						if (requestedConfig.version < 3) {
+						if (!headersInBody()) {
 							integrationResponseParams['method.response.header.Location'] = 'integration.response.body';
 						} else {
 							integrationResponseParams['method.response.header.Location'] = 'integration.response.body.response';
@@ -179,9 +174,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						responseTemplates[contentType] = response.template || '';
 					}
 					if (response.headers) {
-						response.headers.forEach(function (headerName) {
+						headerNames.forEach(function (headerName) {
 							methodResponseParams['method.response.header.' + headerName] = false;
-							integrationResponseParams['method.response.header.' + headerName] = 'integration.response.body.headers.' + headerName;
+							if (headersInBody()) {
+								integrationResponseParams['method.response.header.' + headerName] = 'integration.response.body.headers.' + headerName;
+							} else {
+								integrationResponseParams['method.response.header.' + headerName] = '\'' + response.headers[headerName] + '\'';
+							}
 						});
 					}
 					responseModels[contentType] = 'Empty';
@@ -213,7 +212,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}).then(function () {
 				return putLambdaIntegration(resourceId, methodName);
 			}).then(function () {
-				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(), headers: headers('success')}];
+				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(headers('success')), headers: headers('success')}];
 				if (errorCode() !== successCode()) {
 					results[0].pattern = '^$';
 					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate(), headers: headers('error')});
