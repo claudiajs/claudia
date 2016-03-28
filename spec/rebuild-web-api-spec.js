@@ -581,6 +581,40 @@ describe('rebuildWebApi', function () {
 				});
 			});
 		});
+		describe('when corsHeaders are set', function () {
+			beforeEach(function () {
+				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
+			});
+			it('uses the headers for OPTIONS handlers', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {method: 'OPTIONS'});
+				}).then(function (contents) {
+					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+				}).then(done, done.fail);
+			});
+			it('uses the headers for success methods', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {method: 'GET'});
+				}).then(function (contents) {
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+				}).then(done, done.fail);
+			});
+			it('uses the headers for error methods', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo?fail=true', {method: 'GET', resolveErrors: true});
+				}).then(function (contents) {
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+				}).then(done, done.fail);
+			});
+
+		});
 		describe('when corsHandlers are set to false', function () {
 			beforeEach(function (done) {
 				apiRouteConfig.corsHandlers = false;
@@ -607,9 +641,10 @@ describe('rebuildWebApi', function () {
 				});
 			});
 		});
-		describe('when corsHandlers is set to true', function () {
+		describe('when corsHandlers are set to true', function () {
 			beforeEach(function () {
 				apiRouteConfig.corsHandlers = true;
+				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
 			});
 			it('routes the OPTIONS handler to Lambda', function (done) {
 				apiRouteConfig.routes.hello = {POST: {}, GET: {}};
@@ -617,21 +652,23 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke('original/echo', {
 						method: 'OPTIONS',
-						body: JSON.stringify({headers: {'Access-Control-Allow-Origin': 'tom', 'Access-Control-Allow-Headers': 'bond'}})
+						headers: {'content-type': 'text/plain'},
+						body: 'custom-origin'
 					});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
-					expect(contents.headers['access-control-allow-headers']).toEqual('bond');
-					expect(contents.headers['access-control-allow-origin']).toEqual('tom');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
 				}).then(function () {
 					return invoke('original/hello', {
 						method: 'OPTIONS',
-						body: JSON.stringify({headers: {'Access-Control-Allow-Origin': 'tom2', 'Access-Control-Allow-Headers': 'bond2'}})
+						headers: {'content-type': 'text/plain'},
+						body: 'different-origin'
 					});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('POST,GET,OPTIONS');
-					expect(contents.headers['access-control-allow-headers']).toEqual('bond2');
-					expect(contents.headers['access-control-allow-origin']).toEqual('tom2');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('different-origin');
 				}).then(done, done.fail);
 			});
 			it('allows success methods to override CORS headers', function (done) {
