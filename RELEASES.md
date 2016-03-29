@@ -1,5 +1,9 @@
 # Release history
 
+### 1.1.1, 29 March 2016
+
+- bugfix for application/xml POSTs
+
 ### 1.1.0, 29 March 2016 
 
 - all validations are executed before any objects are created/updated, to avoid partially created functions

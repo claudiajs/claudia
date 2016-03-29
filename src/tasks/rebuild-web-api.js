@@ -63,6 +63,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					'application/json': inputTemplate,
 					'application/x-www-form-urlencoded': inputTemplate,
 					'text/xml': inputTemplate,
+					'application/xml': inputTemplate,
 					'text/plain': inputTemplate
 				},
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
