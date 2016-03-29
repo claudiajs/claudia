@@ -1,10 +1,10 @@
 # Release history
 
-### 1.1.0 (in progress)
+### 1.1.0, 29 March 2016 
 
 - all validations are executed before any objects are created/updated, to avoid partially created functions
-- web API handlers can now set custom headers (requires API Builder 1.1.0 or later)
-- web API handlers can now set custom CORS origins, or completely disable CORS (requires API Builder 1.1.0 or later)
+- web API handlers can now set custom headers (requires API Builder 1.1.0 or later). See the [Custom Headers Example Project](https://github.com/claudiajs/example-projects/blob/master/web-api-custom-headers/web.js)
+- web API handlers can now set custom CORS origins, or completely disable CORS (requires API Builder 1.1.0 or later). See the [Custom CORS Example Project](https://github.com/claudiajs/example-projects/blob/master/web-api-custom-cors/web.js)
 - web API now accepts text/plain content for POST, PUT and PATCH
 - create and update prevent several common user errors and report more meaningfully on those
   - when the lambda handler can't be required (eg package dependency issue or syntax error)
