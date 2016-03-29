@@ -715,6 +715,19 @@ describe('rebuildWebApi', function () {
 					expect(response.headers['content-type']).toEqual('application/json');
 				}).then(done, done.fail);
 			});
+			it('supports JSON with charset', function (done) {
+				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 2, routes: {test: {GET: {success: {contentType: 'application/json; charset=utf-8'}}}}}, awsRegion)
+				.then(function () {
+					return callApi(apiId, awsRegion, 'latest/test?name=timmy');
+				}).then(function (response) {
+					expect(response.body).toEqual('"timmy is OK"');
+					expect(response.statusCode).toEqual(200);
+					expect(response.headers['content-type']).toEqual('application/json; charset=utf-8');
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+			});
 			it('returns a custom code when specified as a number', function (done) {
 				underTest(newObjects.lambdaFunction, 'latest', apiId, {corsHandlers: false, version: 2, routes: {test: {GET: {success: 202}}}}, awsRegion)
 				.then(function () {

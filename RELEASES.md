@@ -1,5 +1,9 @@
 # Release history
 
+### 1.1.2, 29 March 2016
+
+- support for JSON result templates that contain a charset
+
 ### 1.1.1, 29 March 2016
 
 - bugfix for application/xml POSTs

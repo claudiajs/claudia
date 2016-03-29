@@ -119,6 +119,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				successTemplate = function (headers) {
 					// success codes can also be used as error codes, so this has to work for both
 					var contentType = successContentType(), extractor = 'path';
+					if (contentType && contentType.indexOf(';') >= 0) {
+						contentType = contentType.split(';')[0];
+					}
 					if (!contentType || contentType === 'application/json') {
 						extractor = 'json';
 					}
