@@ -1,8 +1,8 @@
 # Developing and contributing to Claudia 
 
-AWS Lambda currently runs on Node.js 0.10.36. To avoid nasty surprises, please use that version for development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment.
+AWS Lambda currently supports Node.js 4.3.2 and 0.10.36. The support for 0.10 is going away in October 2016. Until then, please run all tests using both versions before submitting a pull request. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment.
 
-One important downside of this version is lack of support for promises. Newer Node.js versions support promises out of the box, but Claudia has to use an external dependency for that. To support future migration to the standard API easier, please use the [bluebird](http://bluebirdjs.com/docs/api-reference.html) promise library. 
+One important downside of 0.10 support is lack of support for promises. Newer Node.js versions support promises out of the box, but Claudia has to use an external dependency for that. To support future migration to the standard API easier, please use the [bluebird](http://bluebirdjs.com/docs/api-reference.html) promise library. Once Node 0.10 is no longer supported in Lambda, we'll drop the external library and migrate to internal Promises. 
 
 # Folder structure
 

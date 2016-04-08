@@ -4,7 +4,7 @@
 
 ## Node.JS version
 
-AWS Lambda currently runs on Node.js 0.10.36. To avoid nasty surprises, we strongly suggest using that version for development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment
+AWS Lambda currently supports Node.js 4.3.2 and 0.10.36. By default, Claudia will create 4.3.2 functions in Lambda, and you can force an older version with the `--runtime` argument while creating the function. To avoid nasty surprises, we strongly suggest using the same version for development and deployments. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment
 
 ## Configuring access credentials
 

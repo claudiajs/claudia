@@ -1,5 +1,10 @@
 # Release history
 
+### 1.2.0, 9 April 2016
+
+- Claudia now creates Node.js 4.3.2 deployments by default.
+- Use --runtime when calling create to specify an alternative runtime (eg nodejs for the legacy 0.10)
+
 ### 1.1.2, 29 March 2016
 
 - support for JSON result templates that contain a charset
