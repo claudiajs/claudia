@@ -31,3 +31,6 @@ claudia create {OPTIONS}
   * _For example_: policies/*.xml
 *  `--role`:  _optional_ The name of an existing role to assign to the function. 
   If not supplied, Claudia will create a new role
+*  `--runtime`:  _optional_ Node.js runtime to use. For supported values, see
+  http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html
+  * _Defaults to_: node4.3

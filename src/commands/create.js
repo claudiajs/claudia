@@ -65,7 +65,7 @@ module.exports = function create(options) {
 				FunctionName: options.name,
 				Handler: options.handler || (options['api-module'] + '.router'),
 				Role: roleArn,
-				Runtime: 'nodejs',
+				Runtime: options.runtime || 'nodejs4.3',
 				Publish: true
 			},
 			lambdaData,
@@ -239,6 +239,12 @@ module.exports.doc = {
 			optional: true,
 			description: 'The name of an existing role to assign to the function. \n' +
 				'If not supplied, Claudia will create a new role'
+		},
+		{
+			argument: 'runtime',
+			optional: true,
+			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html',
+			default: 'node4.3'
 		}
 	]
 };

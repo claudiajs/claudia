@@ -264,6 +264,23 @@ describe('create', function () {
 			}).then(done);
 		});
 	});
+	describe('runtime support', function () {
+		it('creates node 4.3 deployments by default', function (done) {
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
+			}).then(done, done.fail);
+		});
+		it('can create legacy 0.10 deployments using the --runtime argument', function (done) {
+			config.runtime = 'nodejs';
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Runtime).toEqual('nodejs');
+			}).then(done, done.fail);
+		});
+	});
 	describe('creating the function', function () {
 		it('returns an object containing the new claudia configuration', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
