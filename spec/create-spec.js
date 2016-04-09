@@ -42,10 +42,13 @@ describe('create', function () {
 		}).finally(done);
 	});
 	describe('config validation', function () {
-		it('fails if name is not given', function (done) {
+		it('fails if name is not given either as an option or package.json name', function (done) {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.writeFileSync(path.join(workingdir, 'package.json'), '{"name": ""}', 'utf8');
 			config.name = undefined;
 			underTest(config).then(done.fail, function (message) {
-				expect(message).toEqual('project name is missing. please specify with --name');
+				expect(message).toEqual('project name is missing. please specify with --name or in package.json');
 				done();
 			});
 		});
@@ -289,9 +292,23 @@ describe('create', function () {
 					region: awsRegion,
 					name: testRunName
 				});
-				return '';
 			}).then(done, done.fail);
 		});
+		it('uses the name from package.json if --name is not specified', function (done) {
+			config.name = undefined;
+			createFromDir('hello-world').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: 'hello-world-executor',
+					region: awsRegion,
+					name: 'hello-world'
+				});
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: 'hello-world'});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
+			}).then(done, done.fail);
+		});
+
 		it('saves the configuration into claudia.json', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
@@ -360,6 +377,19 @@ describe('create', function () {
 				expect(restApi.name).toEqual(testRunName);
 			}).then(done, done.fail);
 		});
+		it('uses the name from package.json if --name is not provided', function (done) {
+			config.name = undefined;
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				var apiId = creationResult.api && creationResult.api.id;
+				newObjects.restApi = apiId;
+				return apiId;
+			}).then(function (apiId) {
+				return apiGateway.getRestApiAsync({restApiId: apiId});
+			}).then(function (restApi) {
+				expect(restApi.name).toEqual('api-gw-hello-world');
+			}).then(done, done.fail);
+		});
+
 		it('when no version provided, creates the latest deployment', function (done) {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;

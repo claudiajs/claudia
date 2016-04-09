@@ -1,5 +1,9 @@
 # Release history
 
+### next release
+
+- `--name` is now optional in `create`, by default Claudia will use the name from `package.json`
+
 ### 1.2.0, 9 April 2016
 
 - Claudia now creates Node.js 4.3.2 deployments by default.
