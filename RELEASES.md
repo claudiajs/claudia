@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.2, 9 April 2016
+
+- create, update and set-version now print out a web API URL if they create/update a web API
+
 ### 1.2.1, 9 April 2016
 
 - it's no longer necessary to use `files` in `package.json` to deploy using Claudia. If the files property is not specified, Claudia will package everything apart from `node_modules`, typical VCS utility files (eg `.git`) and automatically exclude all patterns specified in `.gitignore` and `.npmignore`
