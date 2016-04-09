@@ -12,6 +12,7 @@ var Promise = require('bluebird'),
 	retriableWrap = require('../util/wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
+	apiGWUrl = require('../util/apigw-url'),
 	fs = Promise.promisifyAll(require('fs'));
 module.exports = function create(options) {
 	'use strict';
@@ -117,7 +118,7 @@ module.exports = function create(options) {
 				lambdaMetadata.api = {
 					id: result.id,
 					module: options['api-module'],
-					url: 'https://' + result.id + '.execute-api.' + options.region + '.amazonaws.com/' + alias
+					url: apiGWUrl(result.id, options.region, alias)
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, options.verbose);
 			}).then(function () {

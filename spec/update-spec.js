@@ -177,7 +177,9 @@ describe('update', function () {
 
 
 		it('updates the api using the configuration from the api module', function (done) {
-			return underTest({source: updateddir}).then(function () {
+			return underTest({source: updateddir}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
+			}).then(function () {
 				return invoke('latest/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
@@ -190,7 +192,9 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 		it('when the version is provided, creates the deployment with that name', function (done) {
-			underTest({source: updateddir, version: 'development'}).then(function () {
+			underTest({source: updateddir, version: 'development'}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development');
+			}).then(function () {
 				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
