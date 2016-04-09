@@ -44,7 +44,7 @@ var minimist = require('minimist'),
 
 		commands[command](args).then(function (result) {
 			if (result) {
-				console.log(JSON.stringify(result));
+				console.log(JSON.stringify(result, null, 2));
 			}
 			process.exit();
 		}, function (e) {

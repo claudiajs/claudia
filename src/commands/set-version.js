@@ -4,6 +4,7 @@ var Promise = require('bluebird'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/wrap'),
+	apiGWUrl = require('../util/apigw-url'),
 	markAlias = require('../tasks/mark-alias');
 module.exports = function setVersion(options) {
 	'use strict';
@@ -22,6 +23,8 @@ module.exports = function setVersion(options) {
 						lambdaVersion: options.version
 					}
 				});
+			}).then(function () {
+				return {url: apiGWUrl(apiConfig.id, lambdaConfig.region, options.version) };
 			});
 		};
 	if (!options.version) {

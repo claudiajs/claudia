@@ -113,7 +113,9 @@ describe('setVersion', function () {
 		});
 		it('creates a new api deployment', function (done) {
 			underTest({source: workingdir, version: 'dev'})
-			.then(function () {
+			.then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/dev');
+			}).then(function () {
 				return invoke('dev/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
