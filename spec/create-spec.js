@@ -368,13 +368,18 @@ describe('create', function () {
 				newObjects.restApi = apiId;
 				expect(apiId).toBeTruthy();
 				expect(creationResult.api.module).toEqual('main');
-				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8')))
-					.toEqual(creationResult);
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
 				return apiId;
 			}).then(function (apiId) {
 				return apiGateway.getRestApiAsync({restApiId: apiId});
 			}).then(function (restApi) {
 				expect(restApi.name).toEqual(testRunName);
+			}).then(done, done.fail);
+		});
+		it('saves the api name and module only into claudia.json', function (done) {
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				var savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({id: creationResult.api.id, module: creationResult.api.module});
 			}).then(done, done.fail);
 		});
 		it('uses the name from package.json if --name is not provided', function (done) {
@@ -403,6 +408,7 @@ describe('create', function () {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/development');
 			}).then(function () {
 				return callApi(apiId, awsRegion, 'development/hello');
 			}).then(function (contents) {

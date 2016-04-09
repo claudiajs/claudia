@@ -113,8 +113,13 @@ module.exports = function create(options) {
 			return apiGateway.createRestApiAsync({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
-				lambdaMetadata.api = {id: result.id, module: options['api-module']};
-				return rebuildWebApi(lambdaMetadata.FunctionName, options.version || 'latest', result.id, apiConfig, options.region, options.verbose);
+				var alias = options.version || 'latest';
+				lambdaMetadata.api = {
+					id: result.id,
+					module: options['api-module'],
+					url: 'https://' + result.id + '.execute-api.' + options.region + '.amazonaws.com/' + alias
+				};
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, options.verbose);
 			}).then(function () {
 				return lambdaMetadata;
 			});
@@ -128,15 +133,28 @@ module.exports = function create(options) {
 				}
 			};
 			if (lambdaMetaData.api) {
-				config.api = lambdaMetaData.api;
+				config.api =  { id: lambdaMetaData.api.id, module: lambdaMetaData.api.module };
 			}
 			return fs.writeFileAsync(
 				configFile,
 				JSON.stringify(config, null, 2),
 				'utf8'
 			).then(function () {
-				return config;
+				return lambdaMetaData;
 			});
+		},
+		formatResult = function (lambdaMetaData) {
+			var config = {
+				lambda: {
+					role: roleMetadata.Role.RoleName,
+					name: lambdaMetaData.FunctionName,
+					region: options.region
+				}
+			};
+			if (lambdaMetaData.api) {
+				config.api =  lambdaMetaData.api;
+			}
+			return config;
 		},
 		loadRole = function (functionName) {
 			if (options.role) {
@@ -192,7 +210,7 @@ module.exports = function create(options) {
 			return lambdaMetadata;
 		}
 	})
-	.then(saveConfig);
+	.then(saveConfig).then(formatResult);
 };
 
 module.exports.doc = {
