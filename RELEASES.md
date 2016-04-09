@@ -1,6 +1,6 @@
 # Release history
 
-### next release
+### 1.2.1, 9 April 2016
 
 - it's no longer necessary to use `files` in `package.json` to deploy using Claudia. If the files property is not specified, Claudia will package everything apart from `node_modules`, typical VCS utility files (eg `.git`) and automatically exclude all patterns specified in `.gitignore` and `.npmignore`
 - `--name` is now optional in `create`, by default Claudia will use the name from `package.json`
