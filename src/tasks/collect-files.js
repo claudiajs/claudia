@@ -3,6 +3,7 @@ var tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	Promise = require('bluebird'),
 	shell = require('shelljs'),
+	fs = require('fs'),
 	path = require('path');
 
 module.exports = function collectFiles(sourcePath) {
@@ -22,14 +23,31 @@ module.exports = function collectFiles(sourcePath) {
 			}
 		},
 		copyFiles = function (packageConfig) {
-			var files, targetDir = tmppath();
-			if (!packageConfig.files) {
-				return Promise.reject('package.json does not contain the files property');
+			var files, targetDir = tmppath(), includedFiles = packageConfig.files,
+				removeAfterCopy = ['node_modules', '.git', '.gitignore', '*.swp', '._*', '.DS_Store', '.hg', '.npmrc', '.svn', 'config.gypi', 'CVS', 'npm-debug.log'],
+				ignoreFileLists = ['.gitignore', '.npmignore'];
+			if (!includedFiles) {
+				includedFiles = '*';
 			}
-			files = ['package.json'].concat(packageConfig.files);
+			files = ['package.json'].concat(includedFiles);
 			shell.mkdir('-p', targetDir);
 			files.forEach(function (file) {
-				shell.cp('-r', path.join(sourcePath, file), targetDir);
+				shell.cp('-rf', path.join(sourcePath, file), targetDir);
+			});
+			ignoreFileLists.forEach(function (ignoreFileListName) {
+				var ignoreFile = path.join(sourcePath, ignoreFileListName), fileList;
+				if (shell.test('-e', ignoreFile)) {
+					fileList = fs.readFileSync(ignoreFile, 'utf8').split('\n');
+					fileList.forEach(function (file) {
+						if (file && file.trim() && file.trim()[0] !== '#') {
+							removeAfterCopy.push(file);
+						}
+					});
+				}
+			});
+			removeAfterCopy.forEach(function (ignoredName) {
+				var ignoredFile = path.join(targetDir, ignoredName);
+				shell.rm('-rf', ignoredFile);
 			});
 			return Promise.resolve(targetDir);
 		},
