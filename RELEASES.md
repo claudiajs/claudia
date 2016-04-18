@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.3, 18 April 2016
+
+- form POST now also includes .body with raw input (so it can be posted back to paypal IPN)
+
 ### 1.2.2, 9 April 2016
 
 - create, update and set-version now print out a web API URL if they create/update a web API
