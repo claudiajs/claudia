@@ -21,7 +21,8 @@
         #end
         #if($foreach.hasNext),#end
     #end
-  },
+    },
+    "body" : "$util.escapeJavaScript($input.path('$'))", 
   #elseif($type == "application/xml" || $type == "text/plain" || $type == "text/xml")
     "body" : "$util.escapeJavaScript($input.path('$'))", 
   #else

@@ -129,6 +129,7 @@ describe('rebuildWebApi', function () {
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
 					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
+					expect(params.body).toEqual(querystring.stringify({name: 'tom', surname: 'bond'}));
 				}).then(done, done.fail);
 			});
 			it('captures form post variables even when the charset is provided with the content type', function (done) {
