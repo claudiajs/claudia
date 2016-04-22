@@ -308,6 +308,20 @@ describe('create', function () {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
 		});
+		it('uses the package.json description field in the created lambda Description', function (done) {
+			config.name = undefined;
+			createFromDir('package-description').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: 'package-description-executor',
+					region: awsRegion,
+					name: 'package-description'
+				});
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: 'package-description'});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Description).toEqual('This is the package description');
+			}).then(done, done.fail);
+		});
 
 		it('saves the configuration into claudia.json', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {

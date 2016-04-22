@@ -58,22 +58,24 @@ module.exports = function create(options) {
 				return 'no files match additional policies (' + options.policies + ')';
 			}
 		},
-		getPackageName = function () {
-			if (options.name) {
-				return Promise.resolve(options.name);
-			}
+		getPackageNameAndDesciption = function () {
 			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
-				var name = jsonConfig.name && jsonConfig.name.trim();
+				var name = options.name || (jsonConfig.name && jsonConfig.name.trim()),
+				    description = jsonConfig.description && jsonConfig.description.trim();
 				if (!name) {
 					return Promise.reject('project name is missing. please specify with --name or in package.json');
 				}
-				return name;
+				return {
+					name: name,
+					description: description
+				};
 			});
 		},
-		createLambda = function (functionName, zipFile, roleArn, retriesLeft) {
+		createLambda = function (functionName, functionDesc, zipFile, roleArn, retriesLeft) {
 			var functionMeta = {
 				Code: { ZipFile: zipFile },
 				FunctionName: functionName,
+				Description: functionDesc,
 				Handler: options.handler || (options['api-module'] + '.router'),
 				Role: roleArn,
 				Runtime: options.runtime || 'nodejs4.3',
@@ -87,7 +89,7 @@ module.exports = function create(options) {
 			return lambda.createFunctionPromise(functionMeta).catch(function (error) {
 				if (error && error.cause && error.cause.message == iamPropagationError) {
 					return Promise.delay(3000).then(function () {
-						return createLambda(functionName, zipFile, roleArn, retriesLeft - 1);
+						return createLambda(functionName, functionDesc, zipFile, roleArn, retriesLeft - 1);
 					});
 				} else {
 					return Promise.reject(error);
@@ -177,12 +179,14 @@ module.exports = function create(options) {
 			});
 		},
 		packageArchive,
+		functionDesc,
 		functionName;
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return getPackageName().then(function (name) {
-		functionName = name;
+	return getPackageNameAndDesciption().then(function (nameAndDesc) {
+		functionName = nameAndDesc.name;
+		functionDesc = nameAndDesc.description;
 	}).then(function () {
 		return collectFiles(source);
 	}).then(function (dir) {
@@ -202,7 +206,7 @@ module.exports = function create(options) {
 	}).then(function () {
 		return fs.readFileAsync(packageArchive);
 	}).then(function (fileContents) {
-		return createLambda(functionName, fileContents, roleMetadata.Role.Arn, 10);
+		return createLambda(functionName, functionDesc, fileContents, roleMetadata.Role.Arn, 10);
 	})
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
