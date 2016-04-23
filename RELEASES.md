@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.4, 23 April 2016
+
+- lambda description set automatically from the package.json description, can be overridden by --description when creating
+
 ### 1.2.3, 18 April 2016
 
 - form POST now also includes .body with raw input (so it can be posted back to paypal IPN)
