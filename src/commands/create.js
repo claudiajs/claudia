@@ -58,10 +58,10 @@ module.exports = function create(options) {
 				return 'no files match additional policies (' + options.policies + ')';
 			}
 		},
-		getPackageNameAndDesciption = function () {
+		getPackageInfo = function () {
 			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
 				var name = options.name || (jsonConfig.name && jsonConfig.name.trim()),
-				    description = jsonConfig.description && jsonConfig.description.trim();
+					description = options.description || (jsonConfig.description && jsonConfig.description.trim());
 				if (!name) {
 					return Promise.reject('project name is missing. please specify with --name or in package.json');
 				}
@@ -184,9 +184,9 @@ module.exports = function create(options) {
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return getPackageNameAndDesciption().then(function (nameAndDesc) {
-		functionName = nameAndDesc.name;
-		functionDesc = nameAndDesc.description;
+	return getPackageInfo().then(function (packageInfo) {
+		functionName = packageInfo.name;
+		functionDesc = packageInfo.description;
 	}).then(function () {
 		return collectFiles(source);
 	}).then(function (dir) {
@@ -284,6 +284,12 @@ module.exports.doc = {
 			optional: true,
 			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html',
 			default: 'node4.3'
+		},
+		{
+			argument: 'description',
+			optional: true,
+			description: 'Textual description of the lambda function',
+			default: 'the project description from package.json'
 		}
 	]
 };

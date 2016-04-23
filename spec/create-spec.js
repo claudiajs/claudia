@@ -308,21 +308,21 @@ describe('create', function () {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
 		});
-		it('uses the package.json description field in the created lambda Description', function (done) {
-			config.name = undefined;
-			createFromDir('package-description').then(function (creationResult) {
-				expect(creationResult.lambda).toEqual({
-					role: 'package-description-executor',
-					region: awsRegion,
-					name: 'package-description'
-				});
-			}).then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: 'package-description'});
+		it('uses the package.json description field if --description is not provided', function (done) {
+			createFromDir('package-description').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.Description).toEqual('This is the package description');
 			}).then(done, done.fail);
 		});
-
+		it('uses --description as the lambda description even if the package.json description field is provided', function (done) {
+			config.description = 'description from config';
+			createFromDir('package-description').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Description).toEqual('description from config');
+			}).then(done, done.fail);
+		});
 		it('saves the configuration into claudia.json', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'))).toEqual(creationResult);
