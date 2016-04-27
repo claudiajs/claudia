@@ -2,7 +2,19 @@
   "context": { 
     "method": "$context.httpMethod", 
     "path": "$context.resourcePath", 
-    "sourceIp":"$context.identity.sourceIp"
+    "sourceIp":"$context.identity.sourceIp",
+    "accountId" : "$context.identity.accountId",
+    "apiKey" : "$context.identity.apiKey",
+    "authorizerPrincipalId" : "$context.authorizer.principalId",
+    "caller" : "$context.identity.caller",
+    "cognitoAuthenticationProvider" : "$context.identity.cognitoAuthenticationProvider",
+    "cognitoAuthenticationType" : "$context.identity.cognitoAuthenticationType",
+    "cognitoIdentityId" : "$context.identity.cognitoIdentityId",
+    "cognitoIdentityPoolId" : "$context.identity.cognitoIdentityPoolId",
+    "stage" : "$context.stage",
+    "user" : "$context.identity.user",
+    "userAgent" : "$context.identity.userAgent",
+    "userArn" : "$context.identity.userArn"
   }, 
   "v": "2",
   #set ($type=$input.params().header.get('Content-Type'))
