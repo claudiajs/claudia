@@ -1,5 +1,10 @@
 # Release history
 
+### 1.2.5, 27 April 2016
+
+- bugfix/workaround for quoted POST and query string arguments, see https://forums.aws.amazon.com/thread.jspa?threadID=229672
+- added cognito/authorizer fields to the context in API gateway, so they are available to the lambda function 
+
 ### 1.2.4, 23 April 2016
 
 - lambda description set automatically from the package.json description, can be overridden by --description when creating
