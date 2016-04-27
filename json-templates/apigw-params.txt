@@ -15,27 +15,27 @@
       #set ($kv = $param.split('='))
       "$util.urlDecode($kv[0])": 
         #if($kv.size() > 1)
-          "$util.escapeJavaScript($util.urlDecode($kv[1]))"
+          "$util.escapeJavaScript($util.urlDecode($kv[1])).replace("\'", "'")"
         #else
           ""
         #end
         #if($foreach.hasNext),#end
     #end
     },
-    "body" : "$util.escapeJavaScript($input.path('$'))", 
+    "body" : "$util.escapeJavaScript($input.path('$')).replace("\'", "'")",
   #elseif($type == "application/xml" || $type == "text/plain" || $type == "text/xml")
-    "body" : "$util.escapeJavaScript($input.path('$'))", 
+    "body" : "$util.escapeJavaScript($input.path('$')).replace("\'", "'")",
   #else
     "body" : $input.json('$'), 
   #end
   "headers": { 
     #foreach($param in $input.params().header.entrySet()) 
-      "$param.getKey()": "$util.escapeJavaScript($param.getValue())" #if($foreach.hasNext),#end 
+      "$param.getKey()": "$util.escapeJavaScript($param.getValue())" #if($foreach.hasNext),#end
     #end 
   }, 
   "queryString": { 
     #foreach($param in $input.params().querystring.entrySet()) 
-      "$param.getKey()": "$util.escapeJavaScript($param.getValue())" #if($foreach.hasNext),#end 
+      "$param.getKey()": "$util.escapeJavaScript($param.getValue()).replace("\'", "'")" #if($foreach.hasNext),#end
     #end 
   }, 
   "env": { 

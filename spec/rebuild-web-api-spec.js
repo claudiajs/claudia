@@ -72,6 +72,18 @@ describe('rebuildWebApi', function () {
 					done.fail(e);
 				});
 			});
+			it('captures quoted query string parameters', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo?name=O\'Reilly');
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.queryString).toEqual({name: 'O\'Reilly'});
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail(e);
+				});
+			});
 			it('captures path parameters', function (done) {
 				apiRouteConfig.routes['people/{personId}'] = {'GET': {} };
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
@@ -132,6 +144,30 @@ describe('rebuildWebApi', function () {
 					expect(params.body).toEqual(querystring.stringify({name: 'tom', surname: 'bond'}));
 				}).then(done, done.fail);
 			});
+			it('captures quoted form POST variables correctly', function (done) {
+				var body = 'first_name=Jobin\'s&receiver_email=xxx@yyy.com&address_country_code=CA&payer_business_name=Jobin\'s Services&address_state=Quebec';
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'content-type': 'application/x-www-form-urlencoded'},
+						body: body,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.post).toEqual({
+						first_name: 'Jobin\'s',
+						receiver_email: 'xxx@yyy.com',
+						address_country_code: 'CA',
+						payer_business_name: 'Jobin\'s Services',
+						address_state: 'Quebec'
+					});
+					expect(params.body).toEqual(body);
+				}).then(done, function (result) {
+					console.log(result);
+					done.fail(result);
+				});
+			});
 			it('captures form post variables even when the charset is provided with the content type', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
@@ -191,7 +227,7 @@ describe('rebuildWebApi', function () {
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
-						headers: {'Content-Type': 'text/xml'},
+						headers: {'Content-Type': 'text/plain'},
 						body: textContent,
 						method: 'POST'
 					});
@@ -201,6 +237,20 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 
+			it('captures quoted text/plain request bodies', function (done) {
+				var textContent = 'this is single \' quote';
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'Content-Type': 'text/plain'},
+						body: textContent,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.body).toEqual(textContent);
+				}).then(done, done.fail);
+			});
 		});
 
 		it('creates multiple methods for the same resource', function (done) {
