@@ -284,6 +284,76 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('memory option support', function () {
+		it('fails if memory value is < 128', function (done) {
+			config.memory = 128 - 64;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the memory value provided must be greater than or equal to 128');
+			}).then(done, done.fail);
+		});
+		it('fails if memory value is 0', function (done) {
+			config.memory = 0;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the memory value provided must be greater than or equal to 128');
+			}).then(done, done.fail);
+		});
+		it('fails if memory value is > 1536', function (done) {
+			config.memory = 1536 + 64;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the memory value provided must be less than or equal to 1536');
+			}).then(done, done.fail);
+		});
+		it('fails if memory value is not a multiple of 64', function (done) {
+			config.memory = 128 + 2;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the memory value provided must be a multiple of 64');
+			}).then(done, done.fail);
+		});
+		it('creates memory size of 128 MB by default', function (done) {
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.MemorySize).toEqual(128);
+			}).then(done, done.fail);
+		});
+		it('can specify memory size using the --memory argument', function (done) {
+			config.memory = 1536;
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.MemorySize).toEqual(1536);
+			}).then(done, done.fail);
+		});
+	});
+	describe('timeout option support', function () {
+		it('fails if timeout value is < 1', function (done) {
+			config.timeout = 0;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the timeout value provided must be greater than or equal to 1');
+			}).then(done, done.fail);
+		});
+		it('fails if timeout value is > 300', function (done) {
+			config.timeout = 301;
+			createFromDir('hello-world').then(done.fail, function (error) {
+				expect(error).toEqual('the timeout value provided must be less than or equal to 300');
+			}).then(done, done.fail);
+		});
+		it('creates timeout of 3 seconds by default', function (done) {
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Timeout).toEqual(3);
+			}).then(done, done.fail);
+		});
+		it('can specify timeout using the --timeout argument', function (done) {
+			config.timeout = 300;
+			createFromDir('hello-world').then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Timeout).toEqual(300);
+			}).then(done, done.fail);
+		});
+	});
 	describe('creating the function', function () {
 		it('returns an object containing the new claudia configuration', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
