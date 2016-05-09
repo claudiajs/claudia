@@ -57,6 +57,25 @@ module.exports = function create(options) {
 			if (options.policies && !policyFiles().length) {
 				return 'no files match additional policies (' + options.policies + ')';
 			}
+			if (options.memory || options.memory === 0) {
+				if (options.memory < 128) {
+					return 'the memory value provided must be greater than or equal to 128';
+				}
+				if (options.memory > 1536) {
+					return 'the memory value provided must be less than or equal to 1536';
+				}
+				if (options.memory % 64 !== 0) {
+					return 'the memory value provided must be a multiple of 64';
+				}
+			}
+			if (options.timeout || options.timeout === 0) {
+				if (options.timeout < 1) {
+					return 'the timeout value provided must be greater than or equal to 1';
+				}
+				if (options.timeout > 300) {
+					return 'the timeout value provided must be less than or equal to 300';
+				}
+			}
 		},
 		getPackageInfo = function () {
 			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
@@ -76,6 +95,8 @@ module.exports = function create(options) {
 				Code: { ZipFile: zipFile },
 				FunctionName: functionName,
 				Description: functionDesc,
+				MemorySize: options.memory,
+				Timeout: options.timeout,
 				Handler: options.handler || (options['api-module'] + '.router'),
 				Role: roleArn,
 				Runtime: options.runtime || 'nodejs4.3',
@@ -290,6 +311,18 @@ module.exports.doc = {
 			optional: true,
 			description: 'Textual description of the lambda function',
 			default: 'the project description from package.json'
+		},
+		{
+			argument: 'memory',
+			optional: true,
+			description: 'The amount of memory, in MB, your Lambda function is given.\nThe value must be a multiple of 64 MB.',
+			default: 128
+		},
+		{
+			argument: 'timeout',
+			optional: true,
+			description: 'The function execution time, in second, at which AWS Lambda should terminate the function',
+			default: 3
 		}
 	]
 };
