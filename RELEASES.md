@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.6, 9 May 2016
+
+- support for `--memory` and `--timeout` in `create`
+
 ### 1.2.5, 27 April 2016
 
 - bugfix/workaround for quoted POST and query string arguments, see https://forums.aws.amazon.com/thread.jspa?threadID=229672

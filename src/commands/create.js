@@ -321,7 +321,7 @@ module.exports.doc = {
 		{
 			argument: 'timeout',
 			optional: true,
-			description: 'The function execution time, in second, at which AWS Lambda should terminate the function',
+			description: 'The function execution time, in seconds, at which AWS Lambda should terminate the function',
 			default: 3
 		}
 	]

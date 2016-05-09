@@ -37,3 +37,8 @@ claudia create {OPTIONS}
   * _Defaults to_: node4.3
 *  `--description`:  _optional_ Textual description of the lambda function
   * _Defaults to_: the project description from package.json
+*  `--memory`:  _optional_ The amount of memory, in MB, your Lambda function is given.
+  The value must be a multiple of 64 MB.
+  * _Defaults to_: 128
+*  `--timeout`:  _optional_ The function execution time, in seconds, at which AWS Lambda should terminate the function
+  * _Defaults to_: 3
