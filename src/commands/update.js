@@ -53,7 +53,7 @@ module.exports = function update(options) {
 	}).then(function () {
 		var apiModule, apiDef, alias = options.version || 'latest';
 		if (apiConfig && apiConfig.id && apiConfig.module) {
-			apiModule = require(path.join(options.source, apiConfig.module));
+			apiModule = require(path.resolve(path.join(options.source, apiConfig.module)));
 			apiDef = apiModule.apiConfig();
 			updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, options.verbose);

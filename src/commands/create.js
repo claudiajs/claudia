@@ -128,7 +128,7 @@ module.exports = function create(options) {
 			});
 		},
 		createWebApi = function (lambdaMetadata) {
-			var apiModule = require(path.join(options.source, options['api-module'])),
+			var apiModule = require(path.resolve(path.join(options.source, options['api-module']))),
 				apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: options.region}))),
 				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
 			if (!apiConfig) {

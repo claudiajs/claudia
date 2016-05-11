@@ -191,6 +191,23 @@ describe('update', function () {
 				});
 			}).then(done, done.fail);
 		});
+		it('works when the source is a relative path', function (done) {
+			shell.cd(path.dirname(updateddir));
+			updateddir = './' + path.basename(updateddir);
+			return underTest({source: updateddir}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
+			}).then(function () {
+				return invoke('latest/echo?name=mike');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'latest'
+				});
+			}).then(done, done.fail);
+		});
 		it('when the version is provided, creates the deployment with that name', function (done) {
 			underTest({source: updateddir, version: 'development'}).then(function (result) {
 				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development');

@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, __dirname */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
@@ -17,7 +17,7 @@ describe('create', function () {
 			if (!shell.test('-e', workingdir)) {
 				shell.mkdir('-p', workingdir);
 			}
-			shell.cp('-r', 'spec/test-projects/' + (dir || 'hello-world') + '/*', workingdir);
+			shell.cp('-r', path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*', workingdir);
 			return underTest(config).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -461,6 +461,16 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('saves the api name and module only into claudia.json', function (done) {
+			createFromDir('api-gw-hello-world').then(function (creationResult) {
+				var savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({id: creationResult.api.id, module: creationResult.api.module});
+			}).then(done, done.fail);
+		});
+		it('works when the source is a relative path', function (done) {
+			var workingParent = path.dirname(workingdir),
+				relativeWorkingDir = './' + path.basename(workingdir);
+			shell.cd(workingParent);
+			config.source = relativeWorkingDir;
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				var savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
 				expect(savedContents.api).toEqual({id: creationResult.api.id, module: creationResult.api.module});
