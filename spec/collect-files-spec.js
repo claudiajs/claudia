@@ -10,6 +10,9 @@ describe('collectFiles', function () {
 	var destdir, sourcedir, pwd,
 		configurePackage = function (packageConf) {
 			fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
+		},
+		isSameDir = function (dir1, dir2) {
+			return !path.relative(dir1, dir2);
 		};
 	beforeEach(function () {
 		sourcedir = tmppath();
@@ -80,7 +83,7 @@ describe('collectFiles', function () {
 			configurePackage({files: ['roo*', 'subdir']});
 			underTest(sourcedir).then(function (packagePath) {
 				destdir = packagePath;
-				expect(path.dirname(packagePath)).toEqual(os.tmpdir());
+				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 				done();
@@ -94,13 +97,25 @@ describe('collectFiles', function () {
 				done();
 			}, done.fail);
 		});
+		['.gitignore', '.npmignore'].forEach(function (fileName) {
+			it('ignores ' + fileName, function (done) {
+				fs.writeFileSync(path.join(sourcedir, fileName), 'root.txt', 'utf8');
+				configurePackage({files: ['roo*']});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				}).then(done, done.fail);
+			});
+		});
 	});
 	describe('when the files property is not specified', function () {
 		it('copies all the project files to a folder in temp path', function (done) {
 			configurePackage({});
 			underTest(sourcedir).then(function (packagePath) {
 				destdir = packagePath;
-				expect(path.dirname(packagePath)).toEqual(os.tmpdir());
+				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 				expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
