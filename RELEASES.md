@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.8, 11 May 2016
+
+- bugfix for using relative paths in `--source`
+
 ### 1.2.7, 11 May 2016
 
 - bugfix for [#39](https://github.com/claudiajs/claudia/issues/39) -- when the files property is specified, `.gitignore` is not used
