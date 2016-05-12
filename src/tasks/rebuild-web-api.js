@@ -5,12 +5,12 @@ var aws = require('aws-sdk'),
 	validHttpCode = require('../util/valid-http-code'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),
-	retriableWrap = require('../util/wrap'),
+	retriableWrap = require('../util/retriable-wrap'),
 	fs = Promise.promisifyAll(require('fs'));
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, verbose) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion) {
 	'use strict';
 	var iam = Promise.promisifyAll(new aws.IAM()),
-		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), verbose),
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
 		apiConfig,
 		existingResources,
 		ownerId,

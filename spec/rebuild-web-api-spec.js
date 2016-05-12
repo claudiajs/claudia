@@ -7,7 +7,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
 	callApi = require('../src/util/call-api'),
-	retriableWrap = require('../src/util/wrap'),
+	retriableWrap = require('../src/util/retriable-wrap'),
 	awsRegion = 'us-east-1';
 describe('rebuildWebApi', function () {
 	'use strict';

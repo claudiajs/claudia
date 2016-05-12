@@ -1,5 +1,5 @@
 /* global require, describe, it, expect, beforeEach, jasmine */
-var underTest = require('../src/util/wrap'),
+var underTest = require('../src/util/retriable-wrap'),
 	Promise = require('bluebird');
 describe('retriableWrap', function () {
 	'use strict';
@@ -16,23 +16,32 @@ describe('retriableWrap', function () {
 			});
 			return promises[name].promise;
 		},
-		wrapped;
+		wrapped,
+		onRetry;
 	beforeEach(function () {
 		promises = {};
 		firstSpy = jasmine.createSpy('first').and.returnValue(buildPromise('first'));
 		secondSpy = jasmine.createSpy('second').and.returnValue(buildPromise('second'));
+		onRetry = jasmine.createSpy('onRetry');
 		thirdSpy = jasmine.createSpy('third').and.returnValue(3);
 		source = {firstAsync: firstSpy, secondAsync: secondSpy, thirdSync: thirdSpy, thirdAsync: 5};
-		wrapped = underTest('test123', source);
+		wrapped = underTest(source, onRetry, /Async$/);
 	});
-	it('wraps all xxxAsync methods', function () {
+	it('matches the Promise$ pattern by default', function () {
+		source = {firstPromise: firstSpy, secondPromise: secondSpy, thirdSync: thirdSpy, thirdPromise: 5};
+		wrapped = underTest(source, onRetry);
+		expect(wrapped.firstPromise).not.toEqual(firstSpy);
+		expect(wrapped.secondPromise).not.toEqual(secondSpy);
+		expect(wrapped.thirdSync).toEqual(thirdSpy);
+	});
+	it('wraps all methods matching the pattern', function () {
 		expect(wrapped.firstAsync).not.toEqual(firstSpy);
 		expect(wrapped.secondAsync).not.toEqual(secondSpy);
 	});
-	it('skips xxxAsync properties that are not functions', function () {
+	it('skips matching properties that are not functions', function () {
 		expect(wrapped.thirdAsync).toEqual(5);
 	});
-	it('does not touch any non xxxAsync methods', function () {
+	it('does not touch any methods not matching the pattern', function () {
 		expect(wrapped.thirdSync).toEqual(thirdSpy);
 	});
 	it('proxies calls to promise methods', function () {
@@ -55,12 +64,14 @@ describe('retriableWrap', function () {
 	it('resolves as soon as the underlying promise resolves', function (done) {
 		wrapped.firstAsync('124').then(function (res) {
 			expect(res).toEqual('result');
+			expect(onRetry).not.toHaveBeenCalled();
 		}).then(done, done.fail);
 		promises.first.resolve('result');
 	});
 	it('rejects as soon as the underlying promise resolves with a non retriable error', function (done) {
 		wrapped.firstAsync('124').then(done.fail, function (err) {
 			expect(err).toEqual('result');
+			expect(onRetry).not.toHaveBeenCalled();
 		}).then(done);
 		promises.first.reject('result');
 	});
@@ -69,8 +80,9 @@ describe('retriableWrap', function () {
 			source = { retryAsync: function () {
 				return sequence.shift();
 			}},
-			wrapped = underTest('tx', source, false, 10, 5);
+			wrapped = underTest(source, onRetry, /Async$/, 10, 5);
 		wrapped.retryAsync().then(function (result) {
+			expect(onRetry).toHaveBeenCalled();
 			expect(result).toEqual('good');
 		}).then(done, done.fail);
 		promises.a.reject({code: 'TooManyRequestsException'});
@@ -81,13 +93,13 @@ describe('retriableWrap', function () {
 			source = { retryAsync: function () {
 				return sequence.shift();
 			}},
-			wrapped = underTest('tx', source, false, 10, 1);
+			wrapped = underTest(source, onRetry, /Async$/, 10, 1);
 		wrapped.retryAsync().then(done.fail, function (err) {
+			expect(onRetry).not.toHaveBeenCalled();
 			expect(err).toEqual({code: 'TooManyRequestsException'});
 		}).then(done);
 		promises.a.reject({code: 'TooManyRequestsException'});
-		promises.b.reject({code: 'TooManyRequestsException'});
-		promises.c.resolve('good');
+		promises.b.resolve('good');
 	});
 
 });

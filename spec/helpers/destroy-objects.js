@@ -5,7 +5,7 @@ beforeEach(function () {
 	var aws = require('aws-sdk'),
 		Promise = require('bluebird'),
 		shell = require('shelljs'),
-		retriableWrap = require('../../src/util/wrap'),
+		retriableWrap = require('../../src/util/retriable-wrap'),
 		awsRegion = 'us-east-1';
 
 	this.destroyObjects = function (newObjects) {

@@ -8,7 +8,7 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
-	retriableWrap = require('../util/wrap'),
+	retriableWrap = require('../util/retriable-wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
@@ -27,7 +27,7 @@ module.exports = function update(options) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
 	}).then(function () {
 		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
 	}).then(function (result) {
