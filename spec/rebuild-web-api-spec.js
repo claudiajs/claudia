@@ -8,11 +8,12 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	aws = require('aws-sdk'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/retriable-wrap'),
+	ArrayLogger = require('../src/util/array-logger'),
 	awsRegion = 'us-east-1';
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -1083,6 +1084,36 @@ describe('rebuildWebApi', function () {
 				var params = JSON.parse(contents.body);
 				expect(params.context.method).toEqual('PUT');
 				expect(params.context.path).toEqual('/hello');
+			}).then(done, done.fail);
+		});
+	});
+	describe('logging', function () {
+		var logger = new ArrayLogger();
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		it('logs execution', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger).then(function () {
+				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+					'apigateway.getResources',
+					'apigateway.createResource',
+					'apigateway.putMethod',
+					'apigateway.putIntegration',
+					'apigateway.putMethodResponse',
+					'apigateway.putIntegrationResponse',
+					'apigateway.createDeployment'
+				]);
+				expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
 			}).then(done, done.fail);
 		});
 	});

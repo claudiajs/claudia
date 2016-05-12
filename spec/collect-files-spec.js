@@ -3,6 +3,7 @@ var underTest = require('../src/tasks/collect-files'),
 	shell = require('shelljs'),
 	os = require('os'),
 	fs = require('fs'),
+	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	path = require('path');
 describe('collectFiles', function () {
@@ -234,7 +235,36 @@ describe('collectFiles', function () {
 			expect(shell.pwd()).toEqual(pwd);
 			done();
 		});
-
 	});
 
+
+	it('logs progress', function (done) {
+		var logger = new ArrayLogger();
+		configurePackage({
+			files: ['root.txt'],
+			dependencies: {
+				'uuid': '^2.0.0'
+			}
+		});
+		underTest(sourcedir, logger).then(function () {
+			expect(logger.getCombinedLog()).toEqual([
+				['stage', 'packaging files'],
+				['call', 'cp', 'package.json'],
+				['call', 'cp', 'root.txt'],
+				['call', 'rm', 'node_modules'],
+				['call', 'rm', '.git'],
+				['call', 'rm', '.gitignore'],
+				['call', 'rm', '*.swp'],
+				['call', 'rm', '._*'],
+				['call', 'rm', '.DS_Store'],
+				['call', 'rm', '.hg'],
+				['call', 'rm', '.npmrc'],
+				['call', 'rm', '.svn'],
+				['call', 'rm', 'config.gypi'],
+				['call', 'rm', 'CVS'],
+				['call', 'rm', 'npm-debug.log'],
+				['call', 'npm install --production']
+			]);
+		}).then(done, done.fail);
+	});
 });

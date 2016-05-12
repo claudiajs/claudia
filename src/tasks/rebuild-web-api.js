@@ -5,19 +5,27 @@ var aws = require('aws-sdk'),
 	validHttpCode = require('../util/valid-http-code'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),
+	promiseWrap = require('../util/promise-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
 	fs = Promise.promisifyAll(require('fs'));
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, logger) {
 	'use strict';
-	var iam = Promise.promisifyAll(new aws.IAM()),
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+	var iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+		apiGateway = retriableWrap(
+						promiseWrap(
+							new aws.APIGateway({region: awsRegion}),
+							{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
+						),
+						function () {
+							logger.logStage('rate-limited by AWS, waiting before retry');
+						}),
 		apiConfig,
 		existingResources,
 		ownerId,
 		knownIds = {},
 		inputTemplate,
 		getOwnerId = function () {
-			return iam.getUserAsync().then(function (result) {
+			return iam.getUserPromise().then(function (result) {
 				ownerId = result.User.Arn.split(':')[4];
 			});
 		},

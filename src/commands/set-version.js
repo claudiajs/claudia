@@ -35,7 +35,7 @@ module.exports = function setVersion(options) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-		apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
 	}).then(function () {
 		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
 	}).then(function (versionResult) {

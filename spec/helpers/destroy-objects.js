@@ -11,7 +11,7 @@ beforeEach(function () {
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
 			logs = new aws.CloudWatchLogs({region: awsRegion}),
-			apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), false),
+			apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
 			iam = Promise.promisifyAll(new aws.IAM()),
 			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
 			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),

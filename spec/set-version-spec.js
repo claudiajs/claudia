@@ -126,7 +126,7 @@ describe('setVersion', function () {
 			}).then(done, done.fail);
 		});
 		it('keeps the old stage variables if they exist', function (done) {
-			var apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion})));
+			var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})));
 			apiGateway.createDeploymentAsync({
 				restApiId: newObjects.restApi,
 				stageName: 'fromtest',

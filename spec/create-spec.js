@@ -3,22 +3,23 @@ var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	templateFile = require('../src/util/template-file'),
+	ArrayLogger = require('../src/util/array-logger'),
 	shell = require('shelljs'),
 	Promise = require('bluebird'),
 	fs = Promise.promisifyAll(require('fs')),
-	retriableWrap = require('../src/util/wrap'),
+	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
-		createFromDir = function (dir) {
+		createFromDir = function (dir, logger) {
 			if (!shell.test('-e', workingdir)) {
 				shell.mkdir('-p', workingdir);
 			}
 			shell.cp('-r', path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*', workingdir);
-			return underTest(config).then(function (result) {
+			return underTest(config, logger).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
@@ -440,7 +441,7 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = retriableWrap('apiGateway', Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
 			apiId;
 		beforeEach(function () {
 			config.handler = undefined;
@@ -528,6 +529,35 @@ describe('create', function () {
 				console.log(JSON.stringify(e));
 				done.fail();
 			});
+		});
+	});
+	describe('logging call execution', function () {
+		var logger;
+		beforeEach(function (done) {
+			logger = new ArrayLogger();
+			config.handler = undefined;
+			config['api-module'] = 'main';
+			createFromDir('api-gw-hello-world', logger).then(done, done.fail);
+		});
+		it('logs execution stages with stage events', function () {
+			expect(logger.getStageLog(true)).toEqual([
+				'loading package config',
+				'packaging files',
+				'validating package',
+				'zipping package',
+				'initialising IAM role',
+				'creating Lambda',
+				'waiting for IAM role propagation',
+				'creating version alias',
+				'creating REST API',
+				'saving configuration'
+			]);
+		});
+		it('logs Lambda API calls with api events', function () {
+			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.createFunction']);
+		});
+		it('logs IAM API calls with api events', function () {
+			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.getUser']);
 		});
 	});
 });
