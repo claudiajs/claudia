@@ -559,5 +559,17 @@ describe('create', function () {
 		it('logs IAM API calls with api events', function () {
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.getUser']);
 		});
+		it('logs API Gateway API calls with api events', function () {
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+				'apigateway.createRestApi',
+				'apigateway.getResources',
+				'apigateway.createResource',
+				'apigateway.putMethod',
+				'apigateway.putIntegration',
+				'apigateway.putMethodResponse',
+				'apigateway.putIntegrationResponse',
+				'apigateway.createDeployment'
+			]);
+		});
 	});
 });
