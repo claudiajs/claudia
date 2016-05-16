@@ -16,7 +16,7 @@ module.exports = function setVersion(options) {
 			}).then(function (ownerId) {
 				return allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region);
 			}).then(function () {
-				return apiGateway.createDeploymentAsync({
+				return apiGateway.createDeploymentPromise({
 					restApiId: apiConfig.id,
 					stageName: options.version,
 					variables: {
@@ -35,7 +35,7 @@ module.exports = function setVersion(options) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region})));
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region}), {suffix: 'Promise'}));
 	}).then(function () {
 		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
 	}).then(function (versionResult) {

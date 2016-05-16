@@ -13,7 +13,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};

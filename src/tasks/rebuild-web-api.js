@@ -7,10 +7,12 @@ var aws = require('aws-sdk'),
 	pathSplitter = require('../util/path-splitter'),
 	promiseWrap = require('../util/promise-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
+	NullLogger = require('../util/null-logger'),
 	fs = Promise.promisifyAll(require('fs'));
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, logger) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger) {
 	'use strict';
-	var iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+	var logger = optionalLogger || new NullLogger(),
+		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		apiGateway = retriableWrap(
 						promiseWrap(
 							new aws.APIGateway({region: awsRegion}),

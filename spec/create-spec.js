@@ -441,7 +441,7 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}))),
+		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
 			apiId;
 		beforeEach(function () {
 			config.handler = undefined;
