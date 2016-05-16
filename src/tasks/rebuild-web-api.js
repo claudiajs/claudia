@@ -18,7 +18,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						),
 						function () {
 							logger.logStage('rate-limited by AWS, waiting before retry');
-						}),
+						},
+						/Async$/
+						),
 		apiConfig,
 		existingResources,
 		ownerId,

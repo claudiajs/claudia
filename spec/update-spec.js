@@ -4,6 +4,7 @@ var underTest = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
+	ArrayLogger = require('../src/util/array-logger'),
 	Promise = require('bluebird'),
 	fs = Promise.promisifyAll(require('fs')),
 	path = require('path'),
@@ -23,7 +24,7 @@ describe('update', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
@@ -243,5 +244,37 @@ describe('update', function () {
 				});
 			}).then(done, done.fail);
 		});
+	});
+	it('logs call execution', function (done) {
+		var logger = new ArrayLogger();
+		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/', workingdir);
+		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.restApi = result.api && result.api.id;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+		}).then(function () {
+			return underTest({source: workingdir}, logger);
+		}).then(function () {
+			var result = logger.getStageLog(true);
+			result = result.filter(function (entry) {
+				return entry !== 'rate-limited by AWS, waiting before retry';
+			});
+			expect(result).toEqual([
+				'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'updating REST API'
+			]);
+			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.getFunctionConfiguration', 'lambda.updateFunctionCode']);
+			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+				'apigateway.getRestApi',
+				'apigateway.getResources',
+				'apigateway.deleteResource',
+				'apigateway.createResource',
+				'apigateway.putMethod',
+				'apigateway.putIntegration',
+				'apigateway.putMethodResponse',
+				'apigateway.putIntegrationResponse',
+				'apigateway.createDeployment'
+			]);
+		}).then(done, done.fail);
 	});
 });
