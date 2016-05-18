@@ -96,9 +96,9 @@ module.exports = function create(options, optionalLogger) {
 			});
 		},
 		createLambda = function (functionName, functionDesc, zipFile, roleArn) {
-			logger.logStage('creating Lambda');
 			return retry(
 				function () {
+					logger.logStage('creating Lambda');
 					return lambda.createFunctionPromise({
 						Code: { ZipFile: zipFile },
 						FunctionName: functionName,

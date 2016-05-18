@@ -19,7 +19,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 							{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
 						),
 						function () {
-							logger.logStage('rate-limited by AWS, waiting before retry');
+							logger.logApiCall('rate-limited by AWS, waiting before retry');
 						},
 						/Async$/
 						),

@@ -91,6 +91,7 @@ var fs = require('fs'),
 		lines.push('');
 		lines.push(' * --help           print this help screen');
 		lines.push(' * --version        print out the current version');
+		lines.push(' * --quiet          suppress output when executing commands');
 		lines.push('');
 		lines.push('Run with a command name to see options of a specific command, for example:');
 		lines.push('```bash');

@@ -531,36 +531,29 @@ describe('create', function () {
 			});
 		});
 	});
-	describe('logging call execution', function () {
-		var logger;
-		beforeEach(function (done) {
-			logger = new ArrayLogger();
-			config.handler = undefined;
-			config['api-module'] = 'main';
-			createFromDir('api-gw-hello-world', logger).then(done, done.fail);
-		});
-		it('logs execution stages with stage events', function () {
-			expect(logger.getStageLog(true)).toEqual([
+	it('logs call execution', function (done) {
+		var logger = new ArrayLogger();
+		config.handler = undefined;
+		config['api-module'] = 'main';
+		createFromDir('api-gw-hello-world', logger).then(function () {
+			expect(logger.getStageLog(true).filter(function (entry) {
+				return entry !== 'waiting for IAM role propagation';
+			})).toEqual([
 				'loading package config',
 				'packaging files',
 				'validating package',
 				'zipping package',
 				'initialising IAM role',
 				'creating Lambda',
-				'waiting for IAM role propagation',
 				'creating version alias',
 				'creating REST API',
 				'saving configuration'
 			]);
-		});
-		it('logs Lambda API calls with api events', function () {
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.createFunction']);
-		});
-		it('logs IAM API calls with api events', function () {
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.getUser']);
-		});
-		it('logs API Gateway API calls with api events', function () {
-			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+			expect(logger.getApiCallLogForService('apigateway', true).filter(function (entry) {
+				return entry !== 'rate-limited by AWS, waiting before retry';
+			})).toEqual([
 				'apigateway.createRestApi',
 				'apigateway.getResources',
 				'apigateway.createResource',
@@ -570,6 +563,6 @@ describe('create', function () {
 				'apigateway.putIntegrationResponse',
 				'apigateway.createDeployment'
 			]);
-		});
+		}).then(done, done.fail);
 	});
 });

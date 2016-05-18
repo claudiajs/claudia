@@ -2,56 +2,78 @@
 var ConsoleLogger = require('../src/util/console-logger');
 describe('ConsoleLogger', function () {
 	'use strict';
-	var underTest, fakeWritable;
+	var underTest, fakeConsole;
 	beforeEach(function () {
-		fakeWritable = jasmine.createSpyObj('stderr', ['write']);
-		underTest = new ConsoleLogger('[END]', fakeWritable);
+		fakeConsole = jasmine.createSpyObj('console', ['log']);
+		underTest = new ConsoleLogger('[START]', fakeConsole);
 	});
 	it('has the API methods for logging', function () {
 		expect(typeof underTest.logStage).toEqual('function');
 		expect(typeof underTest.logApiCall).toEqual('function');
 	});
 	describe('logStage', function () {
-		it('logs stage and back to left edge', function () {
+		it('logs first message without the start marker', function () {
 			underTest.logStage('stage 1');
-			expect(fakeWritable.write).toHaveBeenCalledWith('stage 1[END]');
+			expect(fakeConsole.log).toHaveBeenCalledWith('stage 1');
+		});
+		it('logs second message with the start marker', function () {
+			underTest.logStage('stage 1');
+			fakeConsole.log.calls.reset();
+			underTest.logStage('stage 2');
+			expect(fakeConsole.log).toHaveBeenCalledWith('[START]stage 2');
 		});
 	});
 	describe('logApiCall', function () {
-		it('logs just the api call if the stage is not defined', function () {
+		it('logs the first call without the start marker', function () {
 			underTest.logApiCall('svc1.api1');
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1[END]');
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1');
+		});
+		it('logs the second call with the start marker', function () {
+			underTest.logApiCall('svc1.api1');
+			fakeConsole.log.calls.reset();
+			underTest.logApiCall('svc2.api2');
+			expect(fakeConsole.log).toHaveBeenCalledWith('[START]svc2.api2');
 		});
 		it('logs the stage and the api call if the stage is defined', function () {
 			underTest.logStage('stage1');
-			fakeWritable.write.calls.reset();
+			fakeConsole.log.calls.reset();
 			underTest.logApiCall('svc1.api1');
-			expect(fakeWritable.write).toHaveBeenCalledWith('stage1\tsvc1.api1[END]');
+			expect(fakeConsole.log).toHaveBeenCalledWith('[START]stage1\tsvc1.api1');
 		});
-		it('ignores arguments that are not hash objects', function () {
+		it('ignores arguments that are not arrays', function () {
 			underTest.logApiCall('svc1.api1', 12345);
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1[END]');
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1');
+		});
+		it('ignores arguments that are empty arrays', function () {
+			underTest.logApiCall('svc1.api1', []);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1');
 		});
 		it('ignores hash arguments that do not end with ID or Name', function () {
-			underTest.logApiCall('svc1.api1', {a: 'b'});
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1[END]');
+			underTest.logApiCall('svc1.api1', [{a: 'b'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1');
 		});
+
 		it('logs xxxName arguments', function () {
-			underTest.logApiCall('svc1.api1', {a: 'b', FunctionName: 'Fun1'});
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1\tFunctionName=Fun1[END]');
+			underTest.logApiCall('svc1.api1', [{a: 'b', FunctionName: 'Fun1'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1\tFunctionName=Fun1');
+		});
+		it('logs xxxName arguments from an array', function () {
+			underTest.logApiCall('svc1.api1', [{a: 'b', FunctionName: 'Fun1'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1\tFunctionName=Fun1');
 		});
 		it('logs xxxId arguments', function () {
-			underTest.logApiCall('svc1.api1', {a: 'b', RestApiId: 'Api1'});
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1\tRestApiId=Api1[END]');
+			underTest.logApiCall('svc1.api1', [{a: 'b', RestApiId: 'Api1'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1\tRestApiId=Api1');
 		});
 		it('logs pathXXX arguments', function () {
-			underTest.logApiCall('svc1.api1', {a: 'b', pathPart: '/XXX'});
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1\tpathPart=/XXX[END]');
+			underTest.logApiCall('svc1.api1', [{a: 'b', pathPart: '/XXX'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1\tpathPart=/XXX');
 		});
 		it('logs multiple args matching', function () {
-			underTest.logApiCall('svc1.api1', {a: 'b', FunctionName: 'Fun1', RestApiId: 'YYY'});
-			expect(fakeWritable.write).toHaveBeenCalledWith('svc1.api1\tFunctionName=Fun1\tRestApiId=YYY[END]');
+			underTest.logApiCall('svc1.api1', [{a: 'b', FunctionName: 'Fun1', RestApiId: 'YYY'}]);
+			expect(fakeConsole.log).toHaveBeenCalledWith('svc1.api1\tFunctionName=Fun1\tRestApiId=YYY');
 		});
+
 	});
 });
 

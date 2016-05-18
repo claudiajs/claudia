@@ -1,14 +1,17 @@
-/*global module, process*/
-module.exports = function ConsoleLogger(postfix, writable) {
+/*global module, console */
+module.exports = function ConsoleLogger(prefix, loggable) {
 	'use strict';
 	var self = this,
-		writer = writable || process.stderr,
-		back = postfix || '\x1b[0G',
+		writer = loggable || console,
+		prepend = prefix || '\x1b[1F\x1b[2K',
 		currentStage = '',
-		formatArg = function (argOb) {
-			if (typeof argOb !== 'object') {
+		currentPrepend = '',
+		formatArg = function (argArr) {
+			var argOb;
+			if (!Array.isArray(argArr) || !argArr.length) {
 				return '';
 			}
+			argOb = argArr[0];
 			return Object.keys(argOb).filter(function (useKey) {
 				return /Name$/i.test(useKey) || /Id$/i.test(useKey) || /^path/i.test(useKey);
 			}).sort().map(function (key) {
@@ -17,9 +20,11 @@ module.exports = function ConsoleLogger(postfix, writable) {
 		};
 	self.logStage = function (stage) {
 		currentStage = stage + '\t';
-		writer.write(stage + back);
+		writer.log(currentPrepend + stage);
+		currentPrepend = prepend;
 	};
 	self.logApiCall = function (serviceCall, arg) {
-		writer.write(currentStage + serviceCall + formatArg(arg) + back);
+		writer.log(currentPrepend + currentStage + serviceCall + formatArg(arg));
+		currentPrepend = prepend;
 	};
 };

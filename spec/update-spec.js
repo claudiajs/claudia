@@ -255,16 +255,14 @@ describe('update', function () {
 		}).then(function () {
 			return underTest({source: workingdir}, logger);
 		}).then(function () {
-			var result = logger.getStageLog(true);
-			result = result.filter(function (entry) {
-				return entry !== 'rate-limited by AWS, waiting before retry';
-			});
-			expect(result).toEqual([
+			expect(logger.getStageLog(true)).toEqual([
 				'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'updating REST API'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.getFunctionConfiguration', 'lambda.updateFunctionCode']);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
-			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+			expect(logger.getApiCallLogForService('apigateway', true).filter(function (entry) {
+				return entry !== 'rate-limited by AWS, waiting before retry';
+			})).toEqual([
 				'apigateway.getRestApi',
 				'apigateway.getResources',
 				'apigateway.deleteResource',

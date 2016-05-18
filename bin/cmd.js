@@ -1,23 +1,25 @@
 #!/usr/bin/env node
+'use strict';
 /* global process, __dirname, require, console */
 var minimist = require('minimist'),
 	shell = require('shelljs'),
 	path = require('path'),
 	readCommands = require('../src/util/read-commands'),
+	ConsoleLogger = require('../src/util/console-logger'),
 	docTxt = require('../src/util/doc-txt'),
 	readArgs = function () {
-		'use strict';
 		return minimist(process.argv.slice(2), {
 			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region'],
+			boolean: ['quiet'],
 			default: { 'source': shell.pwd() }
 		});
 	},
 	main = function () {
-		'use strict';
 		var args = readArgs(),
 			commands = readCommands(),
-			command = args._ && args._.length && args._[0];
+			command = args._ && args._.length && args._[0],
+			logger = (!args.quiet) && new ConsoleLogger();
 		if (args.version && !command) {
 			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
@@ -42,7 +44,7 @@ var minimist = require('minimist'),
 			return;
 		}
 
-		commands[command](args).then(function (result) {
+		commands[command](args, logger).then(function (result) {
 			if (result) {
 				console.log(JSON.stringify(result, null, 2));
 			}
@@ -52,5 +54,4 @@ var minimist = require('minimist'),
 			process.exit(1);
 		});
 	};
-
 main();

@@ -22,6 +22,7 @@ claudia [command] {OPTIONS}
 
  * --help           print this help screen
  * --version        print out the current version
+ * --quiet          suppress output when executing commands
 
 Run with a command name to see options of a specific command, for example:
 ```bash

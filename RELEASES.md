@@ -1,5 +1,9 @@
 # Release history
 
+### 1.2.9, 18 May 2016
+
+- `create` and `update` now log command execution to avoid looking like claudia is stuck when deploying a large project. use `--quiet` to suppress output
+
 ### 1.2.8, 11 May 2016
 
 - bugfix for using relative paths in `--source`
