@@ -122,10 +122,10 @@ module.exports = function create(options, optionalLogger) {
 		},
 		markAliases = function (lambdaData) {
 			logger.logStage('creating version alias');
-			return markAlias(lambdaData.FunctionName, options.region, '$LATEST', 'latest')
+			return markAlias(lambdaData.FunctionName, lambda, '$LATEST', 'latest')
 			.then(function () {
 				if (options.version) {
-					return markAlias(lambdaData.FunctionName, options.region, lambdaData.Version, options.version);
+					return markAlias(lambdaData.FunctionName, lambda, lambdaData.Version, options.version);
 				}
 			}).then(function () {
 				return lambdaData;

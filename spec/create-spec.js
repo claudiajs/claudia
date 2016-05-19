@@ -537,7 +537,7 @@ describe('create', function () {
 		config['api-module'] = 'main';
 		createFromDir('api-gw-hello-world', logger).then(function () {
 			expect(logger.getStageLog(true).filter(function (entry) {
-				return entry !== 'waiting for IAM role propagation';
+				return entry !== 'waiting for IAM role propagation' && entry !== 'rate-limited by AWS, waiting before retry';
 			})).toEqual([
 				'loading package config',
 				'packaging files',
@@ -549,11 +549,11 @@ describe('create', function () {
 				'creating REST API',
 				'saving configuration'
 			]);
-			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.createFunction']);
+			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
+				'lambda.createFunction', 'lambda.updateAlias', 'lambda.createAlias'
+			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.getUser']);
-			expect(logger.getApiCallLogForService('apigateway', true).filter(function (entry) {
-				return entry !== 'rate-limited by AWS, waiting before retry';
-			})).toEqual([
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',
 				'apigateway.getResources',
 				'apigateway.createResource',

@@ -4,14 +4,17 @@ var Promise = require('bluebird'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/retriable-wrap'),
+	promiseWrap = require('../util/promise-wrap'),
 	apiGWUrl = require('../util/apigw-url'),
+	NullLogger = require('../util/null-logger'),
 	markAlias = require('../tasks/mark-alias');
-module.exports = function setVersion(options) {
+module.exports = function setVersion(options, optionalLogger) {
 	'use strict';
 	var lambdaConfig, lambda, apiGateway, apiConfig,
-		iam = Promise.promisifyAll(new aws.IAM()),
+		logger = optionalLogger || new NullLogger(),
+		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		updateApi = function () {
-			return iam.getUserAsync().then(function (result) {
+			return iam.getUserPromise().then(function (result) {
 				return result.User.Arn.split(':')[4];
 			}).then(function (ownerId) {
 				return allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region);
@@ -30,16 +33,24 @@ module.exports = function setVersion(options) {
 	if (!options.version) {
 		return Promise.reject('version misssing. please provide using --version');
 	}
-
+	logger.logStage('loading config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: lambdaConfig.region}), {suffix: 'Promise'}));
+		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		apiGateway = retriableWrap(
+			promiseWrap(
+				new aws.APIGateway({region:  lambdaConfig.region}),
+				{log: logger.logApiCall, logName: 'apigateway'}
+			),
+			function () {
+				logger.logStage('rate-limited by AWS, waiting before retry');
+			});
 	}).then(function () {
+		logger.logStage('updating versions');
 		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
 	}).then(function (versionResult) {
-		return markAlias(lambdaConfig.name, lambdaConfig.region, versionResult.Version, options.version);
+		return markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version);
 	}).then(function () {
 		if (apiConfig && apiConfig.id) {
 			return updateApi();

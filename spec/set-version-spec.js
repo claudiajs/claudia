@@ -8,6 +8,7 @@ var underTest = require('../src/commands/set-version'),
 	fs = require('fs'),
 	path = require('path'),
 	callApi = require('../src/util/call-api'),
+	ArrayLogger = require('../src/util/array-logger'),
 	aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
@@ -153,5 +154,25 @@ describe('setVersion', function () {
 				done.fail(e);
 			});
 		});
+	});
+	it('logs progress', function (done) {
+		var logger = new ArrayLogger();
+		shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
+		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: this.genericRole}).then(function (result) {
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			newObjects.restApi = result.api && result.api.id;
+		}).then(function () {
+			return underTest({source: workingdir, version: 'dev'}, logger);
+		}).then(function () {
+			expect(logger.getStageLog(true).filter(function (entry) {
+				return entry !== 'rate-limited by AWS, waiting before retry';
+			})).toEqual([
+				'loading config', 'updating versions'
+			]);
+			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.publishVersion', 'lambda.updateAlias', 'lambda.createAlias']);
+			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual(['apigateway.createDeployment']);
+		}).then(done, done.fail);
+
 	});
 });

@@ -64,7 +64,7 @@ module.exports = function update(options, optionalLogger) {
 	}).then(function (result) {
 		if (options.version) {
 			logger.logStage('setting version alias');
-			return markAlias(result.FunctionName, lambdaConfig.region, result.Version, options.version);
+			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
 	}).then(function () {
 		var apiModule, apiDef, alias = options.version || 'latest';

@@ -253,16 +253,18 @@ describe('update', function () {
 			newObjects.restApi = result.api && result.api.id;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 		}).then(function () {
-			return underTest({source: workingdir}, logger);
+			return underTest({source: workingdir, version: 'new'}, logger);
 		}).then(function () {
-			expect(logger.getStageLog(true)).toEqual([
-				'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'updating REST API'
+			expect(logger.getStageLog(true).filter(function (entry) {
+					return entry !== 'rate-limited by AWS, waiting before retry';
+				})).toEqual([
+					'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'setting version alias', 'updating REST API'
+				]);
+			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
+					'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
-			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.getFunctionConfiguration', 'lambda.updateFunctionCode']);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
-			expect(logger.getApiCallLogForService('apigateway', true).filter(function (entry) {
-				return entry !== 'rate-limited by AWS, waiting before retry';
-			})).toEqual([
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.getRestApi',
 				'apigateway.getResources',
 				'apigateway.deleteResource',

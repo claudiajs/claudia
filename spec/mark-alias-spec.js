@@ -33,7 +33,7 @@ describe('markAlias', function () {
 			}).then(done, done.fail);
 		});
 		it('creates a new version alias of the lambda function', function (done) {
-			underTest(testRunName, awsRegion, '1', 'testver').then(function () {
+			underTest(testRunName, lambda, '1', 'testver').then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'testver'});
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
@@ -48,7 +48,7 @@ describe('markAlias', function () {
 			}).then(function () {
 				return update({source: workingdir});
 			}).then(function () {
-				return underTest(testRunName, awsRegion, '2', 'testver');
+				return underTest(testRunName, lambda, '2', 'testver');
 			}).then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'testver'});
 			}).then(function (result) {
