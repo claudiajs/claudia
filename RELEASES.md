@@ -1,5 +1,9 @@
 # Release history
 
+### 1.3.1, 25 May 2016
+
+- bugfix for working with non-reentrant dependency modules (eg pg-promise)
+
 ### 1.3.0, 18 May 2016
 
 - `create` and `update` now log command execution to avoid looking like claudia is stuck when deploying a large project. use `--quiet` to suppress output
