@@ -1,4 +1,4 @@
-/*global module, require */
+/*global module, require, console */
 var Promise = require('bluebird'),
 	path = require('path'),
 	shell = require('shelljs'),
@@ -131,8 +131,8 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaData;
 			});
 		},
-		createWebApi = function (lambdaMetadata) {
-			var apiModule = require(path.resolve(path.join(options.source, options['api-module']))),
+		createWebApi = function (lambdaMetadata, packageDir) {
+			var apiModule, apiConfig, apiModulePath,
 				apiGateway = retriableWrap(promiseWrap(
 									new aws.APIGateway({region: options.region}),
 									{log: logger.logApiCall, logName: 'apigateway'}
@@ -140,9 +140,18 @@ module.exports = function create(options, optionalLogger) {
 								function () {
 									logger.logStage('rate-limited by AWS, waiting before retry');
 								}
-							),
-				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
+							);
 			logger.logStage('creating REST API');
+			try {
+				apiModulePath = path.join(packageDir, options['api-module']);
+				apiModule = require(path.resolve(apiModulePath));
+				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
+			}
+			catch (e) {
+				console.error(e.stack || e);
+				return Promise.reject('cannot load api config from ' + apiModulePath);
+			}
+
 			if (!apiConfig) {
 				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
 			}
@@ -215,7 +224,8 @@ module.exports = function create(options, optionalLogger) {
 		},
 		packageArchive,
 		functionDesc,
-		functionName;
+		functionName,
+		packageFileDir;
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
@@ -228,6 +238,7 @@ module.exports = function create(options, optionalLogger) {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);
 	}).then(function (dir) {
+		packageFileDir = dir;
 		logger.logStage('zipping package');
 		return zipdir(dir);
 	}).then(function (zipFile) {
@@ -249,7 +260,7 @@ module.exports = function create(options, optionalLogger) {
 	}).then(markAliases)
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
-			return createWebApi(lambdaMetadata);
+			return createWebApi(lambdaMetadata, packageFileDir);
 		} else {
 			return lambdaMetadata;
 		}

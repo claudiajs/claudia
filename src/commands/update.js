@@ -1,4 +1,4 @@
-/*global module, require*/
+/*global module, require, console*/
 var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
@@ -19,7 +19,8 @@ module.exports = function update(options, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
-		functionConfig;
+		functionConfig,
+		packageDir;
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
@@ -52,6 +53,7 @@ module.exports = function update(options, optionalLogger) {
 		logger.logStage('validating package');
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
 	}).then(function (dir) {
+		packageDir = dir;
 		logger.logStage('zipping package');
 		return zipdir(dir);
 	}).then(readFile)
@@ -67,11 +69,16 @@ module.exports = function update(options, optionalLogger) {
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
 	}).then(function () {
-		var apiModule, apiDef, alias = options.version || 'latest';
+		var apiModule, apiDef, alias = options.version || 'latest', apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
 		if (apiConfig && apiConfig.id && apiConfig.module) {
 			logger.logStage('updating REST API');
-			apiModule = require(path.resolve(path.join(options.source, apiConfig.module)));
-			apiDef = apiModule.apiConfig();
+			try {
+				apiModule = require(apiModulePath);
+				apiDef = apiModule.apiConfig();
+			} catch (e) {
+				console.error(e.stack || e);
+				return Promise.reject('cannot load api config from ' + apiModulePath);
+			}
 			updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger);
 		}

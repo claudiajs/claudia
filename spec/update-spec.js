@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global */
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -208,6 +208,12 @@ describe('update', function () {
 					lambdaVersion: 'latest'
 				});
 			}).then(done, done.fail);
+		});
+
+		it('works with non-reentrant modules', function (done) {
+			global.MARKED = false;
+			shell.cp('-rf', 'spec/test-projects/non-reentrant/*', updateddir);
+			underTest({source: updateddir}).then(done, done.fail);
 		});
 		it('when the version is provided, creates the deployment with that name', function (done) {
 			underTest({source: updateddir, version: 'development'}).then(function (result) {

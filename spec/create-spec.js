@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, __dirname */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, __dirname, global */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
@@ -529,6 +529,10 @@ describe('create', function () {
 				console.log(JSON.stringify(e));
 				done.fail();
 			});
+		});
+		it('works with non-reentrant modules', function (done) {
+			global.MARKED = false;
+			createFromDir('non-reentrant').then(done, done.fail);
 		});
 	});
 	it('logs call execution', function (done) {
