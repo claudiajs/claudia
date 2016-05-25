@@ -69,10 +69,11 @@ module.exports = function update(options, optionalLogger) {
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
 	}).then(function () {
-		var apiModule, apiDef, alias = options.version || 'latest', apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
+		var apiModule, apiDef, alias = options.version || 'latest', apiModulePath;
 		if (apiConfig && apiConfig.id && apiConfig.module) {
 			logger.logStage('updating REST API');
 			try {
+				apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
 				apiModule = require(apiModulePath);
 				apiDef = apiModule.apiConfig();
 			} catch (e) {
