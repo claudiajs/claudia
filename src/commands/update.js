@@ -20,7 +20,45 @@ module.exports = function update(options, optionalLogger) {
 	var logger = optionalLogger || new NullLogger(),
 		lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig,
-		packageDir;
+		alias = options.version || 'latest',
+		packageDir,
+		updateWebApi = function () {
+			var apiModule, apiDef, apiModulePath;
+			if (apiConfig && apiConfig.id && apiConfig.module) {
+				logger.logStage('updating REST API');
+				try {
+					apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
+					apiModule = require(apiModulePath);
+					apiDef = apiModule.apiConfig();
+				} catch (e) {
+					console.error(e.stack || e);
+					return Promise.reject('cannot load api config from ' + apiModulePath);
+				}
+				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
+				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger)
+					.then(function () {
+						if (apiModule.postDeploy) {
+							return apiModule.postDeploy(
+								options,
+								{
+									name: lambdaConfig.name,
+									alias: alias,
+									apiId: apiConfig.id,
+									region: lambdaConfig.region
+								},
+								{
+									apiGatewayPromise: apiGateway,
+									aws: aws
+								}
+							);
+						}
+					}).then(function (postDeployResult) {
+						if (postDeployResult) {
+							updateResult.deploy = postDeployResult;
+						}
+					});
+			}
+		};
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
@@ -68,22 +106,7 @@ module.exports = function update(options, optionalLogger) {
 			logger.logStage('setting version alias');
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
-	}).then(function () {
-		var apiModule, apiDef, alias = options.version || 'latest', apiModulePath;
-		if (apiConfig && apiConfig.id && apiConfig.module) {
-			logger.logStage('updating REST API');
-			try {
-				apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
-				apiModule = require(apiModulePath);
-				apiDef = apiModule.apiConfig();
-			} catch (e) {
-				console.error(e.stack || e);
-				return Promise.reject('cannot load api config from ' + apiModulePath);
-			}
-			updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
-			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger);
-		}
-	}).then(function () {
+	}).then(updateWebApi).then(function () {
 		return updateResult;
 	});
 };

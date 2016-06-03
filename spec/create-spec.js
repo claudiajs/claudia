@@ -530,6 +530,29 @@ describe('create', function () {
 				done.fail();
 			});
 		});
+		it('executes post-deploy if provided with the api', function (done) {
+			config.version = 'development';
+			config.postcheck = 'option-123';
+			config.postresult = 'option-result-post';
+			createFromDir('api-gw-postdeploy').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+				expect(creationResult.api.deploy).toEqual('option-result-post');
+			}).then(function () {
+				return callApi(apiId, awsRegion, 'postdeploy/hello', {retry: 403});
+			}).then(function (contents) {
+				expect(JSON.parse(contents.body)).toEqual({
+					'postinstallfname': testRunName,
+					'postinstallalias': 'development',
+					'postinstallapiid': apiId,
+					'postinstallregion': awsRegion,
+					'postinstalloption': 'option-123',
+					'lambdaVersion': 'development'
+				});
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail();
+			});
+		});
 		it('works with non-reentrant modules', function (done) {
 			global.MARKED = false;
 			createFromDir('non-reentrant').then(done, done.fail);

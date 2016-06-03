@@ -1,4 +1,4 @@
-/*global exports, console*/
+/*global exports */
 exports.apiConfig = function () {
 	'use strict';
 	return {
@@ -8,6 +8,5 @@ exports.apiConfig = function () {
 };
 exports.router = function (event, context) {
 	'use strict';
-	console.log(event);
 	context.succeed('hello world');
 };

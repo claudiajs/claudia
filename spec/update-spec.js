@@ -250,6 +250,33 @@ describe('update', function () {
 				});
 			}).then(done, done.fail);
 		});
+
+		it('executes post-deploy if provided with the api', function (done) {
+			shell.cp('-rf', 'spec/test-projects/api-gw-postdeploy/*', updateddir);
+			underTest({
+				source: updateddir,
+				version: 'development',
+				postcheck: 'option-123',
+				postresult: 'option-result-post'
+			}).then(function (updateResult) {
+				expect(updateResult.deploy).toEqual('option-result-post');
+			}).then(function () {
+				return invoke('postdeploy/hello');
+			}).then(function (contents) {
+				expect(JSON.parse(contents.body)).toEqual({
+					'postinstallfname': testRunName,
+					'postinstallalias': 'development',
+					'postinstallapiid': newObjects.restApi,
+					'postinstallregion': awsRegion,
+					'postinstalloption': 'option-123',
+					'lambdaVersion': 'development'
+				});
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail();
+			});
+		});
+
 	});
 	it('logs call execution', function (done) {
 		var logger = new ArrayLogger();

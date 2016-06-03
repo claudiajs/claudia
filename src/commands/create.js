@@ -134,6 +134,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			var apiModule, apiConfig, apiModulePath,
+				alias = options.version || 'latest',
 				apiGateway = retriableWrap(promiseWrap(
 									new aws.APIGateway({region: options.region}),
 									{log: logger.logApiCall, logName: 'apigateway'}
@@ -159,7 +160,7 @@ module.exports = function create(options, optionalLogger) {
 			return apiGateway.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
-				var alias = options.version || 'latest';
+
 				lambdaMetadata.api = {
 					id: result.id,
 					module: options['api-module'],
@@ -167,6 +168,25 @@ module.exports = function create(options, optionalLogger) {
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger);
 			}).then(function () {
+				if (apiModule.postDeploy) {
+					return apiModule.postDeploy(
+						options,
+						{
+							name: lambdaMetadata.FunctionName,
+							alias: alias,
+							apiId: lambdaMetadata.api.id,
+							region: options.region
+						},
+						{
+							apiGatewayPromise: apiGateway,
+							aws: aws
+						}
+					);
+				}
+			}).then(function (postDeployResult) {
+				if (postDeployResult) {
+					lambdaMetadata.api.deploy = postDeployResult;
+				}
 				return lambdaMetadata;
 			});
 		},
