@@ -14,7 +14,7 @@ var Promise = require('bluebird'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
 	promiseWrap = require('../util/promise-wrap'),
-	retry = require('../util/retry'),
+	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
@@ -117,7 +117,8 @@ module.exports = function create(options, optionalLogger) {
 				},
 				function () {
 					logger.logStage('waiting for IAM role propagation');
-				}
+				},
+				Promise
 			);
 		},
 		markAliases = function (lambdaData) {

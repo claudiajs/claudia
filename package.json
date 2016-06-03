@@ -43,6 +43,7 @@
     "aws-sdk": "^2.3.15",
     "bluebird": "^3.2.1",
     "minimist": "^1.2.0",
+    "oh-no-i-insist": "^1.0.0",
     "shelljs": "^0.5.3",
     "uuid": "^2.0.1"
   },

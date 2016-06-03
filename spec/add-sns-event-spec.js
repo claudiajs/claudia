@@ -3,7 +3,7 @@ var underTest = require('../src/commands/add-sns-event-source'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	retry = require('../src/util/retry'),
+	retry = require('oh-no-i-insist'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -116,7 +116,7 @@ describe('addSNSEventSource', function () {
 								return Promise.reject();
 							}
 						});
-				}, 5000, 5);
+				}, 5000, 5, undefined, undefined, Promise);
 			}).then(done, done.fail);
 		});
 

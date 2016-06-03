@@ -1,5 +1,6 @@
 /*global module, require*/
-var retry = require('./retry');
+var retry = require('oh-no-i-insist'),
+	Promise = require('bluebird');
 module.exports = function retriableWrap(apiObject, onRetry, pattern, timeout, retries) {
 	'use strict';
 	timeout = timeout || 3000;
@@ -19,7 +20,8 @@ module.exports = function retriableWrap(apiObject, onRetry, pattern, timeout, re
 					function (failure) {
 						return failure.code && failure.code === 'TooManyRequestsException';
 					},
-					onRetry
+					onRetry,
+					Promise
 				);
 			};
 		}

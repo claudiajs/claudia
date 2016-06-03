@@ -1,7 +1,7 @@
 /*global require, module */
 var https = require('https'),
 	Promise = require('bluebird'),
-	retry = require('./retry'),
+	retry = require('oh-no-i-insist'),
 	executeCall = function (callOptions) {
 		'use strict';
 		return new Promise(function (resolve, reject) {
@@ -56,7 +56,7 @@ module.exports = function callApi(apiId, region, path, options) {
 			return executeCall(callOptions);
 		}, 3000, 5, function (err) {
 			return err.statusCode === callOptions.retry;
-		});
+		}, undefined, Promise);
 	}
 };
 
