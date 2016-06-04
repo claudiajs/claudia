@@ -1,5 +1,9 @@
 # Release history
 
+### 1.4.0, 4 June 2016
+
+- experimental support for postDeploy steps in Api Builder
+
 ### 1.3.1, 25 May 2016
 
 - bugfix for working with non-reentrant dependency modules (eg pg-promise)
