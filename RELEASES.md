@@ -6,7 +6,7 @@
 
 ### 1.3.1, 25 May 2016
 
-- bugfix for working with non-reentrant dependency modules (eg pg-promise)
+- bugfix for working with non-reentrant dependency modules
 
 ### 1.3.0, 18 May 2016
 
