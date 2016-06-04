@@ -179,7 +179,8 @@ module.exports = function create(options, optionalLogger) {
 						},
 						{
 							apiGatewayPromise: apiGateway,
-							aws: aws
+							aws: aws,
+							Promise: Promise
 						}
 					);
 				}

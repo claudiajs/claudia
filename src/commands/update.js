@@ -48,7 +48,8 @@ module.exports = function update(options, optionalLogger) {
 								},
 								{
 									apiGatewayPromise: apiGateway,
-									aws: aws
+									aws: aws,
+									Promise: Promise
 								}
 							);
 						}
