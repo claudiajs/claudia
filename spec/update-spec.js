@@ -267,6 +267,9 @@ describe('update', function () {
 					'postinstallfname': testRunName,
 					'postinstallalias': 'development',
 					'postinstallapiid': newObjects.restApi,
+					'hasPromise': 'true',
+					'postinstallapiUrl': 'https://' + newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/development',
+					'hasAWS': 'true',
 					'postinstallregion': awsRegion,
 					'postinstalloption': 'option-123',
 					'lambdaVersion': 'development'

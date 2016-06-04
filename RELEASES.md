@@ -1,6 +1,6 @@
 # Release history
 
-### 1.4.0, 4 June 2016
+### 1.4.0, 1.4.1 4 June 2016
 
 - experimental support for postDeploy steps in Api Builder
 

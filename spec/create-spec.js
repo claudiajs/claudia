@@ -545,6 +545,9 @@ describe('create', function () {
 					'postinstallalias': 'development',
 					'postinstallapiid': apiId,
 					'postinstallregion': awsRegion,
+					'hasPromise': 'true',
+					'postinstallapiUrl': 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/development',
+					'hasAWS': 'true',
 					'postinstalloption': 'option-123',
 					'lambdaVersion': 'development'
 				});

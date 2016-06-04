@@ -175,6 +175,7 @@ module.exports = function create(options, optionalLogger) {
 							name: lambdaMetadata.FunctionName,
 							alias: alias,
 							apiId: lambdaMetadata.api.id,
+							apiUrl: lambdaMetadata.api.url,
 							region: options.region
 						},
 						{

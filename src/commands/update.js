@@ -44,6 +44,7 @@ module.exports = function update(options, optionalLogger) {
 									name: lambdaConfig.name,
 									alias: alias,
 									apiId: apiConfig.id,
+									apiUrl: updateResult.url,
 									region: lambdaConfig.region
 								},
 								{
