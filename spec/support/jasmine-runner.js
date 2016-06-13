@@ -4,12 +4,15 @@ var Jasmine = require('jasmine'),
 	noop = function () {},
 	jrunner = new Jasmine(),
 	filter;
-if (process.argv[2] === 'full') {
-	jrunner.configureDefaultReporter({print: noop});    // remove default reporter logs
-	jasmine.getEnv().addReporter(new SpecReporter());   // add jasmine-spec-reporter
-}
-if (process.argv[2] && process.argv[2].match('^filter=')) {
-	filter = process.argv[2].match('^filter=(.*)')[1];
-}
+process.argv.slice(2).forEach(function (option) {
+	'use strict';
+	if (option === 'full') {
+		jrunner.configureDefaultReporter({print: noop});    // remove default reporter logs
+		jasmine.getEnv().addReporter(new SpecReporter());   // add jasmine-spec-reporter
+	}
+	if (option.match('^filter=')) {
+		filter = option.match('^filter=(.*)')[1];
+	}
+});
 jrunner.loadConfigFile();                           // load jasmine.json configuration
 jrunner.execute(undefined, filter);

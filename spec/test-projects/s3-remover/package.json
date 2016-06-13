@@ -1,5 +1,10 @@
 {
   "name": "hello-world",
   "private": true,
-  "files": ["main.js"]
+  "files": [
+    "main.js"
+  ],
+  "dependencies": {
+    "aws-sdk": "^2.2.47"
+  }
 }

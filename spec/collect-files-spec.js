@@ -3,6 +3,7 @@ var underTest = require('../src/tasks/collect-files'),
 	shell = require('shelljs'),
 	os = require('os'),
 	fs = require('fs'),
+	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	path = require('path');
 describe('collectFiles', function () {
@@ -10,6 +11,9 @@ describe('collectFiles', function () {
 	var destdir, sourcedir, pwd,
 		configurePackage = function (packageConf) {
 			fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
+		},
+		isSameDir = function (dir1, dir2) {
+			return !path.relative(dir1, dir2);
 		};
 	beforeEach(function () {
 		sourcedir = tmppath();
@@ -55,39 +59,133 @@ describe('collectFiles', function () {
 			done();
 		});
 	});
-	it('fails if package.json does not contain the files property', function (done) {
-		configurePackage({});
-		underTest(sourcedir).then(done.fail, function (message) {
-			expect(message).toEqual('package.json does not contain the files property');
-			done();
+	describe('when the files property is specified', function () {
+		it('it limits the files copied to the files property', function (done) {
+			configurePackage({files: ['roo*']});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				done();
+			}, done.fail);
+		});
+		it('works when files is a single string', function (done) {
+			configurePackage({files: 'roo*'});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				done();
+			}, done.fail);
+		});
+		it('copies all the listed files/subfolders/with wildcards from the files property to a folder in temp path', function (done) {
+			configurePackage({files: ['roo*', 'subdir']});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
+				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+				done();
+			}, done.fail);
+		});
+		it('includes package.json even if it is not in the files property', function (done) {
+			configurePackage({files: ['roo*']});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
+				done();
+			}, done.fail);
+		});
+		['.gitignore', '.npmignore'].forEach(function (fileName) {
+			it('ignores ' + fileName, function (done) {
+				fs.writeFileSync(path.join(sourcedir, fileName), 'root.txt', 'utf8');
+				configurePackage({files: ['roo*']});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				}).then(done, done.fail);
+			});
 		});
 	});
-	it('copies all the listed files/subfolders/with wildcards from the files property to a folder in temp path', function (done) {
-		configurePackage({files: ['roo*', 'subdir']});
-		underTest(sourcedir).then(function (packagePath) {
-			destdir = packagePath;
-			expect(path.dirname(packagePath)).toEqual(os.tmpdir());
-			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
-			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
-			done();
-		}, done.fail);
-	});
-	it('includes package.json even if it is not in the files property', function (done) {
-		configurePackage({files: ['roo*']});
-		underTest(sourcedir).then(function (packagePath) {
-			destdir = packagePath;
-			expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
-			done();
-		}, done.fail);
-	});
-	it('does not include any other files', function (done) {
-		configurePackage({files: ['roo*']});
-		underTest(sourcedir).then(function (packagePath) {
-			destdir = packagePath;
-			expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-			expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
-			done();
-		}, done.fail);
+	describe('when the files property is not specified', function () {
+		it('copies all the project files to a folder in temp path', function (done) {
+			configurePackage({});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
+				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+				expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
+			}).then(done, done.fail);
+		});
+		it('includes package.json even if it is not in the files property', function (done) {
+			configurePackage({});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
+			}).then(done, done.fail);
+		});
+		['node_modules', '.git', '.hg', '.svn', 'CVS'].forEach(function (dirName) {
+			it('excludes ' + dirName + ' directory from the package', function (done) {
+				shell.mkdir(path.join(sourcedir, dirName));
+				fs.writeFileSync(path.join(sourcedir, dirName, 'sub.txt'), 'text2', 'utf8');
+
+				configurePackage({});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, dirName, 'sub.txt'))).toBeFalsy();
+				}).then(done, done.fail);
+
+			});
+		});
+		['.gitignore', '.somename.swp', '._somefile', '.DS_Store', '.npmrc', 'npm-debug.log', 'config.gypi'].forEach(function (fileName) {
+			it('excludes ' + fileName + ' file from the package', function (done) {
+				fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
+				configurePackage({});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, fileName))).toBeFalsy();
+				}).then(done, done.fail);
+
+			});
+		});
+		['.gitignore', '.npmignore'].forEach(function (fileName) {
+			it('ignores the wildcard contents specified in ' + fileName, function (done) {
+				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir', 'utf8');
+				configurePackage({});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				}).then(done, done.fail);
+			});
+			it('ignores node_modules even when a separate ignore is specified in ' + fileName, function (done) {
+				shell.mkdir(path.join(sourcedir, 'node_modules'));
+				fs.writeFileSync(path.join(sourcedir, 'node_modules', 'sub.txt'), 'text2', 'utf8');
+				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir', 'utf8');
+				configurePackage({});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, 'node_modules', 'sub.txt'))).toBeFalsy();
+				}).then(done, done.fail);
+			});
+			it('survives blank and comment lines in ignore file lists for ' + fileName, function (done) {
+				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir\n\n#root.txt', 'utf8');
+				configurePackage({});
+				underTest(sourcedir).then(function (packagePath) {
+					destdir = packagePath;
+					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				}).then(done, done.fail);
+
+			});
+		});
 	});
 	it('collects production npm dependencies if package config includes the dependencies flag', function (done) {
 		configurePackage({
@@ -137,7 +235,36 @@ describe('collectFiles', function () {
 			expect(shell.pwd()).toEqual(pwd);
 			done();
 		});
-
 	});
 
+
+	it('logs progress', function (done) {
+		var logger = new ArrayLogger();
+		configurePackage({
+			files: ['root.txt'],
+			dependencies: {
+				'uuid': '^2.0.0'
+			}
+		});
+		underTest(sourcedir, logger).then(function () {
+			expect(logger.getCombinedLog()).toEqual([
+				['stage', 'packaging files'],
+				['call', 'cp', 'package.json'],
+				['call', 'cp', 'root.txt'],
+				['call', 'rm', 'node_modules'],
+				['call', 'rm', '.git'],
+				['call', 'rm', '.gitignore'],
+				['call', 'rm', '*.swp'],
+				['call', 'rm', '._*'],
+				['call', 'rm', '.DS_Store'],
+				['call', 'rm', '.hg'],
+				['call', 'rm', '.npmrc'],
+				['call', 'rm', '.svn'],
+				['call', 'rm', 'config.gypi'],
+				['call', 'rm', 'CVS'],
+				['call', 'rm', 'npm-debug.log'],
+				['call', 'npm install --production']
+			]);
+		}).then(done, done.fail);
+	});
 });

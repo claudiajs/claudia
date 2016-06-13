@@ -3,11 +3,14 @@ var tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	Promise = require('bluebird'),
 	shell = require('shelljs'),
-	path = require('path');
+	fs = require('fs'),
+	path = require('path'),
+	NullLogger = require('../util/null-logger');
 
-module.exports = function collectFiles(sourcePath) {
+module.exports = function collectFiles(sourcePath, optionalLogger) {
 	'use strict';
-	var checkPreconditions = function () {
+	var logger = optionalLogger || new NullLogger(),
+		checkPreconditions = function () {
 			if (!sourcePath) {
 				return 'source directory not provided';
 			}
@@ -21,21 +24,43 @@ module.exports = function collectFiles(sourcePath) {
 				return 'source directory does not contain package.json';
 			}
 		},
-		copyFiles = function (packageConfig) {
-			var files, targetDir = tmppath();
-			if (!packageConfig.files) {
-				return Promise.reject('package.json does not contain the files property');
+		getRemovalFileList = function (ignoreFileListName) {
+			var ignoreFile = path.join(sourcePath, ignoreFileListName),
+				patternList;
+			if (!shell.test('-e', ignoreFile)) {
+				return [];
 			}
-			files = ['package.json'].concat(packageConfig.files);
+			patternList = fs.readFileSync(ignoreFile, 'utf8').split('\n');
+			return patternList.filter(function (file) {
+				return (file && file.trim() && file.trim()[0] !== '#');
+			});
+		},
+		copyFiles = function (packageConfig) {
+			var files, targetDir = tmppath(), includedFiles = packageConfig.files,
+				removeAfterCopy = ['node_modules', '.git', '.gitignore', '*.swp', '._*', '.DS_Store', '.hg', '.npmrc', '.svn', 'config.gypi', 'CVS', 'npm-debug.log'],
+				ignoreFileLists = ['.gitignore', '.npmignore'];
+			if (!includedFiles) {
+				includedFiles = '*';
+				ignoreFileLists.forEach(function (fileName) {
+					removeAfterCopy = removeAfterCopy.concat(getRemovalFileList(fileName));
+				});
+			}
+			files = ['package.json'].concat(includedFiles);
 			shell.mkdir('-p', targetDir);
 			files.forEach(function (file) {
-				shell.cp('-r', path.join(sourcePath, file), targetDir);
+				logger.logApiCall('cp', file);
+				shell.cp('-rf', path.join(sourcePath, file), targetDir);
+			});
+			removeAfterCopy.forEach(function (pattern) {
+				logger.logApiCall('rm', pattern);
+				shell.rm('-rf', path.join(targetDir, pattern));
 			});
 			return Promise.resolve(targetDir);
 		},
 		installDependencies = function (targetDir) {
 			var cwd = shell.pwd(),
 				npmlog = tmppath();
+			logger.logApiCall('npm install --production');
 			shell.cd(targetDir);
 			if (shell.exec('npm install --production > ' + npmlog + ' 2>&1').code !== 0) {
 				shell.cd(cwd);
@@ -45,6 +70,7 @@ module.exports = function collectFiles(sourcePath) {
 			return Promise.resolve(targetDir);
 		},
 		validationError = checkPreconditions(sourcePath);
+	logger.logStage('packaging files');
 	if (validationError) {
 		return Promise.reject(validationError);
 	}

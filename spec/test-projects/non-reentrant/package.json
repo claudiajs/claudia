@@ -1,0 +1,5 @@
+{
+  "name": "non-reentrant",
+  "private": true,
+  "files": ["main.js"]
+}

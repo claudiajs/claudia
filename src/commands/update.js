@@ -1,4 +1,4 @@
-/*global module, require*/
+/*global module, require, console*/
 var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
@@ -8,43 +8,131 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
+	retriableWrap = require('../util/retriable-wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
+	validatePackage = require('../tasks/validate-package'),
+	apiGWUrl = require('../util/apigw-url'),
+	promiseWrap = require('../util/promise-wrap'),
+	NullLogger = require('../util/null-logger'),
 	loadConfig = require('../util/loadconfig');
-module.exports = function update(options) {
+module.exports = function update(options, optionalLogger) {
 	'use strict';
-	var lambda, lambdaConfig, apiConfig, updateResult,
-		updateLambda = function (fileContents) {
-			return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
+	var logger = optionalLogger || new NullLogger(),
+		lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
+		functionConfig,
+		alias = options.version || 'latest',
+		packageDir,
+		updateWebApi = function () {
+			var apiModule, apiDef, apiModulePath;
+			if (apiConfig && apiConfig.id && apiConfig.module) {
+				logger.logStage('updating REST API');
+				try {
+					apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
+					apiModule = require(apiModulePath);
+					apiDef = apiModule.apiConfig();
+				} catch (e) {
+					console.error(e.stack || e);
+					return Promise.reject('cannot load api config from ' + apiModulePath);
+				}
+				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
+				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger)
+					.then(function () {
+						if (apiModule.postDeploy) {
+							return apiModule.postDeploy(
+								options,
+								{
+									name: lambdaConfig.name,
+									alias: alias,
+									apiId: apiConfig.id,
+									apiUrl: updateResult.url,
+									region: lambdaConfig.region
+								},
+								{
+									apiGatewayPromise: apiGateway,
+									aws: aws,
+									Promise: Promise
+								}
+							);
+						}
+					}).then(function (postDeployResult) {
+						if (postDeployResult) {
+							updateResult.deploy = postDeployResult;
+						}
+					});
+			}
 		};
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
 	}
-	return loadConfig(options.source, {lambda: {name: true, region: true}}).then(function (config) {
+	logger.logStage('loading Lambda config');
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
+		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		apiGateway = retriableWrap(
+				promiseWrap(
+					new aws.APIGateway({region: lambdaConfig.region}),
+					{log: logger.logApiCall, logName: 'apigateway'}
+				),
+				function () {
+					logger.logStage('rate-limited by AWS, waiting before retry');
+				}
+		);
 	}).then(function () {
-		return collectFiles(options.source);
-	}).then(zipdir)
-	.then(readFile)
-	.then(updateLambda)
-	.then(function (result) {
+		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
+	}).then(function (result) {
+		functionConfig = result;
+	}).then(function () {
+		if (apiConfig) {
+			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
+		}
+	}).then(function () {
+		return collectFiles(options.source, logger);
+	}).then(function (dir) {
+		logger.logStage('validating package');
+		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
+	}).then(function (dir) {
+		packageDir = dir;
+		logger.logStage('zipping package');
+		return zipdir(dir);
+	}).then(readFile)
+	.then(function (fileContents) {
+		logger.logStage('updating Lambda');
+		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
+	}).then(function (result) {
 		updateResult = result;
 		return result;
 	}).then(function (result) {
 		if (options.version) {
-			return markAlias(result.FunctionName, lambdaConfig.region, result.Version, options.version);
+			logger.logStage('setting version alias');
+			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
-	}).then(function () {
-		var apiModule, apiDef;
-		if (apiConfig && apiConfig.id && apiConfig.module) {
-			apiModule = require(path.join(options.source, apiConfig.module));
-			apiDef = apiModule.apiConfig();
-			return rebuildWebApi(lambdaConfig.name, options.version || 'latest', apiConfig.id, apiDef, lambdaConfig.region);
-		}
-	}).then(function () {
+	}).then(updateWebApi).then(function () {
 		return updateResult;
 	});
 };
-
+module.exports.doc = {
+	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',
+	priority: 2,
+	args: [
+		{
+			argument: 'version',
+			optional: true,
+			description: 'A version alias to automatically assign to the new deployment',
+			example: 'development'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
+};

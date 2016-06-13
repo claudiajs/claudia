@@ -14,7 +14,7 @@ module.exports = function addS3EventSource(options) {
 			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
 		},
 		readConfig = function () {
-			return loadConfig(options.source, {lambda: {name: true, region: true, role: true}})
+			return loadConfig(options, {lambda: {name: true, region: true, role: true}})
 				.then(function (config) {
 					lambdaConfig = config;
 					return config;
@@ -89,4 +89,40 @@ module.exports = function addS3EventSource(options) {
 		.then(addS3AccessPolicy)
 		.then(addInvokePermission)
 		.then(addBucketNotificationConfig);
+};
+
+module.exports.doc = {
+	description: 'Add a notification event to Lambda when a file is added to a S3 bucket, and set up access permissions',
+	priority: 4,
+	args: [
+		{
+			argument: 'bucket',
+			description: 'S3 Bucket name which will push notifications to Lambda'
+		},
+		{
+			argument: 'prefix',
+			optional: true,
+			description: 'Prefix filter for S3 keys that will cause the event',
+			example : 'infiles/'
+		},
+		{
+			argument: 'version',
+			optional: true,
+			description: 'Bind to a particular version',
+			example: 'production',
+			default: 'latest version'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			default: 'current directory'
+		},
+		{
+			argument: 'config',
+			optional: true,
+			description: 'Config file containing the resource names',
+			default: 'claudia.json'
+		}
+	]
 };

@@ -1,10 +1,8 @@
 /*global require, module*/
-var Promise = require('bluebird'),
-	aws = require('aws-sdk');
-module.exports = function markAlias(functionName, region, versionName, versionAlias) {
+var Promise = require('bluebird');
+module.exports = function markAlias(functionName, lambda, versionName, versionAlias) {
 	'use strict';
-	var lambda = Promise.promisifyAll(new aws.Lambda({region: region}), {suffix: 'Promise'}),
-		config = {
+	var config = {
 			FunctionName: functionName,
 			FunctionVersion: versionName,
 			Name: versionAlias

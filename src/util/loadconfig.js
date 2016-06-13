@@ -4,18 +4,35 @@ var	path = require('path'),
 	shell = require('shelljs'),
 	Promise = require('bluebird');
 
-module.exports = function loadConfig(sourceDir, validate) {
+module.exports = function loadConfig(options, validate) {
 	'use strict';
-	sourceDir = sourceDir || shell.pwd();
-	if (!shell.test('-e', path.join(sourceDir, 'claudia.json'))) {
-		return Promise.reject('claudia.json does not exist in the source folder');
+	var sourceDir = shell.pwd(),
+		fileName,
+		configMissingError = function () {
+			if (options && options.config) {
+				return options.config + ' does not exist';
+			}
+			return 'claudia.json does not exist in the source folder';
+		};
+
+	validate = validate || {};
+	if (typeof options === 'string') {
+		sourceDir = options;
+	} else if (options && options.source) {
+		sourceDir = options.source;
 	}
-	return readjson(path.join(sourceDir, 'claudia.json')).then(function (config) {
+	fileName = (options && options.config) ||
+		path.join(sourceDir, 'claudia.json');
+
+	if (!shell.test('-e', fileName)) {
+		return Promise.reject(configMissingError());
+	}
+	return readjson(fileName).then(function (config) {
 		var name = config && config.lambda && config.lambda.name,
 			region = config && config.lambda && config.lambda.region,
 			role = config && config.lambda && config.lambda.role;
 		if (validate.lambda && validate.lambda.name && !name) {
-			return Promise.reject('invalid configuration -- lambda.name missing from claudia.json');
+			return Promise.reject('invalid configuration -- lambda.name missing from ' + path.basename(fileName));
 		}
 		if (validate.lambda && validate.lambda.region && !region) {
 			return Promise.reject('invalid configuration -- lambda.region missing from claudia.json');
@@ -23,6 +40,6 @@ module.exports = function loadConfig(sourceDir, validate) {
 		if (validate.lambda && validate.lambda.role && !role) {
 			return Promise.reject('invalid configuration -- lambda.role missing from claudia.json');
 		}
-		return Promise.resolve(config);
+		return config;
 	});
 };

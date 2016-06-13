@@ -1,0 +1,5 @@
+{
+  "name": "echo",
+  "private": true,
+  "files": ["main.js"]
+}

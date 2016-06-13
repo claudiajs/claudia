@@ -1,39 +1,7 @@
 /*global require, module */
-var https = require('https'),
-	Promise = require('bluebird'),
-	retry = require('./retry'),
-	executeCall = function (callOptions) {
-		'use strict';
-		return new Promise(function (resolve, reject) {
-			var req = https.request(callOptions);
-			req.on('response', function (res) {
-				var dataChunks = [];
-				res.setEncoding('utf8');
-				res.on('data', function (chunk) {
-					dataChunks.push(chunk);
-				});
-				res.on('end', function () {
-					var response = {
-						headers: res.headers,
-						body: dataChunks.join(''),
-						statusCode: res.statusCode,
-						statusMessage: res.statusMessage
-					};
-					if (callOptions.resolveErrors || (response.statusCode > 199 && response.statusCode < 400)) {
-						resolve(response);
-					} else {
-						reject(response);
-					}
-				});
-			}).on('error', function (e) {
-				reject(e);
-			});
-			if (callOptions.body) {
-				req.write(callOptions.body);
-			}
-			req.end();
-		});
-	};
+var Promise = require('bluebird'),
+	retry = require('oh-no-i-insist'),
+	executeCall = require('minimal-request-promise');
 
 module.exports = function callApi(apiId, region, path, options) {
 	'use strict';
@@ -50,13 +18,13 @@ module.exports = function callApi(apiId, region, path, options) {
 		callOptions.headers['Content-Length'] = callOptions.body.length;
 	}
 	if (!callOptions.retry) {
-		return executeCall(callOptions);
+		return executeCall(callOptions, Promise);
 	} else {
 		return retry(function () {
-			return executeCall(callOptions);
+			return executeCall(callOptions, Promise);
 		}, 3000, 5, function (err) {
 			return err.statusCode === callOptions.retry;
-		});
+		}, undefined, Promise);
 	}
 };
 
