@@ -15,7 +15,6 @@ For some nice examples, see the [Example Projects](https://github.com/claudiajs/
 [![](https://nodei.co/npm/claudia.svg?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/claudia)
 
 * Read the [Getting started guide](getting_started.md) for information on setting up credentials and a walk-through of a simple hello-world example. 
-
 * Check out [Command Line Usage](docs) for details about command line options.
 
 ## Questions/Comments?
