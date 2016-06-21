@@ -15,7 +15,8 @@ For some nice examples, see the [Example Projects](https://github.com/claudiajs/
 [![](https://nodei.co/npm/claudia.svg?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/claudia)
 
 * Read the [Getting started guide](getting_started.md) for information on setting up credentials and a walk-through of a simple hello-world example. 
-* Check out [Command Line Usage](docs) for details about command line options.
+* Check out the guide for [Customising Deployments](customising_deployments.md) for information on how to configure what gets sent to Lambda and how it gets used
+* Check out [Command Line Usage](docs) for details about all the command line options.
 
 ## Questions/Comments?
 
