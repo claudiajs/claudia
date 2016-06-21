@@ -2,7 +2,7 @@
 
 This document explains how to deploy a simple Node.js microservice to AWS Lambda using Claudia.js. For an example of how to set up a simple web API, check out [Getting Started with Claudia API Builder](https://github.com/claudiajs/claudia-api-builder/blob/master/docs/getting_started.md).
 
-# Prerequisites
+## Prerequisites
 
 * AWS account with access to IAM and Lambda
 * Node.js 4.3.2 or 0.10.36
@@ -10,14 +10,14 @@ This document explains how to deploy a simple Node.js microservice to AWS Lambda
 
 AWS Lambda currently supports Node.js 4.3.2 and 0.10.36. By default, Claudia will create 4.3.2 functions in Lambda, and you can force an older version with the `--runtime` argument while creating the function. To avoid nasty surprises, we strongly suggest using the same version for development and deployments. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment
 
-## Configuring access credentials
+### Configuring access credentials
 
 Claudia uses the Node.js API for AWS. To set the credentials, please follow the instructions in [Setting AWS Credentials for NodeJS](http://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html) section of the AWS API guide. 
 
 Although any approach described in the guide will work, we recommend creating a separate profile with write-access to Lambda, API Gateway, IAM and other resources, and selecting that profile by setting the `AWS_PROFILE` environment variable.
 
 
-# Deploying your first AWS Lambda function
+## Deploying your first AWS Lambda function
 
 Create a new NPM project, and just give it a descriptive name (eg claudia-test):
 
@@ -70,7 +70,7 @@ This means that the function was deployed to AWS, and is now ready to process ev
 
 For some nice examples of processing various event types, see the [Claudia Example Projects](https://github.com/claudiajs/example-projects)
 
-# Updating an existing Lambda function
+## Updating an existing Lambda function
 
 Let's make something a bit more dynamic. We'll send it a name, and expect a greeting in return. We'll also log the request using CloudWatch. Modify the `lambda.js` file:
 
@@ -119,5 +119,3 @@ aws logs filter-log-events --log-group-name /aws/lambda/claudia-test
 Logging events is a good way to discover the right structure when you connect it to a new event source. 
 
 Claudia has lots of options to customise deployments. Check out [Customising Deployments](customising_deployments.md) for more information on how to configure what gets sent to Lambda and how it gets used.
-
-
