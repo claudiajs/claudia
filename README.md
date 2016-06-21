@@ -35,3 +35,7 @@ See the [Release History](RELEASES.md)
 ## Further reading
 
 See [Related Articles](FURTHER_READING.md) for more articles, reviews and tutorials.
+
+## License
+
+MIT -- see [LICENSE](LICENSE)
