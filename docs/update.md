@@ -16,3 +16,4 @@ claudia update {OPTIONS}
   * _Defaults to_: current directory
 *  `--config`:  _optional_ Config file containing the resource names
   * _Defaults to_: claudia.json
+*  `--use-local-dependencies`:  _optional_ Do not install dependencies, use local node_modules directory instead
