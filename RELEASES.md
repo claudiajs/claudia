@@ -1,5 +1,9 @@
 # Release history
 
+### 1.4.2, 23 June 2016
+
+- Claudia can be forced to use local dependencies, instead of doing npm install, by `--use-local-dependencies`
+
 ### 1.4.0, 1.4.1 4 June 2016
 
 - experimental support for postDeploy steps in Api Builder

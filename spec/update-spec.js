@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global, __dirname */
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -109,6 +109,23 @@ describe('update', function () {
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
 			}).then(done, done.fail);
 		});
+
+		it('uses local dependencies if requested', function (done) {
+			shell.cp('-rf', path.join(__dirname, 'test-projects', 'local-dependencies', '*'), workingdir);
+
+			shell.rm('-rf', path.join(workingdir, 'node_modules'));
+			shell.mkdir(path.join(workingdir, 'node_modules'));
+			shell.cp('-r', path.join(workingdir, 'local_modules', '*'),  path.join(workingdir, 'node_modules'));
+
+			underTest({source: workingdir, 'use-local-dependencies': true}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello local"');
+			}).then(done, done.fail);
+		});
+
+
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});

@@ -7,7 +7,7 @@ var tmppath = require('../util/tmppath'),
 	path = require('path'),
 	NullLogger = require('../util/null-logger');
 
-module.exports = function collectFiles(sourcePath, optionalLogger) {
+module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		checkPreconditions = function () {
@@ -60,13 +60,17 @@ module.exports = function collectFiles(sourcePath, optionalLogger) {
 		installDependencies = function (targetDir) {
 			var cwd = shell.pwd(),
 				npmlog = tmppath();
-			logger.logApiCall('npm install --production');
-			shell.cd(targetDir);
-			if (shell.exec('npm install --production > ' + npmlog + ' 2>&1').code !== 0) {
+			if (useLocalDependencies) {
+				shell.cp('-r', path.join(sourcePath, 'node_modules'), targetDir);
+			} else {
+				logger.logApiCall('npm install --production');
+				shell.cd(targetDir);
+				if (shell.exec('npm install --production > ' + npmlog + ' 2>&1').code !== 0) {
+					shell.cd(cwd);
+					return Promise.reject('npm install --production failed. Check ' + npmlog);
+				}
 				shell.cd(cwd);
-				return Promise.reject('npm install --production failed. Check ' + npmlog);
 			}
-			shell.cd(cwd);
 			return Promise.resolve(targetDir);
 		},
 		validationError = checkPreconditions(sourcePath);

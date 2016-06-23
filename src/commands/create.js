@@ -256,7 +256,7 @@ module.exports = function create(options, optionalLogger) {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	}).then(function () {
-		return collectFiles(source, logger);
+		return collectFiles(source, options['use-local-dependencies'], logger);
 	}).then(function (dir) {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);
@@ -375,6 +375,11 @@ module.exports.doc = {
 			optional: true,
 			description: 'The function execution time, in seconds, at which AWS Lambda should terminate the function',
 			default: 3
+		},
+		{
+			argument: 'use-local-dependencies',
+			optional: true,
+			description: 'Do not install dependencies, use local node_modules directory instead'
 		}
 	]
 };

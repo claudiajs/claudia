@@ -187,56 +187,96 @@ describe('collectFiles', function () {
 			});
 		});
 	});
-	it('collects production npm dependencies if package config includes the dependencies flag', function (done) {
-		configurePackage({
-			files: ['root.txt'],
-			dependencies: {
-				'uuid': '^2.0.0'
-			},
-			devDependencies: {
-				'minimist': '^1.2.0'
-			}
+	describe('collecting dependencies', function () {
+		beforeEach(function () {
+			shell.mkdir(path.join(sourcedir, 'node_modules'));
+			shell.mkdir('-p', path.join(sourcedir, 'node_modules', 'old-mod'));
+			fs.writeFileSync(path.join(sourcedir, 'node_modules', 'old-mod', 'old.txt'), 'old-content', 'utf8');
 		});
-		underTest(sourcedir).then(function (packagePath) {
-			destdir = packagePath;
-			expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
-			done();
-		}, done.fail);
+		it('collects production npm dependencies if package config includes the dependencies object', function (done) {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'uuid': '^2.0.0'
+				},
+				devDependencies: {
+					'minimist': '^1.2.0'
+				}
+			});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
+				done();
+			}, done.fail);
+		});
+		it('uses local node_modules instead of running npm install if localDependencies is set to true', function (done) {
+			configurePackage({
+				dependencies: {
+					'uuid': '^2.0.0'
+				},
+				devDependencies: {
+					'minimist': '^1.2.0'
+				}
+			});
+			underTest(sourcedir, true).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
+				done();
+			}, done.fail);
+		});
+		it('uses local node_modules when localDependencie is set to true, even when only specific files are requested', function (done) {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'uuid': '^2.0.0'
+				},
+				devDependencies: {
+					'minimist': '^1.2.0'
+				}
+			});
+			underTest(sourcedir, true).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
+				done();
+			}, done.fail);
+		});
 
-	});
-	it('fails if npm install fails', function (done) {
-		configurePackage({
-			files: ['root.txt'],
-			dependencies: {
-				'non-existing-package': '2.0.0'
-			}
+		it('fails if npm install fails', function (done) {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'non-existing-package': '2.0.0'
+				}
+			});
+			underTest(sourcedir).then(done.fail, function (reason) {
+				expect(/^npm install --production failed/.test(reason)).toBeTruthy();
+				done();
+			});
 		});
-		underTest(sourcedir).then(done.fail, function (reason) {
-			expect(/^npm install --production failed/.test(reason)).toBeTruthy();
-			done();
+		it('does not change the current working dir', function (done) {
+			configurePackage({files: ['roo*', 'subdir']});
+			underTest(sourcedir).then(function () {
+				expect(shell.pwd()).toEqual(pwd);
+				done();
+			}, done.fail);
+		});
+		it('does not change the current working dir even if npm install fails', function (done) {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'non-existing-package': '2.0.0'
+				}
+			});
+			underTest(sourcedir).then(done.fail, function () {
+				expect(shell.pwd()).toEqual(pwd);
+				done();
+			});
 		});
 	});
-	it('does not change the current working dir', function (done) {
-		configurePackage({files: ['roo*', 'subdir']});
-		underTest(sourcedir).then(function () {
-			expect(shell.pwd()).toEqual(pwd);
-			done();
-		}, done.fail);
-	});
-	it('does not change the current working dir even if npm install fails', function (done) {
-		configurePackage({
-			files: ['root.txt'],
-			dependencies: {
-				'non-existing-package': '2.0.0'
-			}
-		});
-		underTest(sourcedir).then(done.fail, function () {
-			expect(shell.pwd()).toEqual(pwd);
-			done();
-		});
-	});
-
 
 	it('logs progress', function (done) {
 		var logger = new ArrayLogger();
@@ -246,7 +286,7 @@ describe('collectFiles', function () {
 				'uuid': '^2.0.0'
 			}
 		});
-		underTest(sourcedir, logger).then(function () {
+		underTest(sourcedir, false, logger).then(function () {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
 				['call', 'cp', 'package.json'],

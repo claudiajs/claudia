@@ -439,6 +439,19 @@ describe('create', function () {
 				expect(result.FunctionVersion).toEqual('1');
 			}).then(done, done.fail);
 		});
+		it('uses local dependencies if requested', function (done) {
+			var projectDir =  path.join(__dirname, 'test-projects', 'local-dependencies');
+			config['use-local-dependencies'] = true;
+			shell.rm('-rf', path.join(projectDir, 'node_modules'));
+			shell.mkdir(path.join(projectDir, 'node_modules'));
+			shell.cp('-r', path.join(projectDir, 'local_modules', '*'),  path.join(projectDir, 'node_modules'));
+			createFromDir('local-dependencies').then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello local"');
+			}).then(done, done.fail);
+		});
 	});
 	describe('creating the web api', function () {
 		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
