@@ -22,6 +22,12 @@ Although the AWS Node.js deployment guide requires including the `node_modules` 
 
 If you need to do any post-processing or validation before deployment, you can do that in the NPM `post-install` lifecycle task. Because Claudia runs `npm install` to fetch the dependencies, the post-install task will kick-off directly after the dependencies are downloaded, and before the package is uploaded to AWS.
 
+### Using local NPM modules
+
+By default, Claudia will not copy the local `node_modules`, but instead do a clean production installation in a temporary directory. This is to avoid copying testing and development dependencies, and also to validate as much as possible locally before sending the code to AWS. If you would like to skip that step, and use the local `node_modules`, supply `--use-local-dependencies` with your `create` or `update` command. 
+
+This might be useful if you want to send up precompiled binaries for a different platform (eg you use Windows locally, but want to send compiled Linux binaries), or if you use local relative paths in your `package.json`.
+
 ## Working with API Gateway web APIs
 
 Claudia can create an API Gateway definition, wire up integration templates and even simplify routing so that a single Lambda function can handle multiple web API URLs. For that, create a WEB API module using the [Claudia API Builder](https://github.com/claudiajs/claudia-api-builder) and supply the routing module name instead of a handler to create the project:
