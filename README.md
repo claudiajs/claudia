@@ -1,7 +1,5 @@
 # Claudia.js
 
-<img src="https://claudiajs.github.io/claudiajs.com/assets/claudiajs.svg" height="300" align="right" />
-
 Claudia makes it easy to deploy Node.js projects to AWS Lambda and API Gateway. It automates all the error-prone deployment and configuration tasks, and sets everything up the way JavaScript developers expect out of the box. This means that you can get started with Lambda and API Gateway easily, and focus on solving important business problems instead of dealing with AWS deployment workflows. [Check out this video to see how to create and deploy a microservice in under 5 minutes](https://vimeo.com/156232471).
 
 [![Claudia.js Introduction Video](https://claudiajs.github.io/claudiajs.com/assets/claudia-intro-video.png)](https://vimeo.com/156232471)
