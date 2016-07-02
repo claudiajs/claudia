@@ -12,12 +12,14 @@
   },
   "main": "index.js",
   "keywords": [
+    "claudia",
     "aws",
-    "microservices",
     "lambda",
-    "api",
+    "apigateway",
     "s3",
-    "claudia"
+    "api",
+    "microservices",
+    "serverless"
   ],
   "bugs": {
     "url": "https://github.com/claudiajs/claudia/issues"

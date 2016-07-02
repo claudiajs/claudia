@@ -4,13 +4,14 @@ for fun in $functions; do
   aws lambda delete-function --function-name $fun
 done
 
-#apis=`aws apigateway get-rest-apis --query 'items[?starts_with(name,\`test\`)].id' --output text`
-#for api in $apis; do
-#  echo deleting API $api
-#  aws apigateway delete-rest-api --rest-api-id $api
-#done
+apis=`aws apigateway get-rest-apis --query 'items[?starts_with(name,\`test\`)].id' --output text`
+for api in $apis; do
+  echo deleting API $api
+  sleep 10 
+  aws apigateway delete-rest-api --rest-api-id $api
+done
 
-#roles=`aws iam list-roles --query 'Roles[?starts_with(RoleName, \`test\`)].RoleName' --output text`
+roles=`aws iam list-roles --query 'Roles[?starts_with(RoleName, \`test\`)].RoleName' --output text`
 
 
 lambdaLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`/aws/lambda/test\`)].logGroupName' --output text`
