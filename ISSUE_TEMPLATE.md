@@ -8,8 +8,6 @@ To report a bug or a problem, please fill in the sections below. The more you pr
 
 * What actually happens:
 
-* Which bot engine (facebook, skype...): 
-
 * Link to a minimal, executable project that demonstrates the problem:
 
 * Steps to install the project:
