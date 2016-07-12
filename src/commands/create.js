@@ -16,6 +16,7 @@ var Promise = require('bluebird'),
 	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
+	os = require('os'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -37,6 +38,9 @@ module.exports = function create(options, optionalLogger) {
 			});
 		},
 		validationError = function () {
+			if (source === os.tmpdir()) {
+				return 'Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.';
+			}
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
 			}

@@ -3,6 +3,7 @@ var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	fs = require('fs'),
+	os = require('os'),
 	path = require('path'),
 	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
@@ -65,6 +66,10 @@ module.exports = function update(options, optionalLogger) {
 	if (!options.source) {
 		options.source = shell.pwd();
 	}
+	if (options.source === os.tmpdir()) {
+		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+	}
+
 	logger.logStage('loading Lambda config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;

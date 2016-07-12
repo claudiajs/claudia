@@ -9,6 +9,7 @@ var underTest = require('../src/commands/create'),
 	fs = Promise.promisifyAll(require('fs')),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
+	os = require('os'),
 	aws = require('aws-sdk'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
@@ -43,6 +44,13 @@ describe('create', function () {
 		}).finally(done);
 	});
 	describe('config validation', function () {
+		it('fails if the source folder is same as os tmp folder', function (done) {
+			config.source = os.tmpdir();
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+				done();
+			});
+		});
 		it('fails if name is not given either as an option or package.json name', function (done) {
 			shell.mkdir(workingdir);
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
