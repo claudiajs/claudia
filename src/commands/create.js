@@ -245,6 +245,19 @@ module.exports = function create(options, optionalLogger) {
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			});
 		},
+		recursivePolicy = function (functionName) {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Sid': 'InvokePermission',
+					'Effect': 'Allow',
+					'Action': [
+						'lambda:InvokeFunction'
+					],
+					'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
+				}]
+			});
+		},
 		packageArchive,
 		functionDesc,
 		functionName,
@@ -275,6 +288,14 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options.policies) {
 			return addExtraPolicies();
+		}
+	}).then(function () {
+		if (options['allow-recursion']) {
+			return iam.putRolePolicyPromise({
+				RoleName:  roleMetadata.Role.RoleName,
+				PolicyName: 'recursive-execution',
+				PolicyDocument: recursivePolicy(functionName)
+			});
 		}
 	}).then(function () {
 		return fs.readFileAsync(packageArchive);
@@ -345,6 +366,11 @@ module.exports.doc = {
 			description: 'A directory or file pattern for additional IAM policies\n' +
 				'which will automatically be included into the security role for the function',
 			example: 'policies/*.xml'
+		},
+		{
+			argument: 'allow-recursion',
+			optional: true,
+			description: 'Set up IAM permissions so a function can call itself recursively'
 		},
 		{
 			argument: 'role',

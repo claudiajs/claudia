@@ -203,6 +203,33 @@ describe('create', function () {
 				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
 			}).then(done, done.fail);
 		});
+		it('allows function to call itself if --allow-recursion is specified', function (done) {
+			config['allow-recursion'] = true;
+			createFromDir('hello-world').then(function () {
+				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+			}).then(function (result) {
+				expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
+			}).then(function () {
+				return iam.getRolePolicyAsync({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'});
+			}).then(function (policy) {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+						{
+							'Version': '2012-10-17',
+							'Statement': [{
+								'Sid': 'InvokePermission',
+								'Effect': 'Allow',
+								'Action': [
+									'lambda:InvokeFunction'
+								],
+								'Resource': 'arn:aws:lambda:us-east-1:*:function:' + testRunName
+							}]
+						});
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
+		});
+
 		it('loads additional policies from a policies directory recursively, if provided', function (done) {
 			var sesPolicy = {
 					'Version': '2012-10-17',
