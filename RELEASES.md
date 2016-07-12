@@ -1,5 +1,10 @@
 # Release history
 
+### 1.4.4, 12 July 2016
+
+- support for `--allow-recursion` in create to automate IAM permissions for the function to call itself
+- create and update will refuse to work when the source is the same as the Node temp folder, avoiding recursive disk fill-up
+
 ### 1.4.2, 23 June 2016
 
 - Claudia can be forced to use local dependencies, instead of doing npm install, by `--use-local-dependencies`
