@@ -343,6 +343,39 @@ describe('rebuildWebApi', function () {
 				expect(methodConfig.apiKeyRequired).toBeTruthy();
 			}).then(done, done.fail);
 		});
+		it('sets authorizationType if requested', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('NONE');
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('AWS_IAM');
+			}).then(done, done.fail);
+		});
 		it('creates multiple resources for the same api', function (done) {
 			apiRouteConfig.routes['hello/res'] = {POST: {}};
 			apiRouteConfig.routes.hello = {POST: {}};
