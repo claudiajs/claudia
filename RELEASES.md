@@ -1,5 +1,9 @@
 # Release history
 
+### 1.4.5, 22 July 2016
+
+- support for `AWS_IAM` authorization type in API Gateway configuration (thanks to [Chris Bumgardner](https://github.com/cbumgard))
+
 ### 1.4.4, 12 July 2016
 
 - support for `--allow-recursion` in create to automate IAM permissions for the function to call itself
