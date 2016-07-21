@@ -3,6 +3,7 @@ var aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	templateFile = require('../util/template-file'),
 	validHttpCode = require('../util/valid-http-code'),
+	validAuthType = require('../util/valid-auth-type'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),
 	promiseWrap = require('../util/promise-wrap'),
@@ -116,6 +117,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				apiKeyRequired = function () {
 					return methodOptions && methodOptions.apiKeyRequired;
 				},
+				authorizationType = function () {
+					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
+						return methodOptions.authorizationType.toUpperCase();
+					} else {
+						return 'NONE';
+					}
+				},
 				isRedirect = function (code) {
 					return /3[0-9][0-9]/.test(code);
 				},
@@ -220,7 +228,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					});
 				};
 			return apiGateway.putMethodAsync({
-				authorizationType: 'NONE', /*todo support config */
+				authorizationType: authorizationType(),
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
@@ -238,7 +246,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		createCorsHandler = function (resourceId, allowedMethods) {
 			return apiGateway.putMethodAsync({
-				authorizationType: 'NONE', /*todo support config */
+				authorizationType: 'NONE',
 				httpMethod: 'OPTIONS',
 				resourceId: resourceId,
 				restApiId: restApiId
