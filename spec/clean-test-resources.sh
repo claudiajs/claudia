@@ -26,3 +26,9 @@ for log in $apiLogs; do
   aws logs delete-log-group --log-group-name $log
 done
 
+buckets=`aws s3api list-buckets --output text --query 'Buckets[?starts_with(Name,\`test\`)].Name'`
+for bucket in $buckets; do
+  echo deleting bucket $bucket
+  aws s3 rm --recursive s3://$bucket
+  aws s3 rb s3://$bucket
+done
