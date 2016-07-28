@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it*/
+/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, fit*/
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -374,6 +374,87 @@ describe('rebuildWebApi', function () {
 				});
 			}).then(function (methodConfig) {
 				expect(methodConfig.authorizationType).toEqual('AWS_IAM');
+			}).then(done, done.fail);
+		});
+		fit('sets caller credentials when invokeWithCallerCredentials is true', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {
+				invokeWithCallerCredentials: true,
+				authorizationType: 'AWS_IAM'
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
+			}).then(done, done.fail);
+		});
+		fit('sets user defined credentials when credentials are requested', function (done) {
+			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
+				echoResourceId,
+				testCredentials;
+			iam.getUserAsync().then(function (data) {
+				testCredentials = data.User.Arn;
+				apiRouteConfig.routes.echo.POST = {
+					credentials: testCredentials,
+					authorizationType: 'AWS_IAM'
+				};
+				apiRouteConfig.routes.echo.GET = {
+					invokeWithCallerCredentials: true,
+					credentials: testCredentials,
+					authorizationType: 'AWS_IAM'
+				};
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
+			}).then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toEqual(testCredentials);
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toEqual(testCredentials);
 			}).then(done, done.fail);
 		});
 		it('creates multiple resources for the same api', function (done) {
