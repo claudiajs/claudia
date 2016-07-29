@@ -96,6 +96,17 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 
 			});
+			it('captures path parameters with quotes', function (done) {
+				apiRouteConfig.routes['people/{personId}'] = {'GET': {} };
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/people/Mar\'cus');
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.pathParams.personId).toEqual('Mar\'cus');
+				}).then(done, done.fail);
+
+			});
 			it('captures headers', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
@@ -105,6 +116,17 @@ describe('rebuildWebApi', function () {
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3-val');
+				}).then(done, done.fail);
+			});
+			it('captures headers with quotes', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'auth-head': 'auth3\'val'}
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.headers['auth-head']).toEqual('auth3\'val');
 				}).then(done, done.fail);
 			});
 			it('captures stage variables', function (done) {
@@ -429,7 +451,7 @@ describe('rebuildWebApi', function () {
 				expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
 			}).then(done, done.fail);
 		});
-		it('sets custome credentials when invokeWithCredentials is a string', function (done) {
+		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
 			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
 				echoResourceId,
 				testCredentials;
