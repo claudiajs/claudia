@@ -135,7 +135,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						} else if (validCredentials(methodOptions.invokeWithCredentials)) {
 							return methodOptions.invokeWithCredentials;
 						}
-						return null;
 					}
 					return null;
 				},
