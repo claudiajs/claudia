@@ -292,6 +292,25 @@ describe('rebuildWebApi', function () {
 					expect(params.body).toEqual(jsonContent);
 				}).then(done, done.fail);
 			});
+			it('application/json responses comes with the unparsed raw body as string', function (done) {
+				var jsonContent = {
+						fileKey : 'Jim\'s map.mup',
+						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
+					},
+					textContent = JSON.stringify(jsonContent);
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'Content-Type': 'application/json'},
+						body: textContent,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body),
+						rawBody = params.rawBody;
+					expect(rawBody).toEqual(textContent);
+				}).then(done, done.fail);
+			});
 		});
 
 		it('creates multiple methods for the same resource', function (done) {

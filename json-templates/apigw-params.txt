@@ -39,6 +39,7 @@
     "body" : "$util.escapeJavaScript($input.path('$')).replace("\'", "'")",
   #else
     "body" : $input.json('$'), 
+    "rawBody": "$util.escapeJavaScript($input.body).replace("\'", "'")",
   #end
   "headers": { 
     #foreach($param in $input.params().header.entrySet()) 
