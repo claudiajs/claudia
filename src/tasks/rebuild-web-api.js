@@ -4,6 +4,7 @@ var aws = require('aws-sdk'),
 	templateFile = require('../util/template-file'),
 	validHttpCode = require('../util/valid-http-code'),
 	validAuthType = require('../util/valid-auth-type'),
+	validCredentials = require('../util/valid-credentials'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),
 	promiseWrap = require('../util/promise-wrap'),
@@ -65,11 +66,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		},
-		putLambdaIntegration = function (resourceId, methodName) {
+		putLambdaIntegration = function (resourceId, methodName, credentials) {
 			return apiGateway.putIntegrationAsync({
 				restApiId: restApiId,
 				resourceId: resourceId,
 				httpMethod: methodName,
+				credentials: credentials,
 				type: 'AWS',
 				integrationHttpMethod: 'POST',
 				requestTemplates: {
@@ -120,9 +122,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizationType = function () {
 					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
 						return methodOptions.authorizationType.toUpperCase();
+					} else if (methodOptions && (methodOptions.invokeWithCredentials === true || validCredentials(methodOptions.invokeWithCredentials))) {
+						return 'AWS_IAM';
 					} else {
 						return 'NONE';
 					}
+				},
+				credentials = function () {
+					if (methodOptions && methodOptions.invokeWithCredentials) {
+						if (methodOptions.invokeWithCredentials === true) {
+							return 'arn:aws:iam::*:user/*';
+						} else if (validCredentials(methodOptions.invokeWithCredentials)) {
+							return methodOptions.invokeWithCredentials;
+						}
+						return null;
+					}
+					return null;
 				},
 				isRedirect = function (code) {
 					return /3[0-9][0-9]/.test(code);
@@ -234,7 +249,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				restApiId: restApiId,
 				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
-				return putLambdaIntegration(resourceId, methodName);
+				return putLambdaIntegration(resourceId, methodName, credentials());
 			}).then(function () {
 				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(headers('success')), headers: headers('success')}];
 				if (errorCode() !== successCode()) {
