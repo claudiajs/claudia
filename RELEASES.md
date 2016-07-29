@@ -1,5 +1,10 @@
 # Release history
 
+### 1.5.0, 29 July 2016
+
+- support for setting custom credentials and passing on caller credentials with IAM and STS (thanks to [Conor Dockry](https://github.com/cdock1029))
+- bugfix that caused template mappings to fail if a header contained a quote
+
 ### 1.4.5, 22 July 2016
 
 - support for `AWS_IAM` authorization type in API Gateway configuration (thanks to [Chris Bumgardner](https://github.com/cbumgard))
