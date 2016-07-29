@@ -1,5 +1,9 @@
 # Release history
 
+### 1.6.0, upcoming
+
+- support for `.rawBody`, containing the unparsed body in `application/json` requests, to allow for Facebook authentication and otherwise taking a hash of the raw body when needed. (thanks to [Fabricio C Zuardi](https://github.com/fczuardi))
+
 ### 1.5.0, 29 July 2016
 
 - support for setting custom credentials and passing on caller credentials with IAM and STS (thanks to [Conor Dockry](https://github.com/cdock1029))
