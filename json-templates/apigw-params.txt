@@ -34,9 +34,9 @@
         #if($foreach.hasNext),#end
     #end
     },
-    "body" : "$util.escapeJavaScript($input.path('$')).replace("\'", "'")",
+    "body" : "$util.escapeJavaScript($input.body).replace("\'", "'")",
   #elseif($type == "application/xml" || $type == "text/plain" || $type == "text/xml")
-    "body" : "$util.escapeJavaScript($input.path('$')).replace("\'", "'")",
+    "body" : "$util.escapeJavaScript($input.body).replace("\'", "'")",
   #else
     "body" : $input.json('$'), 
     "rawBody": "$util.escapeJavaScript($input.body).replace("\'", "'")",
