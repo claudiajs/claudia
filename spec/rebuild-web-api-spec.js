@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, fit*/
+/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it*/
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -376,11 +376,10 @@ describe('rebuildWebApi', function () {
 				expect(methodConfig.authorizationType).toEqual('AWS_IAM');
 			}).then(done, done.fail);
 		});
-		fit('sets caller credentials when invokeWithCallerCredentials is true', function (done) {
+		it('sets caller credentials when invokeWithCredentials is true', function (done) {
 			var echoResourceId;
 			apiRouteConfig.routes.echo.POST = {
-				invokeWithCallerCredentials: true,
-				authorizationType: 'AWS_IAM'
+				invokeWithCredentials: true
 			};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
@@ -412,20 +411,14 @@ describe('rebuildWebApi', function () {
 				expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
 			}).then(done, done.fail);
 		});
-		fit('sets user defined credentials when credentials are requested', function (done) {
+		it('sets custome credentials when invokeWithCredentials is a string', function (done) {
 			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
 				echoResourceId,
 				testCredentials;
 			iam.getUserAsync().then(function (data) {
 				testCredentials = data.User.Arn;
 				apiRouteConfig.routes.echo.POST = {
-					credentials: testCredentials,
-					authorizationType: 'AWS_IAM'
-				};
-				apiRouteConfig.routes.echo.GET = {
-					invokeWithCallerCredentials: true,
-					credentials: testCredentials,
-					authorizationType: 'AWS_IAM'
+					invokeWithCredentials: testCredentials
 				};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(function () {
@@ -446,7 +439,7 @@ describe('rebuildWebApi', function () {
 					restApiId: apiId
 				});
 			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toEqual(testCredentials);
+				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
 				return apiGateway.getIntegrationAsync({
 					httpMethod: 'POST',
@@ -455,6 +448,41 @@ describe('rebuildWebApi', function () {
 				});
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toEqual(testCredentials);
+			}).then(done, done.fail);
+		});
+		it('does not set credentials or authorizationType if invokeWithCredentials is invalid', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {
+				invokeWithCredentials: 'invalid_credentials'
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('NONE');
 			}).then(done, done.fail);
 		});
 		it('creates multiple resources for the same api', function (done) {

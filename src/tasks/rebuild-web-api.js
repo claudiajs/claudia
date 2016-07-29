@@ -122,16 +122,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizationType = function () {
 					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
 						return methodOptions.authorizationType.toUpperCase();
+					} else if (methodOptions && (methodOptions.invokeWithCredentials === true || validCredentials(methodOptions.invokeWithCredentials))) {
+						return 'AWS_IAM';
 					} else {
 						return 'NONE';
 					}
 				},
 				credentials = function () {
-					if (methodOptions) {
-						if (methodOptions.credentials && validCredentials(methodOptions.credentials)) {
-							return methodOptions.credentials;
-						} else if (methodOptions.invokeWithCallerCredentials === true) {
+					if (methodOptions && methodOptions.invokeWithCredentials) {
+						if (methodOptions.invokeWithCredentials === true) {
 							return 'arn:aws:iam::*:user/*';
+						} else if (validCredentials(methodOptions.invokeWithCredentials)) {
+							return methodOptions.invokeWithCredentials;
 						}
 						return null;
 					}
