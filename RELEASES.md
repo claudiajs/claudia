@@ -1,8 +1,9 @@
 # Release history
 
-### 1.6.0, upcoming
+### 1.6.0, 2 August 2016
 
-- support for `.rawBody`, containing the unparsed body in `application/json` requests, to allow for Facebook authentication and otherwise taking a hash of the raw body when needed. (thanks to [Fabricio C Zuardi](https://github.com/fczuardi))
+- API Gateway request support for `.normalizedHeaders`, containing a copy of the headers with lowercase header names, for easier processing
+- API Gateway request support for `.rawBody`, containing the unparsed body in `application/json` requests, to allow for Facebook authentication and otherwise taking a hash of the raw body when needed. (thanks to [Fabricio C Zuardi](https://github.com/fczuardi))
 
 ### 1.5.0, 29 July 2016
 
