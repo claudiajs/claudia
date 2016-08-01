@@ -39,5 +39,8 @@ beforeEach(function () {
 });
 afterAll(function (done) {
 	'use strict';
-	destroyRole(genericRoleName).then(done, done.fail);
+	destroyRole(genericRoleName).then(done, function () {
+		console.log('error destroying generic role', genericRoleName);
+		done();
+	});
 });
