@@ -46,6 +46,11 @@
       "$param.getKey()": "$util.escapeJavaScript($param.getValue()).replace("\'", "'")" #if($foreach.hasNext),#end
     #end 
   }, 
+  "normalizedHeaders": { 
+    #foreach($param in $input.params().header.entrySet()) 
+      "$param.getKey().toLowerCase()": "$util.escapeJavaScript($param.getValue()).replace("\'", "'")" #if($foreach.hasNext),#end
+    #end 
+  }, 
   "queryString": { 
     #foreach($param in $input.params().querystring.entrySet()) 
       "$param.getKey()": "$util.escapeJavaScript($param.getValue()).replace("\'", "'")" #if($foreach.hasNext),#end

@@ -24,7 +24,7 @@ describe('rebuildWebApi', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 70000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
@@ -111,22 +111,28 @@ describe('rebuildWebApi', function () {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
-						headers: {'auth-head': 'auth3-val'}
+						headers: {'auth-head': 'auth3-val', 'Capital-Head': 'Capital-Val'}
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3-val');
+					expect(params.headers['Capital-Head']).toEqual('Capital-Val');
+					expect(params.normalizedHeaders['auth-head']).toEqual('auth3-val');
+					expect(params.normalizedHeaders['capital-head']).toEqual('Capital-Val');
 				}).then(done, done.fail);
 			});
 			it('captures headers with quotes', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
-						headers: {'auth-head': 'auth3\'val'}
+						headers: {'auth-head': 'auth3\'val', 'Capital-Head': 'Capital\'Val'}
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3\'val');
+					expect(params.headers['Capital-Head']).toEqual('Capital\'Val');
+					expect(params.normalizedHeaders['auth-head']).toEqual('auth3\'val');
+					expect(params.normalizedHeaders['capital-head']).toEqual('Capital\'Val');
 				}).then(done, done.fail);
 			});
 			it('captures stage variables', function (done) {
