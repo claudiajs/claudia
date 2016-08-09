@@ -9,6 +9,7 @@ var underTest = require('../src/commands/create'),
 	fs = Promise.promisifyAll(require('fs')),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
+	os = require('os'),
 	aws = require('aws-sdk'),
 	awsRegion = 'us-east-1';
 describe('create', function () {
@@ -43,6 +44,13 @@ describe('create', function () {
 		}).finally(done);
 	});
 	describe('config validation', function () {
+		it('fails if the source folder is same as os tmp folder', function (done) {
+			config.source = os.tmpdir();
+			underTest(config).then(done.fail, function (message) {
+				expect(message).toEqual('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+				done();
+			});
+		});
 		it('fails if name is not given either as an option or package.json name', function (done) {
 			shell.mkdir(workingdir);
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
@@ -203,6 +211,33 @@ describe('create', function () {
 				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
 			}).then(done, done.fail);
 		});
+		it('allows function to call itself if --allow-recursion is specified', function (done) {
+			config['allow-recursion'] = true;
+			createFromDir('hello-world').then(function () {
+				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+			}).then(function (result) {
+				expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
+			}).then(function () {
+				return iam.getRolePolicyAsync({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'});
+			}).then(function (policy) {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+						{
+							'Version': '2012-10-17',
+							'Statement': [{
+								'Sid': 'InvokePermission',
+								'Effect': 'Allow',
+								'Action': [
+									'lambda:InvokeFunction'
+								],
+								'Resource': 'arn:aws:lambda:us-east-1:*:function:' + testRunName
+							}]
+						});
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
+		});
+
 		it('loads additional policies from a policies directory recursively, if provided', function (done) {
 			var sesPolicy = {
 					'Version': '2012-10-17',
@@ -437,6 +472,19 @@ describe('create', function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
+			}).then(done, done.fail);
+		});
+		it('uses local dependencies if requested', function (done) {
+			var projectDir =  path.join(__dirname, 'test-projects', 'local-dependencies');
+			config['use-local-dependencies'] = true;
+			shell.rm('-rf', path.join(projectDir, 'node_modules'));
+			shell.mkdir(path.join(projectDir, 'node_modules'));
+			shell.cp('-r', path.join(projectDir, 'local_modules', '*'),  path.join(projectDir, 'node_modules'));
+			createFromDir('local-dependencies').then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello local"');
 			}).then(done, done.fail);
 		});
 	});

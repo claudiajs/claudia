@@ -3,6 +3,7 @@ var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	fs = require('fs'),
+	os = require('os'),
 	path = require('path'),
 	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
@@ -20,7 +21,7 @@ module.exports = function update(options, optionalLogger) {
 	var logger = optionalLogger || new NullLogger(),
 		lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig,
-		alias = options.version || 'latest',
+		alias = (options && options.version) || 'latest',
 		packageDir,
 		updateWebApi = function () {
 			var apiModule, apiDef, apiModulePath;
@@ -65,6 +66,10 @@ module.exports = function update(options, optionalLogger) {
 	if (!options.source) {
 		options.source = shell.pwd();
 	}
+	if (options.source === os.tmpdir()) {
+		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+	}
+
 	logger.logStage('loading Lambda config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
@@ -88,7 +93,7 @@ module.exports = function update(options, optionalLogger) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
 		}
 	}).then(function () {
-		return collectFiles(options.source, logger);
+		return collectFiles(options.source, options['use-local-dependencies'], logger);
 	}).then(function (dir) {
 		logger.logStage('validating package');
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
@@ -133,6 +138,11 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'use-local-dependencies',
+			optional: true,
+			description: 'Do not install dependencies, use local node_modules directory instead'
 		}
 	]
 };

@@ -104,14 +104,14 @@ module.exports.doc = {
 		{
 			argument: 'rate',
 			optional: true,
-			description: 'a shorthand for rate-based expressions, without the brackets\n' +
+			description: 'a shorthand for rate-based expressions, without the brackets.\n' +
 				'If this is specified, the schedule argument is not required/ignored',
 			example: '5 minutes'
 		},
 		{
 			argument: 'cron',
 			optional: true,
-			description: 'a shorthand for cron-based expressions, without the brackets\n' +
+			description: 'a shorthand for cron-based expressions, without the brackets.\n' +
 				'If this is specified, the schedule argument is not required/ignored',
 			example: '0 8 1 * ? *'
 		},

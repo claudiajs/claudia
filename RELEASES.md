@@ -1,5 +1,28 @@
 # Release history
 
+### 1.6.0, 2 August 2016
+
+- API Gateway request support for `.normalizedHeaders`, containing a copy of the headers with lowercase header names, for easier processing
+- API Gateway request support for `.rawBody`, containing the unparsed body in `application/json` requests, to allow for Facebook authentication and otherwise taking a hash of the raw body when needed. (thanks to [Fabricio C Zuardi](https://github.com/fczuardi))
+
+### 1.5.0, 29 July 2016
+
+- support for setting custom credentials and passing on caller credentials with IAM and STS (thanks to [Conor Dockry](https://github.com/cdock1029))
+- bugfix that caused template mappings to fail if a header contained a quote
+
+### 1.4.5, 22 July 2016
+
+- support for `AWS_IAM` authorization type in API Gateway configuration (thanks to [Chris Bumgardner](https://github.com/cbumgard))
+
+### 1.4.4, 12 July 2016
+
+- support for `--allow-recursion` in create to automate IAM permissions for the function to call itself
+- create and update will refuse to work when the source is the same as the Node temp folder, avoiding recursive disk fill-up
+
+### 1.4.2, 23 June 2016
+
+- Claudia can be forced to use local dependencies, instead of doing npm install, by `--use-local-dependencies`
+
 ### 1.4.0, 1.4.1 4 June 2016
 
 - experimental support for postDeploy steps in Api Builder

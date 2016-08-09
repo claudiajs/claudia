@@ -24,7 +24,7 @@ describe('rebuildWebApi', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 70000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
@@ -96,15 +96,43 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 
 			});
+			it('captures path parameters with quotes', function (done) {
+				apiRouteConfig.routes['people/{personId}'] = {'GET': {} };
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/people/Mar\'cus');
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.pathParams.personId).toEqual('Mar\'cus');
+				}).then(done, done.fail);
+
+			});
 			it('captures headers', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
-						headers: {'auth-head': 'auth3-val'}
+						headers: {'auth-head': 'auth3-val', 'Capital-Head': 'Capital-Val'}
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3-val');
+					expect(params.headers['Capital-Head']).toEqual('Capital-Val');
+					expect(params.normalizedHeaders['auth-head']).toEqual('auth3-val');
+					expect(params.normalizedHeaders['capital-head']).toEqual('Capital-Val');
+				}).then(done, done.fail);
+			});
+			it('captures headers with quotes', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'auth-head': 'auth3\'val', 'Capital-Head': 'Capital\'Val'}
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.headers['auth-head']).toEqual('auth3\'val');
+					expect(params.headers['Capital-Head']).toEqual('Capital\'Val');
+					expect(params.normalizedHeaders['auth-head']).toEqual('auth3\'val');
+					expect(params.normalizedHeaders['capital-head']).toEqual('Capital\'Val');
 				}).then(done, done.fail);
 			});
 			it('captures stage variables', function (done) {
@@ -252,6 +280,43 @@ describe('rebuildWebApi', function () {
 					expect(params.body).toEqual(textContent);
 				}).then(done, done.fail);
 			});
+			it('captures quoted application/json request bodies', function (done) {
+				var jsonContent = {
+						fileKey : 'Jim\'s map.mup',
+						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
+					},
+					textContent = JSON.stringify(jsonContent);
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'Content-Type': 'application/json'},
+						body: textContent,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body);
+					expect(params.body).toEqual(jsonContent);
+				}).then(done, done.fail);
+			});
+			it('application/json responses comes with the unparsed raw body as string', function (done) {
+				var jsonContent = {
+						fileKey : 'Jim\'s map.mup',
+						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
+					},
+					textContent = JSON.stringify(jsonContent);
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: {'Content-Type': 'application/json'},
+						body: textContent,
+						method: 'POST'
+					});
+				}).then(function (contents) {
+					var params = JSON.parse(contents.body),
+						rawBody = params.rawBody;
+					expect(rawBody).toEqual(textContent);
+				}).then(done, done.fail);
+			});
 		});
 
 		it('creates multiple methods for the same resource', function (done) {
@@ -341,6 +406,148 @@ describe('rebuildWebApi', function () {
 				});
 			}).then(function (methodConfig) {
 				expect(methodConfig.apiKeyRequired).toBeTruthy();
+			}).then(done, done.fail);
+		});
+		it('sets authorizationType if requested', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('NONE');
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('AWS_IAM');
+			}).then(done, done.fail);
+		});
+		it('sets caller credentials when invokeWithCredentials is true', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {
+				invokeWithCredentials: true
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
+			}).then(done, done.fail);
+		});
+		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
+			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
+				echoResourceId,
+				testCredentials;
+			iam.getUserAsync().then(function (data) {
+				testCredentials = data.User.Arn;
+				apiRouteConfig.routes.echo.POST = {
+					invokeWithCredentials: testCredentials
+				};
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
+			}).then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toEqual(testCredentials);
+			}).then(done, done.fail);
+		});
+		it('does not set credentials or authorizationType if invokeWithCredentials is invalid', function (done) {
+			var echoResourceId;
+			apiRouteConfig.routes.echo.POST = {
+				invokeWithCredentials: 'invalid_credentials'
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getIntegrationAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (integrationConfig) {
+				expect(integrationConfig.credentials).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('NONE');
 			}).then(done, done.fail);
 		});
 		it('creates multiple resources for the same api', function (done) {

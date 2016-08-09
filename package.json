@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "1.4.1",
+  "version": "1.6.0",
   "description": "deploy Node.js microservices to AWS easily",
   "license": "MIT",
   "repository": {
@@ -12,12 +12,14 @@
   },
   "main": "index.js",
   "keywords": [
+    "claudia",
     "aws",
-    "microservices",
     "lambda",
-    "api",
+    "apigateway",
     "s3",
-    "claudia"
+    "api",
+    "microservices",
+    "serverless"
   ],
   "bugs": {
     "url": "https://github.com/claudiajs/claudia/issues"
@@ -51,7 +53,7 @@
   "devDependencies": {
     "dotenv": "^2.0.0",
     "jasmine": "^2.4.1",
-    "jasmine-spec-reporter": "^2.4.0",
+    "jasmine-spec-reporter": "^2.5.0",
     "jscs": "^2.9.0",
     "jshint": "^2.9.1"
   }

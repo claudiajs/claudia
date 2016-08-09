@@ -30,6 +30,7 @@ claudia create {OPTIONS}
 *  `--policies`:  _optional_ A directory or file pattern for additional IAM policies
   which will automatically be included into the security role for the function
   * _For example_: policies/*.xml
+*  `--allow-recursion`:  _optional_ Set up IAM permissions so a function can call itself recursively
 *  `--role`:  _optional_ The name of an existing role to assign to the function. 
   If not supplied, Claudia will create a new role
 *  `--runtime`:  _optional_ Node.js runtime to use. For supported values, see
@@ -42,3 +43,4 @@ claudia create {OPTIONS}
   * _Defaults to_: 128
 *  `--timeout`:  _optional_ The function execution time, in seconds, at which AWS Lambda should terminate the function
   * _Defaults to_: 3
+*  `--use-local-dependencies`:  _optional_ Do not install dependencies, use local node_modules directory instead

@@ -16,6 +16,7 @@ var Promise = require('bluebird'),
 	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
+	os = require('os'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -37,6 +38,9 @@ module.exports = function create(options, optionalLogger) {
 			});
 		},
 		validationError = function () {
+			if (source === os.tmpdir()) {
+				return 'Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.';
+			}
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
 			}
@@ -245,6 +249,19 @@ module.exports = function create(options, optionalLogger) {
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			});
 		},
+		recursivePolicy = function (functionName) {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Sid': 'InvokePermission',
+					'Effect': 'Allow',
+					'Action': [
+						'lambda:InvokeFunction'
+					],
+					'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
+				}]
+			});
+		},
 		packageArchive,
 		functionDesc,
 		functionName,
@@ -256,7 +273,7 @@ module.exports = function create(options, optionalLogger) {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	}).then(function () {
-		return collectFiles(source, logger);
+		return collectFiles(source, options['use-local-dependencies'], logger);
 	}).then(function (dir) {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);
@@ -275,6 +292,14 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options.policies) {
 			return addExtraPolicies();
+		}
+	}).then(function () {
+		if (options['allow-recursion']) {
+			return iam.putRolePolicyPromise({
+				RoleName:  roleMetadata.Role.RoleName,
+				PolicyName: 'recursive-execution',
+				PolicyDocument: recursivePolicy(functionName)
+			});
 		}
 	}).then(function () {
 		return fs.readFileAsync(packageArchive);
@@ -347,6 +372,11 @@ module.exports.doc = {
 			example: 'policies/*.xml'
 		},
 		{
+			argument: 'allow-recursion',
+			optional: true,
+			description: 'Set up IAM permissions so a function can call itself recursively'
+		},
+		{
 			argument: 'role',
 			optional: true,
 			description: 'The name of an existing role to assign to the function. \n' +
@@ -375,6 +405,11 @@ module.exports.doc = {
 			optional: true,
 			description: 'The function execution time, in seconds, at which AWS Lambda should terminate the function',
 			default: 3
+		},
+		{
+			argument: 'use-local-dependencies',
+			optional: true,
+			description: 'Do not install dependencies, use local node_modules directory instead'
 		}
 	]
 };

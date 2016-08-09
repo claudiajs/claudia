@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global, __dirname */
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -9,6 +9,7 @@ var underTest = require('../src/commands/update'),
 	fs = Promise.promisifyAll(require('fs')),
 	path = require('path'),
 	aws = require('aws-sdk'),
+	os = require('os'),
 	awsRegion = 'us-east-1';
 describe('update', function () {
 	'use strict';
@@ -39,7 +40,14 @@ describe('update', function () {
 			done();
 		});
 	});
-
+	it('fails if the source folder is same as os tmp folder', function (done) {
+		shell.cp('-rf', 'spec/test-projects/hello-world/*', os.tmpdir());
+		fs.writeFileSync(path.join(os.tmpdir(), 'claudia.json'), JSON.stringify({lambda: {name: 'xxx', region: 'us-east-1'}}), 'utf8');
+		underTest({source: os.tmpdir()}).then(done.fail, function (message) {
+			expect(message).toEqual('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+			done();
+		});
+	});
 	it('fails when the project config file does not contain the lambda name', function (done) {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -109,6 +117,23 @@ describe('update', function () {
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
 			}).then(done, done.fail);
 		});
+
+		it('uses local dependencies if requested', function (done) {
+			shell.cp('-rf', path.join(__dirname, 'test-projects', 'local-dependencies', '*'), workingdir);
+
+			shell.rm('-rf', path.join(workingdir, 'node_modules'));
+			shell.mkdir(path.join(workingdir, 'node_modules'));
+			shell.cp('-r', path.join(workingdir, 'local_modules', '*'),  path.join(workingdir, 'node_modules'));
+
+			underTest({source: workingdir, 'use-local-dependencies': true}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello local"');
+			}).then(done, done.fail);
+		});
+
+
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
