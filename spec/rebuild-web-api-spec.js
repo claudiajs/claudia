@@ -6,6 +6,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	querystring = require('querystring'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
+	path = require('path'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	ArrayLogger = require('../src/util/array-logger'),
@@ -408,147 +409,212 @@ describe('rebuildWebApi', function () {
 				expect(methodConfig.apiKeyRequired).toBeTruthy();
 			}).then(done, done.fail);
 		});
-		it('sets authorizationType if requested', function (done) {
-			var echoResourceId;
-			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return apiGateway.getResourcesAsync({
-					restApiId: apiId
-				});
-			}).then(function (resources) {
-				resources.items.forEach(function (resource) {
-					if (resource.path === '/echo') {
-						echoResourceId = resource.id;
-					}
-				});
-				return echoResourceId;
-			}).then(function () {
-				return apiGateway.getMethodAsync({
-					httpMethod: 'GET',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (methodConfig) {
-				expect(methodConfig.authorizationType).toEqual('NONE');
-			}).then(function () {
-				return apiGateway.getMethodAsync({
-					httpMethod: 'POST',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (methodConfig) {
-				expect(methodConfig.authorizationType).toEqual('AWS_IAM');
-			}).then(done, done.fail);
-		});
-		it('sets caller credentials when invokeWithCredentials is true', function (done) {
-			var echoResourceId;
-			apiRouteConfig.routes.echo.POST = {
-				invokeWithCredentials: true
-			};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return apiGateway.getResourcesAsync({
-					restApiId: apiId
-				});
-			}).then(function (resources) {
-				resources.items.forEach(function (resource) {
-					if (resource.path === '/echo') {
-						echoResourceId = resource.id;
-					}
-				});
-				return echoResourceId;
-			}).then(function () {
-				return apiGateway.getIntegrationAsync({
-					httpMethod: 'GET',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toBeUndefined();
-			}).then(function () {
-				return apiGateway.getIntegrationAsync({
-					httpMethod: 'POST',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
-			}).then(done, done.fail);
-		});
-		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
-			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
-				echoResourceId,
-				testCredentials;
-			iam.getUserAsync().then(function (data) {
-				testCredentials = data.User.Arn;
+		describe('authorization and credentials', function () {
+
+			it('sets authorizationType if requested', function (done) {
+				var echoResourceId;
+				apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return apiGateway.getResourcesAsync({
+						restApiId: apiId
+					});
+				}).then(function (resources) {
+					resources.items.forEach(function (resource) {
+						if (resource.path === '/echo') {
+							echoResourceId = resource.id;
+						}
+					});
+					return echoResourceId;
+				}).then(function () {
+					return apiGateway.getMethodAsync({
+						httpMethod: 'GET',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (methodConfig) {
+					expect(methodConfig.authorizationType).toEqual('NONE');
+				}).then(function () {
+					return apiGateway.getMethodAsync({
+						httpMethod: 'POST',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (methodConfig) {
+					expect(methodConfig.authorizationType).toEqual('AWS_IAM');
+				}).then(done, done.fail);
+			});
+			it('sets caller credentials when invokeWithCredentials is true', function (done) {
+				var echoResourceId;
 				apiRouteConfig.routes.echo.POST = {
-					invokeWithCredentials: testCredentials
+					invokeWithCredentials: true
 				};
-				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
-			}).then(function () {
-				return apiGateway.getResourcesAsync({
-					restApiId: apiId
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return apiGateway.getResourcesAsync({
+						restApiId: apiId
+					});
+				}).then(function (resources) {
+					resources.items.forEach(function (resource) {
+						if (resource.path === '/echo') {
+							echoResourceId = resource.id;
+						}
+					});
+					return echoResourceId;
+				}).then(function () {
+					return apiGateway.getIntegrationAsync({
+						httpMethod: 'GET',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (integrationConfig) {
+					expect(integrationConfig.credentials).toBeUndefined();
+				}).then(function () {
+					return apiGateway.getIntegrationAsync({
+						httpMethod: 'POST',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (integrationConfig) {
+					expect(integrationConfig.credentials).toEqual('arn:aws:iam::*:user/*');
+				}).then(done, done.fail);
+			});
+			it('sets custom credentials when invokeWithCredentials is a string', function (done) {
+				var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
+					echoResourceId,
+					testCredentials;
+				iam.getUserAsync().then(function (data) {
+					testCredentials = data.User.Arn;
+					apiRouteConfig.routes.echo.POST = {
+						invokeWithCredentials: testCredentials
+					};
+					return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
+				}).then(function () {
+					return apiGateway.getResourcesAsync({
+						restApiId: apiId
+					});
+				}).then(function (resources) {
+					resources.items.forEach(function (resource) {
+						if (resource.path === '/echo') {
+							echoResourceId = resource.id;
+						}
+					});
+					return echoResourceId;
+				}).then(function () {
+					return apiGateway.getIntegrationAsync({
+						httpMethod: 'GET',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (integrationConfig) {
+					expect(integrationConfig.credentials).toBeUndefined();
+				}).then(function () {
+					return apiGateway.getIntegrationAsync({
+						httpMethod: 'POST',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (integrationConfig) {
+					expect(integrationConfig.credentials).toEqual(testCredentials);
+				}).then(done, done.fail);
+			});
+			it('does not set credentials or authorizationType if invokeWithCredentials is invalid', function (done) {
+				var echoResourceId;
+				apiRouteConfig.routes.echo.POST = {
+					invokeWithCredentials: 'invalid_credentials'
+				};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(function () {
+					return apiGateway.getResourcesAsync({
+						restApiId: apiId
+					});
+				}).then(function (resources) {
+					resources.items.forEach(function (resource) {
+						if (resource.path === '/echo') {
+							echoResourceId = resource.id;
+						}
+					});
+					return echoResourceId;
+				}).then(function () {
+					return apiGateway.getIntegrationAsync({
+						httpMethod: 'POST',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (integrationConfig) {
+					expect(integrationConfig.credentials).toBeUndefined();
+				}).then(function () {
+					return apiGateway.getMethodAsync({
+						httpMethod: 'POST',
+						resourceId: echoResourceId,
+						restApiId: apiId
+					});
+				}).then(function (methodConfig) {
+					expect(methodConfig.authorizationType).toEqual('NONE');
+				}).then(done, done.fail);
+			});
+			describe('custom authorizers', function () {
+				var authorizerLambdaName, authorizerLambdaId, authorizerLambdaDir, lambda;
+				beforeEach(function (done) {
+					lambda = new aws.Lambda({region: awsRegion});
+					authorizerLambdaDir = path.join(workingdir, 'authorizer');
+					shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
+					create({name: testRunName + 'auth', version: 'original', role: this.genericRole, region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'}).then(function (result) {
+						authorizerLambdaName = result.lambda && result.lambda.name;
+					}).then(function () {
+						return lambda.getFunctionConfiguration({FunctionName: authorizerLambdaName}).promise();
+					}).then(function (lambdaConfig) {
+						var lambdaArn = lambdaConfig.FunctionArn;
+						return apiGateway.createAuthorizerAsync({
+							identitySource: 'method.request.header.Authorization',
+							name: testRunName + 'auth',
+							restApiId: apiId,
+							type: 'TOKEN',
+							authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
+						});
+					}).then(function (authorizerData) {
+						authorizerLambdaId = authorizerData.id;
+					}).then(done, done.fail);
 				});
-			}).then(function (resources) {
-				resources.items.forEach(function (resource) {
-					if (resource.path === '/echo') {
-						echoResourceId = resource.id;
-					}
+				afterEach(function (done) {
+					lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
 				});
-				return echoResourceId;
-			}).then(function () {
-				return apiGateway.getIntegrationAsync({
-					httpMethod: 'GET',
-					resourceId: echoResourceId,
-					restApiId: apiId
+				it('sets custom authorizer from authorizerId', function (done) {
+					var echoResourceId;
+					apiRouteConfig.routes.echo.POST = {authorizerId: authorizerLambdaId};
+					underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return apiGateway.getResourcesAsync({
+							restApiId: apiId
+						});
+					}).then(function (resources) {
+						resources.items.forEach(function (resource) {
+							if (resource.path === '/echo') {
+								echoResourceId = resource.id;
+							}
+						});
+						return echoResourceId;
+					}).then(function () {
+						return apiGateway.getMethodAsync({
+							httpMethod: 'GET',
+							resourceId: echoResourceId,
+							restApiId: apiId
+						});
+					}).then(function (methodConfig) {
+						expect(methodConfig.authorizationType).toEqual('NONE');
+						expect(methodConfig.authorizerId).toBeUndefined();
+					}).then(function () {
+						return apiGateway.getMethodAsync({
+							httpMethod: 'POST',
+							resourceId: echoResourceId,
+							restApiId: apiId
+						});
+					}).then(function (methodConfig) {
+						expect(methodConfig.authorizationType).toEqual('CUSTOM');
+						expect(methodConfig.authorizerId).toEqual(authorizerLambdaId);
+					}).then(done, done.fail);
 				});
-			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toBeUndefined();
-			}).then(function () {
-				return apiGateway.getIntegrationAsync({
-					httpMethod: 'POST',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toEqual(testCredentials);
-			}).then(done, done.fail);
-		});
-		it('does not set credentials or authorizationType if invokeWithCredentials is invalid', function (done) {
-			var echoResourceId;
-			apiRouteConfig.routes.echo.POST = {
-				invokeWithCredentials: 'invalid_credentials'
-			};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return apiGateway.getResourcesAsync({
-					restApiId: apiId
-				});
-			}).then(function (resources) {
-				resources.items.forEach(function (resource) {
-					if (resource.path === '/echo') {
-						echoResourceId = resource.id;
-					}
-				});
-				return echoResourceId;
-			}).then(function () {
-				return apiGateway.getIntegrationAsync({
-					httpMethod: 'POST',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (integrationConfig) {
-				expect(integrationConfig.credentials).toBeUndefined();
-			}).then(function () {
-				return apiGateway.getMethodAsync({
-					httpMethod: 'POST',
-					resourceId: echoResourceId,
-					restApiId: apiId
-				});
-			}).then(function (methodConfig) {
-				expect(methodConfig.authorizationType).toEqual('NONE');
-			}).then(done, done.fail);
+			});
 		});
 		it('creates multiple resources for the same api', function (done) {
 			apiRouteConfig.routes['hello/res'] = {POST: {}};
