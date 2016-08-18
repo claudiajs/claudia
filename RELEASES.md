@@ -1,5 +1,9 @@
 # Release history
 
+### 1.6.1, 18 August 2016
+
+- bugfix for deployments under assumed roles/STS tokens
+
 ### 1.6.0, 2 August 2016
 
 - API Gateway request support for `.normalizedHeaders`, containing a copy of the headers with lowercase header names, for easier processing
