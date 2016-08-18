@@ -81,12 +81,9 @@ describe('addScheduledEvent', function () {
 			done();
 		});
 	});
-	it('fails when the project config file does not contain the lambda role', function (done) {
+	it('does not fail when the project config file does not contain the lambda role', function (done) {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify({lambda: {name: 'xxx', region: 'abc'}}), 'utf8');
-		underTest(config).then(done.fail, function (reason) {
-			expect(reason).toEqual('invalid configuration -- lambda.role missing from claudia.json');
-			done();
-		});
+		underTest(config).then(done, done.fail);
 	});
 
 
