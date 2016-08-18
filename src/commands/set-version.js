@@ -7,16 +7,14 @@ var Promise = require('bluebird'),
 	promiseWrap = require('../util/promise-wrap'),
 	apiGWUrl = require('../util/apigw-url'),
 	NullLogger = require('../util/null-logger'),
-	markAlias = require('../tasks/mark-alias');
+	markAlias = require('../tasks/mark-alias'),
+	getOwnerId = require('../tasks/get-owner-account-id');
 module.exports = function setVersion(options, optionalLogger) {
 	'use strict';
 	var lambdaConfig, lambda, apiGateway, apiConfig,
 		logger = optionalLogger || new NullLogger(),
-		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		updateApi = function () {
-			return iam.getUserPromise().then(function (result) {
-				return result.User.Arn.split(':')[4];
-			}).then(function (ownerId) {
+			return getOwnerId(optionalLogger).then(function (ownerId) {
 				return allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region);
 			}).then(function () {
 				return apiGateway.createDeploymentPromise({

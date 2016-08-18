@@ -10,11 +10,11 @@ var aws = require('aws-sdk'),
 	promiseWrap = require('../util/promise-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
 	NullLogger = require('../util/null-logger'),
-	fs = Promise.promisifyAll(require('fs'));
+	fs = Promise.promisifyAll(require('fs')),
+	getOwnerId = require('./get-owner-account-id');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
-		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		apiGateway = retriableWrap(
 						promiseWrap(
 							new aws.APIGateway({region: awsRegion}),
@@ -30,11 +30,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		ownerId,
 		knownIds = {},
 		inputTemplate,
-		getOwnerId = function () {
-			return iam.getUserPromise().then(function (result) {
-				ownerId = result.User.Arn.split(':')[4];
-			});
-		},
 		findByPath = function (resourceItems, path) {
 			var result;
 			resourceItems.forEach(function (item) {
@@ -428,7 +423,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return result;
 		};
 	apiConfig = upgradeConfig(requestedConfig);
-	return getOwnerId()
+	return getOwnerId(logger).then(function (accountOwnerId) {
+			ownerId = accountOwnerId;
+		})
 		.then(readTemplates)
 		.then(rebuildApi)
 		.then(deployApi);

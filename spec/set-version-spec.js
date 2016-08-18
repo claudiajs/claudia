@@ -170,7 +170,7 @@ describe('setVersion', function () {
 				'loading config', 'updating versions'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.publishVersion', 'lambda.updateAlias', 'lambda.createAlias']);
-			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual(['apigateway.createDeployment']);
 		}).then(done, done.fail);
 

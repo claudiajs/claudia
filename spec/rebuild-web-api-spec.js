@@ -1320,7 +1320,7 @@ describe('rebuildWebApi', function () {
 					'apigateway.putIntegrationResponse',
 					'apigateway.createDeployment'
 				]);
-				expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
+				expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			}).then(done, done.fail);
 		});
 	});
