@@ -19,7 +19,7 @@ module.exports = function addScheduledEvent(options) {
 			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
 		},
 		readConfig = function () {
-			return loadConfig(options, {lambda: {name: true, region: true, role: false}})
+			return loadConfig(options, {lambda: {name: true, region: true}})
 				.then(function (config) {
 					lambdaConfig = config.lambda;
 				}).then(initServices)
