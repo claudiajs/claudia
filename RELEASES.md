@@ -1,5 +1,9 @@
 # Release history
 
+### 1.6.2, 18 August 2016
+
+- `add-scheduled-event` no longer checks for role in `claudia.json`, it was not being used anyway
+
 ### 1.6.1, 18 August 2016
 
 - bugfix for deployments under assumed roles/STS tokens
