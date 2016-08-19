@@ -119,6 +119,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return methodOptions.authorizationType.toUpperCase();
 					} else if (methodOptions && (methodOptions.invokeWithCredentials === true || validCredentials(methodOptions.invokeWithCredentials))) {
 						return 'AWS_IAM';
+					} else if (methodOptions && methodOptions.authorizerId) {
+						return 'CUSTOM';
 					} else {
 						return 'NONE';
 					}
@@ -132,6 +134,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						}
 					}
 					return null;
+				},
+				authorizerId = function () {
+					return (methodOptions && methodOptions.authorizerId) ? methodOptions.authorizerId : undefined;
 				},
 				isRedirect = function (code) {
 					return /3[0-9][0-9]/.test(code);
@@ -238,6 +243,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				};
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
+				authorizerId: authorizerId(),
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
