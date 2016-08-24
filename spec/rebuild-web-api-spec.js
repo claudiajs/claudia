@@ -594,20 +594,7 @@ describe('rebuildWebApi', function () {
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
 
-			/*}).then(function () {
-				return lambda.getFunctionConfiguration({FunctionName: authorizerLambdaName}).promise();
-			}).then(function (lambdaConfig) {
-				var lambdaArn = lambdaConfig.FunctionArn;
-				return apiGateway.createAuthorizerAsync({
-					identitySource: 'method.request.header.Authorization',
-					name: testRunName + 'auth',
-					restApiId: apiId,
-					type: 'TOKEN',
-					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
-				});
-			}).then(function (authorizerData) {
-				authorizerLambdaId = authorizerData.id;
-				*/
+
 
 			apiRouteConfig.corsHandlers = false;
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
@@ -625,94 +612,6 @@ describe('rebuildWebApi', function () {
 		});
 		afterEach(function (done) {
 			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
-		});
-		it('creates header-based authorizers', function (done) {
-			apiRouteConfig.authorizers = {
-				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' }
-			};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return apiGateway.getAuthorizersAsync({
-					restApiId: apiId
-				});
-			}).then(function (authorizers) {
-				expect(authorizers.items.length).toEqual(1);
-				expect(authorizers.items[0].name).toEqual('first');
-				expect(authorizers.items[0].type).toEqual('TOKEN');
-				expect(authorizers.items[0].identitySource).toEqual('method.request.header.Authorization');
-				expect(authorizers.items[0].authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
-			}).then(done, done.fail);
-		});
-		it('creates multiple authorizers', function (done) {
-			apiRouteConfig.authorizers = {
-				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' },
-				second: { lambdaName: authorizerLambdaName, headerName: 'UserId' }
-			};
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(function () {
-				return apiGateway.getAuthorizersAsync({
-					restApiId: apiId
-				});
-			}).then(function (authorizers) {
-				var auths = {};
-				expect(authorizers.items.length).toEqual(2);
-				auths[authorizers.items[0].name] = authorizers.items[0];
-				auths[authorizers.items[1].name] = authorizers.items[1];
-
-				expect(auths.first.type).toEqual('TOKEN');
-				expect(auths.first.identitySource).toEqual('method.request.header.Authorization');
-				expect(auths.first.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
-
-				expect(auths.second.type).toEqual('TOKEN');
-				expect(auths.second.identitySource).toEqual('method.request.header.UserId');
-				expect(auths.second.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
-			}).then(done, done.fail);
-		});
-		it('overrides existing authorizers', function (done) {
-			var lambdaArn;
-			lambda.getFunctionConfiguration({FunctionName: authorizerLambdaName}).promise().then(function (lambdaConfig) {
-				lambdaArn = lambdaConfig.FunctionArn;
-			}).then(function () {
-				return apiGateway.createAuthorizerAsync({
-					identitySource: 'method.request.header.OldFirst',
-					name: 'first',
-					restApiId: apiId,
-					type: 'TOKEN',
-					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
-				});
-			}).then(function () {
-				return apiGateway.createAuthorizerAsync({
-					identitySource: 'method.request.header.OldSecond',
-					name: 'second',
-					restApiId: apiId,
-					type: 'TOKEN',
-					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
-				});
-			}).then(function () {
-				apiRouteConfig.authorizers = {
-					first: { lambdaName: authorizerLambdaName, headerName: 'NewFirst' },
-					third: { lambdaName: authorizerLambdaName, headerName: 'NewThird' }
-				};
-				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
-			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
-					restApiId: apiId
-				});
-			}).then(function (authorizers) {
-				var auths = {};
-				expect(authorizers.items.length).toEqual(2);
-				auths[authorizers.items[0].name] = authorizers.items[0];
-				auths[authorizers.items[1].name] = authorizers.items[1];
-
-				expect(auths.first.type).toEqual('TOKEN');
-				expect(auths.first.identitySource).toEqual('method.request.header.NewFirst');
-				expect(auths.first.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
-
-				expect(auths.third.type).toEqual('TOKEN');
-				expect(auths.third.identitySource).toEqual('method.request.header.NewThird');
-				expect(auths.third.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
-
-			}).then(done, done.fail);
 		});
 		it('assigns authorizers by name', function (done) {
 			var authorizerIds, echoResourceId;

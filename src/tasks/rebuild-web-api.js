@@ -11,7 +11,8 @@ var aws = require('aws-sdk'),
 	retriableWrap = require('../util/retriable-wrap'),
 	NullLogger = require('../util/null-logger'),
 	fs = Promise.promisifyAll(require('fs')),
-	getOwnerId = require('./get-owner-account-id');
+	getOwnerId = require('./get-owner-account-id'),
+	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
@@ -29,6 +30,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		existingResources,
 		ownerId,
 		knownIds = {},
+		authorizerIds,
 		inputTemplate,
 		findByPath = function (resourceItems, path) {
 			var result;
@@ -117,6 +119,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizationType = function () {
 					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
 						return methodOptions.authorizationType.toUpperCase();
+					} else if (methodOptions.customAuthorizer) {
+						return 'CUSTOM';
 					} else if (methodOptions && (methodOptions.invokeWithCredentials === true || validCredentials(methodOptions.invokeWithCredentials))) {
 						return 'AWS_IAM';
 					} else {
@@ -235,9 +239,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 							responseTemplates: responseTemplates
 						});
 					});
+				},
+				authorizerId = function () {
+					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
 				};
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
+				authorizerId: authorizerId(),
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
@@ -421,12 +429,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			});
 			return result;
+		},
+		configureAuthorizers = function () {
+			if (apiConfig.authorizers && apiConfig.authorizers !== {}) {
+				return registerAuthorizers(apiConfig.authorizers, restApiId, awsRegion, logger).then(function (result) {
+					authorizerIds = result;
+				});
+			} else {
+				authorizerIds = {};
+			}
 		};
 	apiConfig = upgradeConfig(requestedConfig);
 	return getOwnerId(logger).then(function (accountOwnerId) {
 			ownerId = accountOwnerId;
 		})
 		.then(readTemplates)
+		.then(configureAuthorizers)
 		.then(rebuildApi)
 		.then(deployApi);
 };
