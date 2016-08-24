@@ -4,6 +4,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	shell = require('shelljs'),
 	Promise = require('bluebird'),
 	querystring = require('querystring'),
+	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
 	callApi = require('../src/util/call-api'),
@@ -585,6 +586,182 @@ describe('rebuildWebApi', function () {
 			});
 		});
 	});
+	describe('custom authorizers', function () {
+		var authorizerLambdaName, lambda;
+		beforeEach(function (done) {
+			var authorizerLambdaDir = path.join(workingdir, 'authorizer');
+			lambda = new aws.Lambda({region: awsRegion});
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
+
+			/*}).then(function () {
+				return lambda.getFunctionConfiguration({FunctionName: authorizerLambdaName}).promise();
+			}).then(function (lambdaConfig) {
+				var lambdaArn = lambdaConfig.FunctionArn;
+				return apiGateway.createAuthorizerAsync({
+					identitySource: 'method.request.header.Authorization',
+					name: testRunName + 'auth',
+					restApiId: apiId,
+					type: 'TOKEN',
+					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
+				});
+			}).then(function (authorizerData) {
+				authorizerLambdaId = authorizerData.id;
+				*/
+
+			apiRouteConfig.corsHandlers = false;
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({name: testRunName});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(function () {
+				return create({name: testRunName + 'auth', version: 'original', role: this.genericRole, region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'});
+			}).then(function (result) {
+				authorizerLambdaName = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		afterEach(function (done) {
+			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
+		});
+		it('creates header-based authorizers', function (done) {
+			apiRouteConfig.authorizers = {
+				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' }
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				expect(authorizers.items.length).toEqual(1);
+				expect(authorizers.items[0].name).toEqual('first');
+				expect(authorizers.items[0].type).toEqual('TOKEN');
+				expect(authorizers.items[0].identitySource).toEqual('method.request.header.Authorization');
+				expect(authorizers.items[0].authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
+			}).then(done, done.fail);
+		});
+		it('creates multiple authorizers', function (done) {
+			apiRouteConfig.authorizers = {
+				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' },
+				second: { lambdaName: authorizerLambdaName, headerName: 'UserId' }
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				var auths = {};
+				expect(authorizers.items.length).toEqual(2);
+				auths[authorizers.items[0].name] = authorizers.items[0];
+				auths[authorizers.items[1].name] = authorizers.items[1];
+
+				expect(auths.first.type).toEqual('TOKEN');
+				expect(auths.first.identitySource).toEqual('method.request.header.Authorization');
+				expect(auths.first.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
+
+				expect(auths.second.type).toEqual('TOKEN');
+				expect(auths.second.identitySource).toEqual('method.request.header.UserId');
+				expect(auths.second.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
+			}).then(done, done.fail);
+		});
+		it('overrides existing authorizers', function (done) {
+			var lambdaArn;
+			lambda.getFunctionConfiguration({FunctionName: authorizerLambdaName}).promise().then(function (lambdaConfig) {
+				lambdaArn = lambdaConfig.FunctionArn;
+			}).then(function () {
+				return apiGateway.createAuthorizerAsync({
+					identitySource: 'method.request.header.OldFirst',
+					name: 'first',
+					restApiId: apiId,
+					type: 'TOKEN',
+					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
+				});
+			}).then(function () {
+				return apiGateway.createAuthorizerAsync({
+					identitySource: 'method.request.header.OldSecond',
+					name: 'second',
+					restApiId: apiId,
+					type: 'TOKEN',
+					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
+				});
+			}).then(function () {
+				apiRouteConfig.authorizers = {
+					first: { lambdaName: authorizerLambdaName, headerName: 'NewFirst' },
+					third: { lambdaName: authorizerLambdaName, headerName: 'NewThird' }
+				};
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
+			}).then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				var auths = {};
+				expect(authorizers.items.length).toEqual(2);
+				auths[authorizers.items[0].name] = authorizers.items[0];
+				auths[authorizers.items[1].name] = authorizers.items[1];
+
+				expect(auths.first.type).toEqual('TOKEN');
+				expect(auths.first.identitySource).toEqual('method.request.header.NewFirst');
+				expect(auths.first.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
+
+				expect(auths.third.type).toEqual('TOKEN');
+				expect(auths.third.identitySource).toEqual('method.request.header.NewThird');
+				expect(auths.third.authorizerUri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/test/invocations');
+
+			}).then(done, done.fail);
+		});
+		it('assigns authorizers by name', function (done) {
+			var authorizerIds, echoResourceId;
+			apiRouteConfig.authorizers = {
+				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' },
+				second: { lambdaName: authorizerLambdaName, headerName: 'UserId' }
+			};
+			apiRouteConfig.routes.echo.POST = {customAuthorizer: 'second'};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === '/echo') {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				authorizerIds[authorizers.items[0].name] = authorizers.items[0].id;
+				authorizerIds[authorizers.items[1].name] = authorizers.items[1].id;
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'GET',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('NONE');
+				expect(methodConfig.authorizerId).toBeUndefined();
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: 'POST',
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			}).then(function (methodConfig) {
+				expect(methodConfig.authorizationType).toEqual('CUSTOM');
+				expect(methodConfig.authorizerId).toEqual(authorizerIds.second);
+			}).then(done, done.fail);
+		});
+	});
+
 	describe('custom headers', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/headers/*', workingdir);
