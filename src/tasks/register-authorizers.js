@@ -24,19 +24,27 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, o
 				restApiId: apiId
 			});
 		},
+		getAuthorizerArn = function (authConfig) {
+			if (authConfig.lambdaArn) {
+				return Promise.resolve(authConfig.lambdaArn);
+			} else {
+				return lambda.getFunctionConfigurationPromise({FunctionName: authConfig.lambdaName}).then(function (lambdaConfig) {
+					return lambdaConfig.FunctionArn;
+				});
+			}
+
+		},
 		addAuthorizer = function (authName) {
 			var authConfig = authorizerMap[authName];
-			return lambda.getFunctionConfigurationAsync({FunctionName: authConfig.lambdaName})
-				.then(function (lambdaConfig) {
-					var lambdaArn = lambdaConfig.FunctionArn;
-					return apiGateway.createAuthorizerAsync({
-						identitySource: 'method.request.header.' + authConfig.headerName,
-						name: authName,
-						restApiId: apiId,
-						type: 'TOKEN',
-						authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
-					});
+			return getAuthorizerArn(authConfig).then(function (lambdaArn) {
+				return apiGateway.createAuthorizerAsync({
+					identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
+					name: authName,
+					restApiId: apiId,
+					type: 'TOKEN',
+					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
 				});
+			});
 		},
 		authorizerNames = Object.keys(authorizerMap);
 
