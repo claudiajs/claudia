@@ -589,15 +589,14 @@ describe('rebuildWebApi', function () {
 	describe('custom authorizers', function () {
 		var authorizerLambdaName, lambda;
 		beforeEach(function (done) {
-			var authorizerLambdaDir = path.join(workingdir, 'authorizer');
+			var authorizerLambdaDir = path.join(workingdir, 'authorizer'),
+				genericRole = this.genericRole;
 			lambda = new aws.Lambda({region: awsRegion});
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
 
-
-
 			apiRouteConfig.corsHandlers = false;
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({name: testRunName});
@@ -605,7 +604,7 @@ describe('rebuildWebApi', function () {
 				apiId = result.id;
 				newObjects.restApi = result.id;
 			}).then(function () {
-				return create({name: testRunName + 'auth', version: 'original', role: this.genericRole, region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'});
+				return create({name: testRunName + 'auth', version: 'original', role: genericRole, region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'});
 			}).then(function (result) {
 				authorizerLambdaName = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
@@ -614,7 +613,7 @@ describe('rebuildWebApi', function () {
 			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
 		});
 		it('assigns authorizers by name', function (done) {
-			var authorizerIds, echoResourceId;
+			var authorizerIds = {}, echoResourceId;
 			apiRouteConfig.authorizers = {
 				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' },
 				second: { lambdaName: authorizerLambdaName, headerName: 'UserId' }
