@@ -37,7 +37,8 @@
   "scripts": {
     "prepublish": "node src/util/doc-md.js",
     "pretest": "jshint src spec && jscs src spec",
-    "test": "node spec/support/jasmine-runner.js"
+    "test": "node spec/support/jasmine-runner.js",
+    "debug": "node debug spec/support/jasmine-runner.js"
   },
   "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
   "dependencies": {

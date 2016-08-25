@@ -29,7 +29,13 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, o
 				return Promise.resolve(authConfig.lambdaArn);
 			} else {
 				return lambda.getFunctionConfigurationPromise({FunctionName: authConfig.lambdaName}).then(function (lambdaConfig) {
-					return lambdaConfig.FunctionArn;
+					var suffix = '';
+					if (authConfig.lambdaVersion === true) {
+						suffix = ':${stageVariables.lambdaVersion}';
+					} else if (authConfig.lambdaVersion) {
+						suffix = ':' + authConfig.lambdaVersion;
+					}
+					return lambdaConfig.FunctionArn + suffix;
 				});
 			}
 

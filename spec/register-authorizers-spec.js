@@ -19,7 +19,11 @@ describe('registerAuthorizers', function () {
 		checkAuthUri = function (uri) {
 			expect(uri).toMatch(/^arn:aws:apigateway:us-east-1:lambda:path\/2015-03-31\/functions\/arn:aws:lambda:us-east-1:[0-9]+:function:test[0-9]+auth\/invocations$/);
 			expect(uri.split(':')[11]).toEqual(testRunName + 'auth/invocations');
+		},
+		checkAuthUriWithVersion = function (uri, version) {
+			expect(uri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/' + authorizerArn + ':' + version + '/invocations');
 		};
+
 
 	beforeEach(function () {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
@@ -214,10 +218,46 @@ describe('registerAuthorizers', function () {
 			}).then(done, done.fail);
 
 	});
-	it('creates authorizers qualified by stage', function (done) {
-		done.fail('not implemented yet');
+	it('creates authorizers qualified by lambda name and current stage', function (done) {
+		var authorizerConfig = {
+			first: { lambdaName: authorizerLambdaName, lambdaVersion: true }
+		}, result;
+		underTest(authorizerConfig, apiId, awsRegion)
+			.then(function (createResult) {
+				result = createResult;
+			}).then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				expect(authorizers.items.length).toEqual(1);
+				expect(result.first).toEqual(authorizers.items[0].id);
+				expect(authorizers.items[0].name).toEqual('first');
+				expect(authorizers.items[0].type).toEqual('TOKEN');
+				expect(authorizers.items[0].identitySource).toEqual('method.request.header.Authorization');
+				checkAuthUriWithVersion(authorizers.items[0].authorizerUri, '${stageVariables.lambdaVersion}');
+			}).then(done, done.fail);
+
 	});
 	it('creates authorizers qualified by a specific value', function (done) {
-		done.fail('not implemented yet');
+		var authorizerConfig = {
+			first: { lambdaName: authorizerLambdaName, lambdaVersion: 'original' }
+		}, result;
+		underTest(authorizerConfig, apiId, awsRegion)
+			.then(function (createResult) {
+				result = createResult;
+			}).then(function () {
+				return apiGateway.getAuthorizersAsync({
+					restApiId: apiId
+				});
+			}).then(function (authorizers) {
+				expect(authorizers.items.length).toEqual(1);
+				expect(result.first).toEqual(authorizers.items[0].id);
+				expect(authorizers.items[0].name).toEqual('first');
+				expect(authorizers.items[0].type).toEqual('TOKEN');
+				expect(authorizers.items[0].identitySource).toEqual('method.request.header.Authorization');
+				checkAuthUriWithVersion(authorizers.items[0].authorizerUri, 'original');
+			}).then(done, done.fail);
+
 	});
 });
