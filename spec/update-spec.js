@@ -324,7 +324,8 @@ describe('update', function () {
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
 					'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
-			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.getUser']);
+			expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.getRestApi',
 				'apigateway.getResources',
