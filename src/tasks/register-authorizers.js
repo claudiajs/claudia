@@ -43,7 +43,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			}
 
 		},
-		allowInvocation = function (authConfig) {
+		allowInvocation = function (authConfig/*, authorizerId */) {
 			var authLambdaQualifier;
 			if (authConfig.lambdaVersion && typeof authConfig.lambdaVersion === 'string') {
 				authLambdaQualifier = authConfig.lambdaVersion;
@@ -51,7 +51,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 				authLambdaQualifier = functionVersion;
 			}
 			if (authConfig.lambdaName) {
-				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerId, awsRegion);
+				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerId, awsRegion, 'authorizers/*');
 			}
 		},
 		configureAuthorizer = function (authConfig, lambdaArn, authName) {
@@ -82,6 +82,8 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 				return allowInvocation(authConfig);
 			}).then(function () {
 				return apiGateway.createAuthorizerAsync(configureAuthorizer(authConfig, lambdaArn, authName));
+			}).then(function (result) {
+				return result.id;
 			});
 		},
 		authorizerNames = Object.keys(authorizerMap);
@@ -101,7 +103,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 		var index,
 			result = {};
 		for (index = 0; index < authorizerNames.length; index++) {
-			result[authorizerNames[index]] = creationResults[index].id;
+			result[authorizerNames[index]] = creationResults[index];
 		}
 		return result;
 	});

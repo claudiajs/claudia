@@ -331,7 +331,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/*/*/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});
@@ -349,7 +349,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/*/*/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});
@@ -366,7 +366,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/*/*/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});

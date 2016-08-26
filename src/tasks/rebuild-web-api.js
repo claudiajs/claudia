@@ -394,15 +394,17 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 			return -1;
 		},
-		rebuildApi = function () {
-			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
-			.then(getExistingResources)
+		removeExistingResources = function () {
+			return getExistingResources()
 			.then(function (resources) {
 				existingResources = resources.items;
 				existingResources.sort(pathSort);
 				return existingResources;
 			}).then(findRoot)
-			.then(dropSubresources)
+			.then(dropSubresources);
+		},
+		rebuildApi = function () {
+			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
 			.then(function () {
 				return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
 			});
@@ -444,6 +446,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			ownerId = accountOwnerId;
 		})
 		.then(readTemplates)
+		.then(removeExistingResources)
 		.then(configureAuthorizers)
 		.then(rebuildApi)
 		.then(deployApi);
