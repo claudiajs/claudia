@@ -3,10 +3,13 @@ var aws = require('aws-sdk'),
 	Promise = require('bluebird'),
 	promiseWrap = require('../util/promise-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
-	NullLogger = require('../util/null-logger');
-module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, optionalLogger) {
+	allowApiInvocation = require('./allow-api-invocation'),
+	NullLogger = require('../util/null-logger'),
+	getOwnerId = require('./get-owner-account-id');
+module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, functionVersion, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
+		ownerId,
 		apiGateway = retriableWrap(
 			promiseWrap(
 				new aws.APIGateway({region: awsRegion}),
@@ -40,24 +43,58 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, o
 			}
 
 		},
+		allowInvocation = function (authConfig) {
+			var authLambdaQualifier;
+			if (authConfig.lambdaVersion && typeof authConfig.lambdaVersion === 'string') {
+				authLambdaQualifier = authConfig.lambdaVersion;
+			} else if (authConfig.lambdaVersion === true) {
+				authLambdaQualifier = functionVersion;
+			}
+			if (authConfig.lambdaName) {
+				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerId, awsRegion);
+			}
+		},
+		configureAuthorizer = function (authConfig, lambdaArn, authName) {
+			var params = {
+				identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
+				name: authName,
+				restApiId: apiId,
+				type: 'TOKEN',
+				authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
+			};
+			if (authConfig.validationExpression) {
+				params.identityValidationExpression = authConfig.validationExpression;
+			}
+			if (authConfig.credentials) {
+				params.authorizerCredentials = authConfig.credentials;
+			}
+			if (authConfig.resultTtl) {
+				params.authorizerResultTtlInSeconds = authConfig.resultTtl;
+			}
+			return params;
+		},
 		addAuthorizer = function (authName) {
-			var authConfig = authorizerMap[authName];
-			return getAuthorizerArn(authConfig).then(function (lambdaArn) {
-				return apiGateway.createAuthorizerAsync({
-					identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
-					name: authName,
-					restApiId: apiId,
-					type: 'TOKEN',
-					authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations'
-				});
+			var authConfig = authorizerMap[authName],
+				lambdaArn;
+			return getAuthorizerArn(authConfig).then(function (functionArn) {
+				lambdaArn = functionArn;
+			}).then(function () {
+				return allowInvocation(authConfig);
+			}).then(function () {
+				return apiGateway.createAuthorizerAsync(configureAuthorizer(authConfig, lambdaArn, authName));
 			});
 		},
 		authorizerNames = Object.keys(authorizerMap);
+
 
 	return apiGateway.getAuthorizersAsync({
 		restApiId: apiId
 	}).then(function (existingAuthorizers) {
 		return Promise.map(existingAuthorizers.items, removeAuthorizer, {concurrency: 1});
+	}).then(function () {
+		return getOwnerId();
+	}).then(function (accountId) {
+		ownerId = accountId;
 	}).then(function () {
 		return Promise.map(authorizerNames, addAuthorizer, {concurrency: 1});
 	}).then(function (creationResults) {
