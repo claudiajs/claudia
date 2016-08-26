@@ -1,5 +1,11 @@
 # Release history
 
+### 1.7.0, XXX
+
+- support for custom authorizers defined by claudia-api-builder
+- support for `--profile` to select a profile (this could be used instead of setting the AWS_PROFILE variable)
+- better validation for authorization types and credentials requested by claudia API builder APIs
+
 ### 1.6.2, 18 August 2016
 
 - `add-scheduled-event` no longer checks for role in `claudia.json`, it was not being used anyway
