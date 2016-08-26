@@ -60,6 +60,42 @@ describe('validatePackage', function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-headers-no-defaults'), 'main.router', 'main');
 			}).toThrow('main.js GET /echo error template requests custom headers but does not provide defaults');
 		});
+		it('fails if a method requests an undefined authorizer', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'undefined_authorizer.router', 'undefined_authorizer');
+			}).toThrow('undefined_authorizer.js GET /echo requests an undefined custom authorizer customA');
+		});
+		it('fails if a method requests an authorizer but no authorizers defined', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'no_authorizers.router', 'no_authorizers');
+			}).toThrow('no_authorizers.js GET /echo requests an undefined custom authorizer customA');
+		});
+		it('fails if an authorizer is not configured with either lambda name or arn', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_authorizer.router', 'misconfigured_authorizer');
+			}).toThrow('misconfigured_authorizer.js authorizer first requires either lambdaName or lambdaArn');
+		});
+		it('fails if an authorizer is configured with both lambda name or arn', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'overconfigured_authorizer.router', 'overconfigured_authorizer');
+			}).toThrow('overconfigured_authorizer.js authorizer first is ambiguous - both lambdaName or lambdaArn are defined');
+		});
+		it('fails if an authorizer is configured with both lambda name or arn', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'overconfigured_version.router', 'overconfigured_version');
+			}).toThrow('overconfigured_version.js authorizer first is ambiguous - cannot use lambdaVersion with lambdaArn');
+		});
+		it('fails if an authorizer is configured with both lambda name or arn', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_version.router', 'misconfigured_version');
+			}).toThrow('misconfigured_version.js authorizer first lambdaVersion must be either string or true');
+		});
+
+		it('does not fail when the api is well configured', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-validation-kitchen-sink'), 'main.router', 'main');
+			}).not.toThrow();
+		});
 
 	});
 });

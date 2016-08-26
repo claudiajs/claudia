@@ -38,23 +38,43 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		Object.keys(apiConfig.routes).forEach(function (route) {
 			var routeConfig = apiConfig.routes[route];
 			Object.keys(routeConfig).forEach(function (method) {
-				var methodConfig = routeConfig[method];
+				var methodConfig = routeConfig[method], routeMessage = apiModulePath + '.js ' + method + ' /' + route + ' ';
 				if (methodConfig.success && methodConfig.success.headers) {
 					if (Object.keys(methodConfig.success.headers).length === 0) {
-						throw apiModulePath + '.js ' + method + ' /' + route + ' requests custom headers but does not enumerate any headers';
+						throw routeMessage + 'requests custom headers but does not enumerate any headers';
 					}
 				}
 				if (methodConfig.error && methodConfig.error.headers) {
 					if (Object.keys(methodConfig.error.headers).length === 0) {
-						throw apiModulePath + '.js ' + method + ' /' + route + ' error template requests custom headers but does not enumerate any headers';
+						throw routeMessage + 'error template requests custom headers but does not enumerate any headers';
 					}
 					if (Array.isArray(methodConfig.error.headers)) {
-						throw apiModulePath + '.js ' + method + ' /' + route + ' error template requests custom headers but does not provide defaults';
+						throw routeMessage + 'error template requests custom headers but does not provide defaults';
 					}
 				}
-
+				if (methodConfig.customAuthorizer && (!apiConfig.authorizers || !apiConfig.authorizers[methodConfig.customAuthorizer])) {
+					throw routeMessage + 'requests an undefined custom authorizer ' + methodConfig.customAuthorizer;
+				}
 			});
 		});
+		if (apiConfig.authorizers) {
+			Object.keys(apiConfig.authorizers).forEach(function (authorizerName) {
+				var authorizer = apiConfig.authorizers[authorizerName],
+					authorizerMessage =  apiModulePath + '.js authorizer ' + authorizerName + ' ';
+				if (!authorizer.lambdaName && !authorizer.lambdaArn) {
+					throw authorizerMessage + 'requires either lambdaName or lambdaArn';
+				}
+				if (authorizer.lambdaName && authorizer.lambdaArn) {
+					throw authorizerMessage + 'is ambiguous - both lambdaName or lambdaArn are defined';
+				}
+				if (authorizer.lambdaVersion && (typeof authorizer.lambdaVersion !== 'boolean' && typeof authorizer.lambdaVersion !== 'string')) {
+					throw authorizerMessage + 'lambdaVersion must be either string or true';
+				}
+				if (authorizer.lambdaVersion && authorizer.lambdaArn) {
+					throw authorizerMessage + 'is ambiguous - cannot use lambdaVersion with lambdaArn';
+				}
+			});
+		}
 	}
 	return dir;
 };
