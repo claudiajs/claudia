@@ -6,6 +6,7 @@ var aws = require('aws-sdk'),
 	validAuthType = require('../util/valid-auth-type'),
 	validCredentials = require('../util/valid-credentials'),
 	allowApiInvocation = require('./allow-api-invocation'),
+	paramExtractor = require('../util/param-extractor'),
 	pathSplitter = require('../util/path-splitter'),
 	promiseWrap = require('../util/promise-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
@@ -88,7 +89,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 			return '\'' + val + '\'';
 		},
-		createMethod = function (methodName, resourceId, methodOptions) {
+		createMethod = function (methodName, resourceId, methodOptions, methodRequestParameters) {
 			var errorCode = function () {
 					if (!methodOptions.error) {
 						return '500';
@@ -145,6 +146,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				headers = function (responseType) {
 					return methodOptions && methodOptions[responseType] && methodOptions[responseType].headers;
+				},
+				requestParameters = function () {
+					var reqParams = {};
+					if (methodRequestParameters) {
+						methodRequestParameters.forEach(function (paramName) {
+							// True is required, which is always correct in the URL path
+							reqParams['method.request.path.' + paramName] = true;
+						});
+					}
+					return reqParams;
 				},
 				successContentType = function () {
 					return methodOptions && methodOptions.success && methodOptions.success.contentType;
@@ -249,6 +260,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
+				requestParameters: requestParameters(),
 				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
 				return putLambdaIntegration(resourceId, methodName, credentials());
@@ -330,8 +342,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		configurePath = function (path) {
 			var resourceId,
 				supportedMethods = Object.keys(apiConfig.routes[path]),
+				requestParameters = paramExtractor(path),
 				createMethodMapper = function (methodName) {
-					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
+					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName], requestParameters);
 				};
 			return findResourceByPath(path).then(function (r) {
 				resourceId = r;
