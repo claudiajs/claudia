@@ -630,7 +630,8 @@ describe('create', function () {
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
 				'lambda.createFunction', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
-			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.getUser']);
+			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole']);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',
 				'apigateway.getResources',
