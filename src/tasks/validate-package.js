@@ -1,5 +1,7 @@
 /*global module, require, console */
-var path = require('path');
+var path = require('path'),
+	validAuthType = require('../util/valid-auth-type'),
+	validCredentials = require('../util/valid-credentials');
 module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 	'use strict';
 	var handlerComponents = functionHandler && functionHandler.split('.'),
@@ -54,6 +56,18 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 				}
 				if (methodConfig.customAuthorizer && (!apiConfig.authorizers || !apiConfig.authorizers[methodConfig.customAuthorizer])) {
 					throw routeMessage + 'requests an undefined custom authorizer ' + methodConfig.customAuthorizer;
+				}
+				if (methodConfig.authorizationType && !validAuthType(methodConfig.authorizationType)) {
+					throw routeMessage + 'authorization type ' + methodConfig.authorizationType + ' is invalid';
+				}
+				if (methodConfig.authorizationType && methodConfig.authorizationType !== 'CUSTOM' && methodConfig.customAuthorizer) {
+					throw routeMessage + 'authorization type ' + methodConfig.authorizationType + ' is incompatible with custom authorizers';
+				}
+				if (methodConfig.invokeWithCredentials && !validCredentials(methodConfig.invokeWithCredentials)) {
+					throw routeMessage + 'credentials have to be either an ARN or a boolean';
+				}
+				if (methodConfig.authorizationType && methodConfig.authorizationType !== 'AWS_IAM' && methodConfig.invokeWithCredentials) {
+					throw routeMessage + 'authorization type ' + methodConfig.authorizationType + ' is incompatible with invokeWithCredentials';
 				}
 			});
 		});

@@ -30,9 +30,16 @@ describe('validCredentials', function () {
 		expect(validCredentials('arn:aws:iam::*:user/*')).toBeTruthy();
 		expect(validCredentials('arn:aws:iam::*:role/*')).toBeTruthy();
 	});
+	it('recognises true', function () {
+		expect(validCredentials(true)).toBeTruthy();
+	});
 	it('does not recognise invalid format', function () {
 		expect(validCredentials('xxx:aws:iam::*:role/apigAwsProxyRole')).toBeFalsy();
 		expect(validCredentials('arn:aws:iam::*')).toBeFalsy();
 		expect(validCredentials('arn:aws:iam:*:role/*')).toBeFalsy();
+	});
+	it('does not recognise non string truthy values', function () {
+		expect(validCredentials([])).toBeFalsy();
+		expect(validCredentials({a: 1})).toBeFalsy();
 	});
 });

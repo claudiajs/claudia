@@ -90,6 +90,31 @@ describe('validatePackage', function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_version.router', 'misconfigured_version');
 			}).toThrow('misconfigured_version.js authorizer first lambdaVersion must be either string or true');
 		});
+		it('fails when an invalid authorization type is specified', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'invalid_authorization.router', 'invalid_authorization');
+			}).toThrow('invalid_authorization.js GET /echo authorization type BOOM is invalid');
+
+		});
+		it('fails when authorizer is specified with IAM', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'overconfigured_authorization.router', 'overconfigured_authorization');
+			}).toThrow('overconfigured_authorization.js GET /echo authorization type AWS_IAM is incompatible with custom authorizers');
+
+		});
+		it('fails when credentials are specified with CUSTOM', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'overconfigured_credentials.router', 'overconfigured_credentials');
+			}).toThrow('overconfigured_credentials.js GET /echo authorization type CUSTOM is incompatible with invokeWithCredentials');
+
+		});
+
+		it('fails when credentials are invalid', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'invalid_credentials.router', 'invalid_credentials');
+			}).toThrow('invalid_credentials.js GET /echo credentials have to be either an ARN or a boolean');
+
+		});
 
 		it('does not fail when the api is well configured', function () {
 			expect(function () {

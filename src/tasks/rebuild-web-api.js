@@ -121,7 +121,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return methodOptions.authorizationType.toUpperCase();
 					} else if (methodOptions.customAuthorizer) {
 						return 'CUSTOM';
-					} else if (methodOptions && (methodOptions.invokeWithCredentials === true || validCredentials(methodOptions.invokeWithCredentials))) {
+					} else if (methodOptions && validCredentials(methodOptions.invokeWithCredentials)) {
 						return 'AWS_IAM';
 					} else {
 						return 'NONE';
