@@ -7,10 +7,11 @@ var minimist = require('minimist'),
 	readCommands = require('../src/util/read-commands'),
 	ConsoleLogger = require('../src/util/console-logger'),
 	docTxt = require('../src/util/doc-txt'),
+	AWS = require('aws-sdk'),
 	readArgs = function () {
 		return minimist(process.argv.slice(2), {
 			alias: { h: 'help', v: 'version' },
-			string: ['source', 'name', 'region'],
+			string: ['source', 'name', 'region', 'profile'],
 			boolean: ['quiet'],
 			default: { 'source': shell.pwd() }
 		});
@@ -43,7 +44,9 @@ var minimist = require('minimist'),
 			process.exit(1);
 			return;
 		}
-
+		if (args.profile) {
+			AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: args.profile});
+		}
 		commands[command](args, logger).then(function (result) {
 			if (result) {
 				console.log(JSON.stringify(result, null, 2));
