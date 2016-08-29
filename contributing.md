@@ -12,6 +12,12 @@ Sub-tasks directly related to automating and aggregating AWS workflows should go
 
 Claudia has extensive unit and integration tests in the [spec](./spec) directory. Ideally, any new code should also be accompanied by a new test, so we can simplify future maintenance and development.  Unless there is a very compelling reason to use something different, please continue using [Jasmine](https://jasmine.github.io) for tests.
 
+# Important tests to add
+
+In addition for the tests for the new functionality, if you are adding any configuration arguments or changing any configuration options for API deploument, make sure to add a test to the [validatePackage spec](https://github.com/claudiajs/claudia/blob/master/spec/validate-package-spec.js) to ensure stupid mistakes are stopped before the API even starts deploying. Think of the most common ways users can mistakenly configure the new arguments (such as duplicates, empty values, inconsistent related settings) and provide a helpful error message in [validatePackage](https://github.com/claudiajs/claudia/blob/master/src/tasks/validate-package.js).
+
+It might also be useful to add a successful fully configured example to the [kitchen sink parsing test](https://github.com/claudiajs/claudia/blob/master/spec/test-projects/api-gw-validation-kitchen-sink/main.js), which is just a smoke test to validate that correct configurations pass validation
+
 # Running tests
 
 ## Setting credentials for tests
