@@ -241,7 +241,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					});
 				},
 				authorizerId = function () {
-					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
+					return methodOptions && (
+							methodOptions.authorizerId ||
+									(methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer])
+					);
 				};
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
