@@ -75,17 +75,17 @@ describe('validatePackage', function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_authorizer.router', 'misconfigured_authorizer');
 			}).toThrow('misconfigured_authorizer.js authorizer first requires either lambdaName or lambdaArn');
 		});
-		it('fails if an authorizer is configured with both lambda name or arn', function () {
+		it('fails if an authorizer is configured with both lambda name and arn', function () {
 			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'overconfigured_authorizer.router', 'overconfigured_authorizer');
 			}).toThrow('overconfigured_authorizer.js authorizer first is ambiguous - both lambdaName or lambdaArn are defined');
 		});
-		it('fails if an authorizer is configured with both lambda name or arn', function () {
+		it('fails if an authorizer is configured with version and arn', function () {
 			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'overconfigured_version.router', 'overconfigured_version');
 			}).toThrow('overconfigured_version.js authorizer first is ambiguous - cannot use lambdaVersion with lambdaArn');
 		});
-		it('fails if an authorizer is configured with both lambda name or arn', function () {
+		it('fails if an authorizer version is invalid format', function () {
 			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_version.router', 'misconfigured_version');
 			}).toThrow('misconfigured_version.js authorizer first lambdaVersion must be either string or true');
