@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "prepublish": "node src/util/doc-md.js",
-    "pretest": "jshint src spec && jscs src spec",
+    "pretest": "jshint src spec && jscs src spec/*.js",
     "test": "node spec/support/jasmine-runner.js",
     "debug": "node debug spec/support/jasmine-runner.js"
   },
@@ -53,8 +53,8 @@
   },
   "devDependencies": {
     "dotenv": "^2.0.0",
-    "jasmine": "^2.4.1",
-    "jasmine-spec-reporter": "^2.5.0",
+    "jasmine": "~2.4.1",
+    "jasmine-spec-reporter": "~2.5.0",
     "jscs": "^2.9.0",
     "jshint": "^2.9.1"
   }

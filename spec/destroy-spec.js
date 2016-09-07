@@ -1,13 +1,13 @@
 /*global describe, require, it, expect, beforeEach, jasmine */
 var underTest = require('../src/commands/destroy'),
-  create = require('../src/commands/create'),
-  shell = require('shelljs'),
-  tmppath = require('../src/util/tmppath'),
-  fs = require('fs'),
-  path = require('path'),
-  aws = require('aws-sdk'),
-  Promise = require('bluebird'),
-  awsRegion = 'us-east-1';
+	create = require('../src/commands/create'),
+	shell = require('shelljs'),
+	tmppath = require('../src/util/tmppath'),
+	fs = require('fs'),
+	path = require('path'),
+	aws = require('aws-sdk'),
+	Promise = require('bluebird'),
+	awsRegion = 'us-east-1';
 describe('destroy', function () {
 	'use strict';
 	var workingdir, testRunName, lambda, config, newObjects, apiGateway, iam;
