@@ -11,9 +11,10 @@ var aws = require('aws-sdk'),
 	retriableWrap = require('../util/retriable-wrap'),
 	NullLogger = require('../util/null-logger'),
 	fs = Promise.promisifyAll(require('fs')),
+	safeHash = require('../util/safe-hash'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger, configCacheStageVar) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
@@ -26,7 +27,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						},
 						/Async$/
 						),
-		apiConfig,
+		upgradeConfig = function (config) {
+			var result;
+			if (config.version >= 2) {
+				return config;
+			}
+			result = { version: 3, routes: {} };
+			Object.keys(config).forEach(function (route) {
+				result.routes[route] = {};
+				config[route].methods.forEach(function (methodName) {
+					result.routes[route][methodName] = {};
+				});
+			});
+			return result;
+		},
+		apiConfig = upgradeConfig(requestedConfig),
+		configHash = safeHash(apiConfig),
 		existingResources,
 		ownerId,
 		knownIds = {},
@@ -410,27 +426,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			});
 		},
 		deployApi = function () {
+			var stageVars = {
+				lambdaVersion: functionVersion
+			};
+			if (configCacheStageVar) {
+				stageVars[configCacheStageVar] = configHash;
+			}
+
 			return apiGateway.createDeploymentAsync({
 				restApiId: restApiId,
 				stageName: functionVersion,
-				variables: {
-					lambdaVersion: functionVersion
-				}
+				variables: stageVars
 			});
-		},
-		upgradeConfig = function (config) {
-			var result;
-			if (config.version >= 2) {
-				return config;
-			}
-			result = { version: 3, routes: {} };
-			Object.keys(config).forEach(function (route) {
-				result.routes[route] = {};
-				config[route].methods.forEach(function (methodName) {
-					result.routes[route][methodName] = {};
-				});
-			});
-			return result;
 		},
 		configureAuthorizers = function () {
 			if (apiConfig.authorizers && apiConfig.authorizers !== {}) {
@@ -440,14 +447,38 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			} else {
 				authorizerIds = {};
 			}
+		},
+		uploadApiConfig = function () {
+			return readTemplates()
+				.then(removeExistingResources)
+				.then(configureAuthorizers)
+				.then(rebuildApi)
+				.then(deployApi);
+		},
+		getExistingConfigHash = function () {
+			if (!configCacheStageVar) {
+				return false;
+			}
+			return apiGateway.getStageAsync({
+				restApiId: restApiId,
+				stageName: functionVersion
+			}).then(function (stage) {
+				return stage.variables && stage.variables[configCacheStageVar];
+			}).catch(function () {
+				return false;
+			});
+
 		};
-	apiConfig = upgradeConfig(requestedConfig);
 	return getOwnerId(logger).then(function (accountOwnerId) {
 			ownerId = accountOwnerId;
 		})
-		.then(readTemplates)
-		.then(removeExistingResources)
-		.then(configureAuthorizers)
-		.then(rebuildApi)
-		.then(deployApi);
+		.then(getExistingConfigHash)
+		.then(function (existingHash) {
+			if (existingHash && existingHash === configHash) {
+				logger.logStage('Reusing cached API configuration');
+			} else {
+				return uploadApiConfig();
+			}
+		});
+
 };

@@ -36,7 +36,7 @@ module.exports = function update(options, optionalLogger) {
 					return Promise.reject('cannot load api config from ' + apiModulePath);
 				}
 				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
-				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger)
+				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
 					.then(function () {
 						if (apiModule.postDeploy) {
 							return apiModule.postDeploy(
@@ -143,6 +143,12 @@ module.exports.doc = {
 			argument: 'use-local-dependencies',
 			optional: true,
 			description: 'Do not install dependencies, use local node_modules directory instead'
+		},
+		{
+			argument: 'cache-api-config',
+			optional: true,
+			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
+				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
 		}
 	]
 };

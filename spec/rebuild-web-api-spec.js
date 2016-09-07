@@ -1370,8 +1370,9 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('logging', function () {
-		var logger = new ArrayLogger();
+		var logger;
 		beforeEach(function (done) {
+			logger = new ArrayLogger();
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -1397,6 +1398,70 @@ describe('rebuildWebApi', function () {
 				]);
 				expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			}).then(done, done.fail);
+		});
+	});
+	describe('configuration cashing', function () {
+		var logger;
+		beforeEach(function (done) {
+			logger = new ArrayLogger();
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		it('stores the configuration hash in a stage variable', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash').then(function () {
+				return invoke('original/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.env).toEqual({
+					lambdaVersion: 'original',
+					configHash: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+				});
+			}).then(done, done.fail);
+		});
+		it('runs through the whole deployment if there was no previous stage by this name', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
+				return underTest(newObjects.lambdaFunction, 'latest', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
+			}).then(function () {
+				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
+				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
+			}).then(done, done.fail);
+		});
+		it('runs throough the whole deployment if there was no config hash in the previous stage with the same name', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined).then(function () {
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
+			}).then(function () {
+				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
+				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
+			}).then(done, done.fail);
+		});
+		it('runs through the whole deployment if there was a previous config hash but was different', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
+				apiRouteConfig.routes.echo.POST = {};
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
+			}).then(function () {
+				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
+				expect(logger.getStageLog()).not.toContain('Reusing cached API configuration');
+			}).then(done, done.fail);
+		});
+		it('skips deleting and creating resources if there was a previous stage with the same name and config hash', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
+				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
+			}).then(function () {
+				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+					'apigateway.getStage'
+				]);
+				expect(logger.getStageLog(true)).toContain('Reusing cached API configuration');
+			}).then(done, done.fail);
+
 		});
 	});
 });

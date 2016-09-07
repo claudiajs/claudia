@@ -558,6 +558,22 @@ describe('create', function () {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
+
+		it('adds an api config cache if requested', function (done) {
+			config['cache-api-config'] = 'claudiaConfig';
+			createFromDir('api-gw-echo').then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+			}).then(function () {
+				return callApi(apiId, awsRegion, 'latest/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.env).toEqual({
+					lambdaVersion: 'latest',
+					claudiaConfig: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+				});
+			}).then(done, done.fail);
+		});
+
 		it('makes it possible to deploy a custom stage, as long as the lambdaVersion is defined', function (done) {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {

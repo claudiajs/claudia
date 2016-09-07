@@ -170,7 +170,7 @@ module.exports = function create(options, optionalLogger) {
 					module: options['api-module'],
 					url: apiGWUrl(result.id, options.region, alias)
 				};
-				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger);
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
 			}).then(function () {
 				if (apiModule.postDeploy) {
 					return apiModule.postDeploy(
@@ -410,6 +410,12 @@ module.exports.doc = {
 			argument: 'use-local-dependencies',
 			optional: true,
 			description: 'Do not install dependencies, use local node_modules directory instead'
+		},
+		{
+			argument: 'cache-api-config',
+			optional: true,
+			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
+				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
 		}
 	]
 };

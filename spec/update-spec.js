@@ -255,6 +255,22 @@ describe('update', function () {
 				});
 			}).then(done, done.fail);
 		});
+		it('adds an api config cache if requested', function (done) {
+			underTest({source: updateddir, version: 'development', 'cache-api-config': 'claudiaConfig'}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development');
+			}).then(function () {
+				return invoke('development/echo?name=mike');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.context.method).toEqual('GET');
+				expect(params.context.path).toEqual('/echo');
+				expect(params.env).toEqual({
+					lambdaVersion: 'development',
+					claudiaConfig: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+				});
+			}).then(done, done.fail);
+		});
 		it('if using a different version, leaves the old one intact', function (done) {
 			underTest({source: updateddir, version: 'development'}).then(function () {
 				return invoke('original/hello');
