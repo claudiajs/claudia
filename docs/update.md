@@ -16,4 +16,7 @@ claudia update {OPTIONS}
   * _Defaults to_: current directory
 *  `--config`:  _optional_ Config file containing the resource names
   * _Defaults to_: claudia.json
+*  `--no-optional-dependencies`:  _optional_ Do not upload optional dependencies to Lambda.
 *  `--use-local-dependencies`:  _optional_ Do not install dependencies, use local node_modules directory instead
+*  `--cache-api-config`:  _optional_ Name of the stage variable for storing the current API configuration signature.
+  If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment

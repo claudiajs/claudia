@@ -1,0 +1,13 @@
+{
+  "name": "echo",
+  "private": true,
+  "files": [
+    "main.js"
+  ],
+  "optionalDependencies": {
+    "aws-sdk": "^2.5.6"
+  },
+  "dependencies": {
+    "huh": "^1.1.4"
+  }
+}

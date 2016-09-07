@@ -5,6 +5,7 @@ var Promise = require('bluebird'),
 	fs = require('fs'),
 	os = require('os'),
 	path = require('path'),
+	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
 	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
 	shell = require('shelljs'),
@@ -69,6 +70,10 @@ module.exports = function update(options, optionalLogger) {
 	if (options.source === os.tmpdir()) {
 		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
 	}
+	if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
+		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+	}
+
 
 	logger.logStage('loading Lambda config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
@@ -99,6 +104,12 @@ module.exports = function update(options, optionalLogger) {
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
 	}).then(function (dir) {
 		packageDir = dir;
+		if (options['no-optional-dependencies']) {
+			return cleanOptionalDependencies(dir, logger);
+		} else {
+			return dir;
+		}
+	}).then(function (dir) {
 		logger.logStage('zipping package');
 		return zipdir(dir);
 	}).then(readFile)
@@ -138,6 +149,11 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'no-optional-dependencies',
+			optional: true,
+			description: 'Do not upload optional dependencies to Lambda.'
 		},
 		{
 			argument: 'use-local-dependencies',

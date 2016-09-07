@@ -1,6 +1,11 @@
 # Release history
 
-### 1.7.0, XXX
+### 1.8.0, 7 September 2016
+
+- support for `--no-optional-dependencies`, allowing you to exclude things like aws-sdk and imagemagick from the package uploaded to Lambda
+- support for `--cache-api-config`, allowing faster deployments of web APIs and chat bots when the API configuration does not change
+
+### 1.7.0, 26 August 2016
 
 - support for custom authorizers defined by claudia-api-builder
 - support for `--profile` to select a profile (this could be used instead of setting the AWS_PROFILE variable)

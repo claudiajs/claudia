@@ -62,6 +62,14 @@ describe('update', function () {
 			done();
 		});
 	});
+	it('fails if local dependencies and optional dependencies are mixed', function (done) {
+		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		underTest({source: workingdir, 'use-local-dependencies': true, 'no-optional-dependencies': true}).then(done.fail, function (message) {
+			expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+			done();
+		});
+	});
+
 	describe('when the config exists', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
@@ -130,6 +138,15 @@ describe('update', function () {
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello local"');
+			}).then(done, done.fail);
+		});
+		it('removes optional dependencies after validation if requested', function (done) {
+			shell.cp('-rf', 'spec/test-projects/optional-dependencies/*', workingdir);
+			underTest({source: workingdir, 'no-optional-dependencies': true}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
 			}).then(done, done.fail);
 		});
 

@@ -43,4 +43,7 @@ claudia create {OPTIONS}
   * _Defaults to_: 128
 *  `--timeout`:  _optional_ The function execution time, in seconds, at which AWS Lambda should terminate the function
   * _Defaults to_: 3
+*  `--no-optional-dependencies`:  _optional_ Do not upload optional dependencies to Lambda.
 *  `--use-local-dependencies`:  _optional_ Do not install dependencies, use local node_modules directory instead
+*  `--cache-api-config`:  _optional_ Name of the stage variable for storing the current API configuration signature.
+  If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment

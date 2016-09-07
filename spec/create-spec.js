@@ -134,6 +134,14 @@ describe('create', function () {
 				done();
 			});
 		});
+		it('fails if local dependencies and optional dependencies are mixed', function (done) {
+			config['use-local-dependencies'] = true;
+			config['no-optional-dependencies'] = true;
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+				done();
+			});
+		});
 		it('validates the package before creating the role or the function', function (done) {
 			createFromDir('echo-dependency-problem').then(function () {
 				done.fail('create succeeded');
@@ -485,6 +493,15 @@ describe('create', function () {
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello local"');
+			}).then(done, done.fail);
+		});
+		it('removes optional dependencies after validation if requested', function (done) {
+			config['no-optional-dependencies'] = true;
+			createFromDir('optional-dependencies').then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
 			}).then(done, done.fail);
 		});
 	});

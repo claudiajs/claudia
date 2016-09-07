@@ -13,6 +13,7 @@ var Promise = require('bluebird'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
+	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
 	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
@@ -43,6 +44,9 @@ module.exports = function create(options, optionalLogger) {
 			}
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
+			}
+			if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
+				return 'incompatible arguments --use-local-dependencies and --no-optional-dependencies';
 			}
 			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
@@ -279,6 +283,12 @@ module.exports = function create(options, optionalLogger) {
 		return validatePackage(dir, options.handler, options['api-module']);
 	}).then(function (dir) {
 		packageFileDir = dir;
+		if (options['no-optional-dependencies']) {
+			return cleanOptionalDependencies(dir, logger);
+		} else {
+			return dir;
+		}
+	}).then(function (dir) {
 		logger.logStage('zipping package');
 		return zipdir(dir);
 	}).then(function (zipFile) {
@@ -405,6 +415,11 @@ module.exports.doc = {
 			optional: true,
 			description: 'The function execution time, in seconds, at which AWS Lambda should terminate the function',
 			default: 3
+		},
+		{
+			argument: 'no-optional-dependencies',
+			optional: true,
+			description: 'Do not upload optional dependencies to Lambda.'
 		},
 		{
 			argument: 'use-local-dependencies',
