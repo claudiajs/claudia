@@ -197,7 +197,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
           return '$input.path(\'$.errorMessage\')';
         },
         addCodeMapper = function (response) {
-          console.log('\n\n', 'addCodeMapper', response);
           var methodResponseParams = {},
             integrationResponseParams = {},
             responseTemplates = {},
@@ -244,7 +243,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
             });
           }
           responseModels[contentType] = 'Empty';
-          console.log('\n\n', 'errorTemplate', responseTemplates);
           return apiGateway.putMethodResponseAsync({
             restApiId: restApiId,
             resourceId: resourceId,
