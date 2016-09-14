@@ -106,8 +106,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
       return '\'' + val + '\'';
     },
     createMethod = function (methodName, resourceId, methodOptions) {
-      console.log('\n\n', 'createMethod', { methodName, resourceId, methodOptions }, '\n--------\n');
-      console.log('createMethod:error', methodOptions.error, '\n\n');
       var errorCode = function () {
           if (!methodOptions.error) {
             return '500';
@@ -193,7 +191,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
         },
         errorTemplate = function () {
           var contentType = errorContentType();
-          console.log('\n\n', 'errorTemplate', contentType);
           if (!contentType || contentType === 'application/json') {
             return '';
           }
@@ -291,7 +288,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
           template: successTemplate(headers('success')),
           headers: headers('success')
         }];
-        console.log('\n\n', { errorCode: errorCode(), successCode: successCode() });
         if (errorCode() !== successCode()) {
           results[0].pattern = '^$';
           results.push({
@@ -313,7 +309,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
             });
           });
         }
-        console.log('\n\n', 'results', results);
         return Promise.map(results, addCodeMapper, { concurrency: 1 });
       });
     },
