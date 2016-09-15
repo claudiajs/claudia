@@ -299,11 +299,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
         if (additionalCodes()) {
           additionalCodes().forEach(function (additionalCode) {
             results.push({
-              code: String(additionalCode.code), // code: 404,
-              pattern: additionalCode.pattern, // pattern: '^Not Found:.*',
-              template: additionalCode.template, // template: '$input.path(\'$.errorMessage\')',
-              // contentType: errorContentType(), // TODO do we need a json here?
-              headers: headers('error') // TODO do we need this?
+              code: String(additionalCode.code),
+              pattern: additionalCode.pattern,
+              template: additionalCode.template,
+              headers: headers('error')
             });
           });
         }
