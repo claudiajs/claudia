@@ -55,6 +55,30 @@ describe('zipdir', function () {
 				done.fail('invalid archive');
 			}
 
+			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
+			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
+			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+
+			done();
+		}, done.fail);
+	});
+	it('zips up files and subfolders into a temporary path and clean up', function (done) {
+		var original = path.join(workingdir, 'original');
+		shell.mkdir(original);
+		fs.writeFileSync(path.join(original, 'root.txt'), 'text1', 'utf8');
+		shell.mkdir(path.join(original, 'subdir'));
+		fs.writeFileSync(path.join(original, 'subdir', 'sub.txt'), 'text2', 'utf8');
+
+		underTest(original, true).then(function (argpath) {
+			var unpacked = path.join(workingdir, 'unpacked');
+
+			zipfile = argpath;
+			shell.mkdir(unpacked);
+			shell.cd(unpacked);
+			if (shell.exec('unzip ' + argpath).code !== 0) {
+				done.fail('invalid archive');
+			}
+
 			expect(!shell.test('-e', path)).toBeTruthy();
 			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');

@@ -125,7 +125,7 @@ module.exports = function update(options, optionalLogger) {
 		}
 	}).then(function (dir) {
 		logger.logStage('zipping package');
-		return zipdir(dir);
+		return zipdir(dir, true);
 	}).then(readFileAndDeleteZip)
 		.then(function (fileContents) {
 			logger.logStage('updating Lambda');
