@@ -61,6 +61,17 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
         if (methodConfig.error && methodConfig.error.defaultCode && !validHttpCode(methodConfig.error.defaultCode)) {
           throw routeMessage + 'error defaultCode ' + methodConfig.error.defaultCode + ' is no valid http code';
         }
+        if (methodConfig.error && methodConfig.error.additionalErrors) {
+          if (!Array.isArray(methodConfig.error.additionalErrors)) {
+            throw routeMessage + 'error additionalErrors is not an array';
+          }
+          methodConfig.error.additionalErrors.forEach(function (additionalError) {
+            if (!additionalError.code || !additionalError.pattern || !additionalError.template) {
+              throw routeMessage + 'error additionalError ' +
+              JSON.stringify(additionalError) + ' must have code, pattern & template';
+            }
+          });
+        }
         if (methodConfig.customAuthorizer && (!apiConfig.authorizers || !apiConfig.authorizers[methodConfig.customAuthorizer])) {
           throw routeMessage + 'requests an undefined custom authorizer ' + methodConfig.customAuthorizer;
         }
