@@ -49,8 +49,7 @@ module.exports = function update(options, optionalLogger) {
 					return Promise.reject('cannot load api config from ' + apiModulePath);
 				}
 				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
-				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger,
-					options['cache-api-config'])
+				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
 					.then(function () {
 						if (apiModule.postDeploy) {
 							return apiModule.postDeploy(
@@ -81,35 +80,34 @@ module.exports = function update(options, optionalLogger) {
 		options.source = shell.pwd();
 	}
 	if (options.source === os.tmpdir()) {
-		return Promise.reject(
-			'Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
 	}
 	if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
 		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 	}
 
+
 	logger.logStage('loading Lambda config');
-	return loadConfig(options, { lambda: { name: true, region: true } }).then(function (config) {
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = promiseWrap(new aws.Lambda({ region: lambdaConfig.region }),
-			{ log: logger.logApiCall, logName: 'lambda' });
+		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
-			promiseWrap(
-				new aws.APIGateway({ region: lambdaConfig.region }),
-				{ log: logger.logApiCall, logName: 'apigateway' }
-			),
-			function () {
-				logger.logStage('rate-limited by AWS, waiting before retry');
-			}
+				promiseWrap(
+					new aws.APIGateway({region: lambdaConfig.region}),
+					{log: logger.logApiCall, logName: 'apigateway'}
+				),
+				function () {
+					logger.logStage('rate-limited by AWS, waiting before retry');
+				}
 		);
 	}).then(function () {
-		return lambda.getFunctionConfigurationPromise({ FunctionName: lambdaConfig.name });
+		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
 	}).then(function (result) {
 		functionConfig = result;
 	}).then(function () {
 		if (apiConfig) {
-			return apiGateway.getRestApiPromise({ restApiId: apiConfig.id });
+			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
 		}
 	}).then(function () {
 		return collectFiles(options.source, options['use-local-dependencies'], logger);
@@ -127,21 +125,20 @@ module.exports = function update(options, optionalLogger) {
 		logger.logStage('zipping package');
 		return zipdir(dir, true);
 	}).then(readFileAndDeleteZip)
-		.then(function (fileContents) {
-			logger.logStage('updating Lambda');
-			return lambda.updateFunctionCodePromise(
-				{ FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true });
-		}).then(function (result) {
-			updateResult = result;
-			return result;
-		}).then(function (result) {
-			if (options.version) {
-				logger.logStage('setting version alias');
-				return markAlias(result.FunctionName, lambda, result.Version, options.version);
-			}
-		}).then(updateWebApi).then(function () {
-			return updateResult;
-		});
+	.then(function (fileContents) {
+		logger.logStage('updating Lambda');
+		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
+	}).then(function (result) {
+		updateResult = result;
+		return result;
+	}).then(function (result) {
+		if (options.version) {
+			logger.logStage('setting version alias');
+			return markAlias(result.FunctionName, lambda, result.Version, options.version);
+		}
+	}).then(updateWebApi).then(function () {
+		return updateResult;
+	});
 };
 module.exports.doc = {
 	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',
@@ -179,7 +176,7 @@ module.exports.doc = {
 			argument: 'cache-api-config',
 			optional: true,
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
-			'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
 		}
 	]
 };

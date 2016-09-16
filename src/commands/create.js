@@ -24,8 +24,8 @@ module.exports = function create(options, optionalLogger) {
 	var logger = optionalLogger || new NullLogger(),
 		source = (options && options.source) || shell.pwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = promiseWrap(new aws.IAM(), { log: logger.logApiCall, logName: 'iam' }),
-		lambda = promiseWrap(new aws.Lambda({ region: options.region }), { log: logger.logApiCall, logName: 'lambda' }),
+		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+		lambda = promiseWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		roleMetadata,
 		policyFiles = function () {
 			var files = shell.ls('-R', options.policies);
@@ -132,25 +132,25 @@ module.exports = function create(options, optionalLogger) {
 		markAliases = function (lambdaData) {
 			logger.logStage('creating version alias');
 			return markAlias(lambdaData.FunctionName, lambda, '$LATEST', 'latest')
-				.then(function () {
-					if (options.version) {
-						return markAlias(lambdaData.FunctionName, lambda, lambdaData.Version, options.version);
-					}
-				}).then(function () {
-					return lambdaData;
-				});
+			.then(function () {
+				if (options.version) {
+					return markAlias(lambdaData.FunctionName, lambda, lambdaData.Version, options.version);
+				}
+			}).then(function () {
+				return lambdaData;
+			});
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			var apiModule, apiConfig, apiModulePath,
 				alias = options.version || 'latest',
 				apiGateway = retriableWrap(promiseWrap(
-					new aws.APIGateway({ region: options.region }),
-					{ log: logger.logApiCall, logName: 'apigateway' }
-					),
-					function () {
-						logger.logStage('rate-limited by AWS, waiting before retry');
-					}
-				);
+									new aws.APIGateway({region: options.region}),
+									{log: logger.logApiCall, logName: 'apigateway'}
+								),
+								function () {
+									logger.logStage('rate-limited by AWS, waiting before retry');
+								}
+							);
 			logger.logStage('creating REST API');
 			try {
 				apiModulePath = path.join(packageDir, options['api-module']);
@@ -163,8 +163,7 @@ module.exports = function create(options, optionalLogger) {
 			}
 
 			if (!apiConfig) {
-				return Promise.reject(
-					'No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
+				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
 			}
 			return apiGateway.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
@@ -175,8 +174,7 @@ module.exports = function create(options, optionalLogger) {
 					module: options['api-module'],
 					url: apiGWUrl(result.id, options.region, alias)
 				};
-				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger,
-					options['cache-api-config']);
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
 			}).then(function () {
 				if (apiModule.postDeploy) {
 					return apiModule.postDeploy(
@@ -212,7 +210,7 @@ module.exports = function create(options, optionalLogger) {
 			};
 			logger.logStage('saving configuration');
 			if (lambdaMetaData.api) {
-				config.api = { id: lambdaMetaData.api.id, module: lambdaMetaData.api.module };
+				config.api =  { id: lambdaMetaData.api.id, module: lambdaMetaData.api.module };
 			}
 			return fs.writeFileAsync(
 				configFile,
@@ -231,14 +229,14 @@ module.exports = function create(options, optionalLogger) {
 				}
 			};
 			if (lambdaMetaData.api) {
-				config.api = lambdaMetaData.api;
+				config.api =  lambdaMetaData.api;
 			}
 			return config;
 		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
-				return iam.getRolePromise({ RoleName: options.role });
+				return iam.getRolePromise({RoleName: options.role});
 			} else {
 				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 					.then(function (lambdaRolePolicy) {
@@ -308,7 +306,7 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options['allow-recursion']) {
 			return iam.putRolePolicyPromise({
-				RoleName: roleMetadata.Role.RoleName,
+				RoleName:  roleMetadata.Role.RoleName,
 				PolicyName: 'recursive-execution',
 				PolicyDocument: recursivePolicy(functionName)
 			});
@@ -319,14 +317,14 @@ module.exports = function create(options, optionalLogger) {
 		shell.rm('-rf', packageArchive); // remove zip
 		return createLambda(functionName, functionDesc, fileContents, roleMetadata.Role.Arn);
 	}).then(markAliases)
-		.then(function (lambdaMetadata) {
-			if (options['api-module']) {
-				return createWebApi(lambdaMetadata, packageFileDir);
-			} else {
-				return lambdaMetadata;
-			}
-		})
-		.then(saveConfig).then(formatResult);
+	.then(function (lambdaMetadata) {
+		if (options['api-module']) {
+			return createWebApi(lambdaMetadata, packageFileDir);
+		} else {
+			return lambdaMetadata;
+		}
+	})
+	.then(saveConfig).then(formatResult);
 };
 
 module.exports.doc = {
@@ -348,8 +346,8 @@ module.exports.doc = {
 			argument: 'api-module',
 			optional: true,
 			description: 'The main module to use when creating Web APIs. \n' +
-			'If you provide this parameter, the handler option is ignored.\n' +
-			'This should be a module created using the Claudia API Builder.',
+				'If you provide this parameter, the handler option is ignored.\n' +
+				'This should be a module created using the Claudia API Builder.',
 			example: 'if the api is defined in web.js, this would be web'
 		},
 		{
@@ -381,7 +379,7 @@ module.exports.doc = {
 			argument: 'policies',
 			optional: true,
 			description: 'A directory or file pattern for additional IAM policies\n' +
-			'which will automatically be included into the security role for the function',
+				'which will automatically be included into the security role for the function',
 			example: 'policies/*.xml'
 		},
 		{
@@ -393,7 +391,7 @@ module.exports.doc = {
 			argument: 'role',
 			optional: true,
 			description: 'The name of an existing role to assign to the function. \n' +
-			'If not supplied, Claudia will create a new role'
+				'If not supplied, Claudia will create a new role'
 		},
 		{
 			argument: 'runtime',
@@ -433,7 +431,7 @@ module.exports.doc = {
 			argument: 'cache-api-config',
 			optional: true,
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
-			'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
 		}
 	]
 };
