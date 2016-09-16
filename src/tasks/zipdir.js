@@ -4,7 +4,7 @@ var Promise = require('bluebird'),
 	tmppath = require('../util/tmppath'),
 	archiver = require('archiver'),
 	fs = require('fs');
-module.exports = function zipdir(path) {
+module.exports = function zipdir(path, clean) {
 	'use strict';
 	var targetFile = tmppath('.zip');
 	if (!shell.test('-e', path)) {
