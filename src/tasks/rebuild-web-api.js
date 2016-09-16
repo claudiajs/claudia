@@ -428,7 +428,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		readTemplates = function () {
 			return fs.readFileAsync(templateFile('apigw-params.txt'), 'utf8')
 				.then(function (fileContents) {
-					inputTemplate = fileContents;
+								inputTemplate = fileContents;
 				});
 		},
 		pathSort = function (resA, resB) {
@@ -441,18 +441,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		removeExistingResources = function () {
 			return getExistingResources()
-				.then(function (resources) {
-					existingResources = resources.items;
-					existingResources.sort(pathSort);
-					return existingResources;
-				}).then(findRoot)
-				.then(dropSubresources);
+											.then(function (resources) {
+															existingResources = resources.items;
+															existingResources.sort(pathSort);
+															return existingResources;
+											}).then(findRoot)
+											.then(dropSubresources);
 		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
-				.then(function () {
-					return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
-				});
+											.then(function () {
+															return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
+											});
 		},
 		deployApi = function () {
 			var stageVars = {
@@ -499,8 +499,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 
 		};
 	return getOwnerId(logger).then(function (accountOwnerId) {
-		ownerId = accountOwnerId;
-	})
+									ownerId = accountOwnerId;
+								})
 		.then(getExistingConfigHash)
 		.then(function (existingHash) {
 			if (existingHash && existingHash === configHash) {
