@@ -295,10 +295,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 				if (additionalErrors()) {
 					additionalErrors().forEach(function (additionalError) {
+						var additionalErrorConfig = additionalError.toConfig();
 						results.push({
-							code: String(additionalError.code),
-							pattern: additionalError.pattern,
-							template: additionalError.template,
+							code: String(additionalErrorConfig.code),
+							pattern: additionalErrorConfig.pattern,
+							template: additionalErrorConfig.template,
 							headers: headers('error')
 						});
 					});
