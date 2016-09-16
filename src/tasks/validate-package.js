@@ -1,8 +1,7 @@
 /*global module, require, console */
 var path = require('path'),
 	validAuthType = require('../util/valid-auth-type'),
-	validCredentials = require('../util/valid-credentials'),
-	validHttpCode = require('../util/valid-http-code');
+	validCredentials = require('../util/valid-credentials');
 module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 	'use strict';
 	var handlerComponents = functionHandler && functionHandler.split('.'),
@@ -64,7 +63,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 							throw routeMessage + 'error additionalError ' +
 							JSON.stringify(additionalError) + ' must be an Error/function';
 						}
-						const additionalErrorConfig = additionalError.toConfig();
+						var additionalErrorConfig = additionalError.toConfig();
 						if (!additionalErrorConfig.code || !additionalErrorConfig.pattern || !additionalErrorConfig.template) {
 							throw routeMessage + 'error additionalErrorConfig ' +
 							JSON.stringify(additionalErrorConfig) + ' must have code, pattern & template';
