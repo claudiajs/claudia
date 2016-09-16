@@ -55,6 +55,7 @@ describe('zipdir', function () {
 				done.fail('invalid archive');
 			}
 
+			expect(!shell.test('-e', path)).toBeTruthy();
 			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
