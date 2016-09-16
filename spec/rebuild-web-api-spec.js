@@ -10,7 +10,8 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	ArrayLogger = require('../src/util/array-logger'),
-	awsRegion = 'us-east-1';
+	awsRegion = 'us-east-1',
+	ApiErrors = require('claudia-api-errors');
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
@@ -663,7 +664,14 @@ describe('rebuildWebApi', function () {
 	describe('custom headers', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/headers/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({
+				name: testRunName,
+				version: 'original',
+				role: this.genericRole,
+				region: awsRegion,
+				source: workingdir,
+				handler: 'main.handler'
+			}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiAsync({
@@ -675,69 +683,141 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('when headers are enumerated as an array, uses ApiResponse templates from headers', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': { success: { headers: ['name', 'surname']}}}}}, awsRegion)
-			.then(function () {
-				return invoke('original/echo', {
-					headers: {'content-type': 'application/json'},
-					body: JSON.stringify({response: {a: 'b' }, headers: {name: 'tom', surname: 'bond'}}),
-					method: 'POST'
-				});
-			}).then(function (response) {
+			underTest(newObjects.lambdaFunction, 'original', apiId,
+				{ version: 2, routes: { 'echo': { 'POST': { success: { headers: ['name', 'surname'] } } } } }, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ response: { a: 'b' }, headers: { name: 'tom', surname: 'bond' } }),
+						method: 'POST'
+					});
+				}).then(function (response) {
 				expect(response.headers.name).toEqual('tom');
 				expect(response.headers.surname).toEqual('bond');
-				expect(JSON.parse(response.body)).toEqual({a: 'b'});
+				expect(JSON.parse(response.body)).toEqual({ a: 'b' });
 			}).then(done, function (e) {
 				console.log(e);
 				done.fail();
 			});
 		});
 		it('when headers are specified as an object, maps the values directly', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': { success: { headers: {name: 'Mike', surname: 'Smith'}}}}}}, awsRegion)
-			.then(function () {
-				return invoke('original/echo', {
-					headers: {'content-type': 'application/json'},
-					body: JSON.stringify({response: {a: 'b' }, headers: {name: 'tom', surname: 'bond'}}),
-					method: 'POST'
-				});
-			}).then(function (response) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {
+				corsHandlers: false,
+				version: 2,
+				routes: { 'echo': { 'POST': { success: { headers: { name: 'Mike', surname: 'Smith' } } } } }
+			}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ response: { a: 'b' }, headers: { name: 'tom', surname: 'bond' } }),
+						method: 'POST'
+					});
+				}).then(function (response) {
 				expect(response.headers.name).toEqual('Mike');
 				expect(response.headers.surname).toEqual('Smith');
-				expect(JSON.parse(response.body)).toEqual({response: {a: 'b' }, headers: {name: 'tom', surname: 'bond'}});
+				expect(JSON.parse(response.body)).toEqual({ response: { a: 'b' }, headers: { name: 'tom', surname: 'bond' } });
 			}).then(done, function (e) {
 				console.log(e);
 				done.fail();
 			});
 		});
 		it('can override standard headers', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {'echo': { 'POST': { success: { headers: ['Content-Type', 'Access-Control-Allow-Origin']}}}}}, awsRegion)
-			.then(function () {
-				return invoke('original/echo', {
-					headers: {'content-type': 'application/json'},
-					body: JSON.stringify({response: {a: 'b' }, headers: {'Content-Type': 'text/markdown', 'Access-Control-Allow-Origin': 'customCors'}}),
-					method: 'POST'
-				});
-			}).then(function (response) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {
+				version: 2,
+				routes: { 'echo': { 'POST': { success: { headers: ['Content-Type', 'Access-Control-Allow-Origin'] } } } }
+			}, awsRegion)
+				.then(function () {
+					return invoke('original/echo', {
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({
+							response: { a: 'b' },
+							headers: { 'Content-Type': 'text/markdown', 'Access-Control-Allow-Origin': 'customCors' }
+						}),
+						method: 'POST'
+					});
+				}).then(function (response) {
 				expect(response.headers['content-type']).toEqual('text/markdown');
 				expect(response.headers['access-control-allow-origin']).toEqual('customCors');
-				expect(JSON.parse(response.body)).toEqual({a: 'b'});
+				expect(JSON.parse(response.body)).toEqual({ a: 'b' });
 			}).then(done, function (e) {
 				console.log(e);
 				done.fail();
 			});
 		});
 		it('maps error header values directly', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': { error: { headers: {name: 'Mike', surname: 'Smith'}}}}}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {
+				corsHandlers: false,
+				version: 2,
+				routes: { 'echo': { 'POST': { error: { headers: { name: 'Mike', surname: 'Smith' } } } } }
+			}, awsRegion)
+				.then(function () {
+					return invoke('original/echo?fail=yes', {
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ response: { a: 'b' }, headers: { name: 'tom', surname: 'bond' } }),
+						method: 'POST',
+						resolveErrors: true
+					});
+				}).then(function (response) {
+				expect(response.headers.name).toEqual('Mike');
+				expect(response.headers.surname).toEqual('Smith');
+				expect(JSON.parse(response.body)).toEqual({ errorMessage: 'failing' });
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
+		});
+	});
+	describe('additional errors', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/additional-errors/*', workingdir);
+			shell.exec('npm install --production');
+			create({
+				name: testRunName,
+				version: 'original',
+				role: this.genericRole,
+				region: awsRegion,
+				source: workingdir,
+				handler: 'main.handler'
+			}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		it('fail response with bad request 400', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': { error: { additionalErrors: [ApiErrors.BadRequest]}}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/echo?fail=yes', {
 					headers: {'content-type': 'application/json'},
-					body: JSON.stringify({response: {a: 'b' }, headers: {name: 'tom', surname: 'bond'}}),
+					body: JSON.stringify({}),
 					method: 'POST',
 					resolveErrors: true
 				});
 			}).then(function (response) {
-				expect(response.headers.name).toEqual('Mike');
-				expect(response.headers.surname).toEqual('Smith');
-				expect(JSON.parse(response.body)).toEqual({errorMessage: 'failing'});
+				expect(response.statusCode).toEqual(400); // BadRequest
+				expect(JSON.parse(response.body)).toEqual({message: 'this call failed'});
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
+		});
+		it('success response with success 200', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': { error: { additionalErrors: [ApiErrors.BadRequest]}}}}}, awsRegion)
+			.then(function () {
+				return invoke('original/echo', {
+					headers: {'content-type': 'application/json'},
+					body: JSON.stringify({response: { a: 'b' }}),
+					method: 'POST',
+					resolveErrors: true
+				});
+			}).then(function (response) {
+				expect(response.statusCode).toEqual(200); // Success
+				expect(JSON.parse(response.body)).toEqual({ a: 'b' });
 			}).then(done, function (e) {
 				console.log(e);
 				done.fail();
