@@ -18,15 +18,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
-																					promiseWrap(
-																									new aws.APIGateway({region: awsRegion}),
-																									{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
-																					),
-																					function () {
-																									logger.logApiCall('rate-limited by AWS, waiting before retry');
-																					},
-																					/Async$/
-																					),
+			promiseWrap(
+				new aws.APIGateway({ region: awsRegion }),
+				{ log: logger.logApiCall, logName: 'apigateway', suffix: 'Async' }
+			),
+			function () {
+				logger.logApiCall('rate-limited by AWS, waiting before retry');
+			},
+			/Async$/
+		),
 		upgradeConfig = function (config) {
 			var result;
 			if (config.version >= 2) {
