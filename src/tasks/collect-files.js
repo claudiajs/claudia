@@ -69,6 +69,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 					shell.cd(cwd);
 					return Promise.reject('npm install --production failed. Check ' + npmlog);
 				}
+				shell.rm('-rf', npmlog); // remove empty log file
 				shell.cd(cwd);
 			}
 			return Promise.resolve(targetDir);
