@@ -17,6 +17,7 @@ module.exports = function zipdir(path) {
 			zipStream = fs.createWriteStream(targetFile);
 		zipStream.on('close', function () {
 			resolve(targetFile);
+			shell.rm('-rf', path);
 		});
 		archive.pipe(zipStream);
 		archive.bulk([{
@@ -27,6 +28,7 @@ module.exports = function zipdir(path) {
 		}]);
 		archive.on('error', function (e) {
 			reject(e);
+			shell.rm('-rf', path);
 		});
 		archive.finalize();
 	});
