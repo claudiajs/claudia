@@ -30,7 +30,6 @@ module.exports = function zipdir(path, clean) {
 		}]);
 		archive.on('error', function (e) {
 			reject(e);
-			shell.rm('-rf', path);
 		});
 		archive.finalize();
 	});
