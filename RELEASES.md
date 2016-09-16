@@ -1,5 +1,9 @@
 # Release history
 
+### 1.9.0, 17 September 2016
+
+- support for custom response errors, allowing you to configure multiple http errors with different status codes 
+
 ### 1.8.0, 7 September 2016
 
 - support for `--no-optional-dependencies`, allowing you to exclude things like aws-sdk and imagemagick from the package uploaded to Lambda
