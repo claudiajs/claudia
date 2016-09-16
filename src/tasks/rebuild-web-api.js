@@ -265,9 +265,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
         authorizerId = function () {
           return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
         },
-        additionalCodes = function () {
+        additionalErrors = function () {
           return methodOptions && methodOptions.error && Array.isArray(
-              methodOptions.error.additionalCodes) && methodOptions.error.additionalCodes;
+              methodOptions.error.additionalErrors) && methodOptions.error.additionalErrors;
         };
       return apiGateway.putMethodAsync({
         authorizationType: authorizationType(),
@@ -296,12 +296,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
             headers: headers('error')
           });
         }
-        if (additionalCodes()) {
-          additionalCodes().forEach(function (additionalCode) {
+        if (additionalErrors()) {
+          additionalErrors().forEach(function (additionalError) {
             results.push({
-              code: String(additionalCode.code),
-              pattern: additionalCode.pattern,
-              template: additionalCode.template,
+              code: String(additionalError.code),
+              pattern: additionalError.pattern,
+              template: additionalError.template,
               headers: headers('error')
             });
           });
