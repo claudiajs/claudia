@@ -47,9 +47,6 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 						throw routeMessage + 'requests custom headers but does not enumerate any headers';
 					}
 				}
-				if (methodConfig.success && !validHttpCode(methodConfig.success)) {
-					throw routeMessage + 'success code ' + methodConfig.success + ' is no valid http code';
-				}
 				if (methodConfig.error && methodConfig.error.headers) {
 					if (Object.keys(methodConfig.error.headers).length === 0) {
 						throw routeMessage + 'error template requests custom headers but does not enumerate any headers';
