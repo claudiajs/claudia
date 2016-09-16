@@ -115,9 +115,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					if (methodOptions.error && methodOptions.error.code && validHttpCode(methodOptions.error.code)) {
 						return String(methodOptions.error.code);
 					}
-					if (methodOptions.defaultCode && validHttpCode(methodOptions.defaultCode)) {
-						return methodOptions.defaultCode;
-					}
 					return '500';
 				},
 				successCode = function () {

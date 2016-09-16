@@ -55,9 +55,6 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 						throw routeMessage + 'error template requests custom headers but does not provide defaults';
 					}
 				}
-				if (methodConfig.error && methodConfig.error.defaultCode && !validHttpCode(methodConfig.error.defaultCode)) {
-					throw routeMessage + 'error defaultCode ' + methodConfig.error.defaultCode + ' is no valid http code';
-				}
 				if (methodConfig.error && methodConfig.error.additionalErrors) {
 					if (!Array.isArray(methodConfig.error.additionalErrors)) {
 						throw routeMessage + 'error additionalErrors is not an array';
