@@ -59,14 +59,12 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 						throw routeMessage + 'error additionalErrors is not an array';
 					}
 					methodConfig.error.additionalErrors.forEach(function (additionalError) {
+						var additionalErrorConfig = additionalError && typeof additionalError === 'function' && additionalError.toConfig();
 						if (typeof additionalError !== 'function') {
-							throw routeMessage + 'error additionalError ' +
-							JSON.stringify(additionalError) + ' must be an Error/function';
+							throw routeMessage + 'error additionalError must be an Error/function';
 						}
-						var additionalErrorConfig = additionalError.toConfig();
 						if (!additionalErrorConfig.code || !additionalErrorConfig.pattern || !additionalErrorConfig.template) {
-							throw routeMessage + 'error additionalErrorConfig ' +
-							JSON.stringify(additionalErrorConfig) + ' must have code, pattern & template';
+							throw routeMessage + 'error additionalErrorConfig must have code, pattern & template';
 						}
 					});
 				}
