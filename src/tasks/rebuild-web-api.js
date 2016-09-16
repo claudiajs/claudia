@@ -18,15 +18,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
-			promiseWrap(
-				new aws.APIGateway({ region: awsRegion }),
-				{ log: logger.logApiCall, logName: 'apigateway', suffix: 'Async' }
-			),
-			function () {
-				logger.logApiCall('rate-limited by AWS, waiting before retry');
-			},
-			/Async$/
-		),
+						promiseWrap(
+							new aws.APIGateway({region: awsRegion}),
+							{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
+						),
+						function () {
+							logger.logApiCall('rate-limited by AWS, waiting before retry');
+						},
+						/Async$/
+						),
 		upgradeConfig = function (config) {
 			var result;
 			if (config.version >= 2) {
@@ -335,10 +335,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			}).then(function () {
 				var responseParams = {
-					'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
-					'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
-					'method.response.header.Access-Control-Allow-Origin': '\'*\''
-				};
+						'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
+						'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
+						'method.response.header.Access-Control-Allow-Origin': '\'*\''
+					};
 				if (apiConfig.corsHandlers) {
 					responseParams['method.response.header.Access-Control-Allow-Origin'] = 'integration.response.body';
 				}
@@ -360,16 +360,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return Promise.resolve(knownIds[path]);
 			} else {
 				return findResourceByPath(pathComponents.parentPath)
-					.then(function (parentId) {
-						return apiGateway.createResourceAsync({
-							restApiId: restApiId,
-							parentId: parentId,
-							pathPart: pathComponents.pathPart
-						});
-					}).then(function (resource) {
-						knownIds[path] = resource.id;
-						return resource.id;
+				.then(function (parentId) {
+					return apiGateway.createResourceAsync({
+						restApiId: restApiId,
+						parentId: parentId,
+						pathPart: pathComponents.pathPart
 					});
+				}).then(function (resource) {
+					knownIds[path] = resource.id;
+					return resource.id;
+				});
 			}
 		},
 		configurePath = function (path) {
@@ -427,9 +427,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		readTemplates = function () {
 			return fs.readFileAsync(templateFile('apigw-params.txt'), 'utf8')
-				.then(function (fileContents) {
-								inputTemplate = fileContents;
-				});
+			.then(function (fileContents) {
+				inputTemplate = fileContents;
+			});
 		},
 		pathSort = function (resA, resB) {
 			if (resA.path > resB.path) {
@@ -441,18 +441,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		removeExistingResources = function () {
 			return getExistingResources()
-											.then(function (resources) {
-															existingResources = resources.items;
-															existingResources.sort(pathSort);
-															return existingResources;
-											}).then(findRoot)
-											.then(dropSubresources);
+			.then(function (resources) {
+				existingResources = resources.items;
+				existingResources.sort(pathSort);
+				return existingResources;
+			}).then(findRoot)
+			.then(dropSubresources);
 		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
-											.then(function () {
-															return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
-											});
+			.then(function () {
+				return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
+			});
 		},
 		deployApi = function () {
 			var stageVars = {
@@ -499,8 +499,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 
 		};
 	return getOwnerId(logger).then(function (accountOwnerId) {
-									ownerId = accountOwnerId;
-								})
+			ownerId = accountOwnerId;
+		})
 		.then(getExistingConfigHash)
 		.then(function (existingHash) {
 			if (existingHash && existingHash === configHash) {
