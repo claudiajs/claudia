@@ -290,7 +290,7 @@ module.exports = function create(options, optionalLogger) {
 		}
 	}).then(function (dir) {
 		logger.logStage('zipping package');
-		return zipdir(dir);
+		return zipdir(dir, true);
 	}).then(function (zipFile) {
 		packageArchive = zipFile;
 	}).then(function () {
@@ -314,6 +314,7 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		return fs.readFileAsync(packageArchive);
 	}).then(function (fileContents) {
+		shell.rm('-rf', packageArchive); // remove zip
 		return createLambda(functionName, functionDesc, fileContents, roleMetadata.Role.Arn);
 	}).then(markAliases)
 	.then(function (lambdaMetadata) {

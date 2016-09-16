@@ -4,7 +4,7 @@ var Promise = require('bluebird'),
 	tmppath = require('../util/tmppath'),
 	archiver = require('archiver'),
 	fs = require('fs');
-module.exports = function zipdir(path) {
+module.exports = function zipdir(path, clean) {
 	'use strict';
 	var targetFile = tmppath('.zip');
 	if (!shell.test('-e', path)) {
@@ -17,6 +17,9 @@ module.exports = function zipdir(path) {
 			zipStream = fs.createWriteStream(targetFile);
 		zipStream.on('close', function () {
 			resolve(targetFile);
+			if (clean) {
+				shell.rm('-rf', path);
+			}
 		});
 		archive.pipe(zipStream);
 		archive.bulk([{

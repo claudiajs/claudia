@@ -6,7 +6,19 @@ var Promise = require('bluebird'),
 	os = require('os'),
 	path = require('path'),
 	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
-	readFile = Promise.promisify(fs.readFile),
+	readFileAndDeleteZip = function (path) {
+		'use strict';
+		return new Promise(function (resolve, reject) {
+			fs.readFile(path, function (error, data) {
+				shell.rm('-rf', path); // remove zip
+				if (error) {
+					reject(error);
+					return;
+				}
+				resolve(data);
+			});
+		});
+	},
 	aws = require('aws-sdk'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
@@ -111,8 +123,8 @@ module.exports = function update(options, optionalLogger) {
 		}
 	}).then(function (dir) {
 		logger.logStage('zipping package');
-		return zipdir(dir);
-	}).then(readFile)
+		return zipdir(dir, true);
+	}).then(readFileAndDeleteZip)
 	.then(function (fileContents) {
 		logger.logStage('updating Lambda');
 		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
