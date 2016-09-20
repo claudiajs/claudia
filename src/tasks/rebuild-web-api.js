@@ -186,8 +186,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return '$input.' + extractor + '(\'$\')';
 					}
 				},
-				errorTemplate = function () {
-					var contentType = errorContentType();
+				errorTemplate = function (contentType) {
+					var contentType = contentType || errorContentType();
 					if (!contentType || contentType === 'application/json') {
 						return '';
 					}
@@ -298,7 +298,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						results.push({
 							code: String(additionalError.code),
 							pattern: additionalError.pattern,
-							template: additionalError.template,
+							template: additionalError.template || errorTemplate(additionalError.contentType),
 							contentType: additionalError.contentType || errorContentType(),
 							headers: additionalError.headers || headers('error')
 						});
