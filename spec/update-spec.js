@@ -141,7 +141,7 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 		it('removes optional dependencies after validation if requested', function (done) {
-			shell.cp('-rf', 'spec/test-projects/optional-dependencies/*', workingdir);
+			shell.cp('-rf', path.join(__dirname, '/test-projects/optional-dependencies/*'), workingdir);
 			underTest({source: workingdir, 'no-optional-dependencies': true}).then(function () {
 				return lambda.invokePromise({FunctionName: testRunName});
 			}).then(function (lambdaResult) {
@@ -149,8 +149,16 @@ describe('update', function () {
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
 			}).then(done, done.fail);
 		});
-
-
+		it('rewires relative dependencies to reference original location after copy', function (done) {
+			shell.cp('-r', path.join(__dirname, 'test-projects/relative-dependencies/*'), workingdir);
+			shell.cp('-r', path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
+			underTest({source: path.join(workingdir, 'lambda')}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello relative"');
+			}).then(done, done.fail);
+		});
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});

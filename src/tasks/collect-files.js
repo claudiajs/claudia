@@ -5,6 +5,7 @@ var tmppath = require('../util/tmppath'),
 	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path'),
+	localizeDependencies = require('./localize-dependencies'),
 	NullLogger = require('../util/null-logger');
 
 module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
@@ -73,6 +74,11 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			}
 			return Promise.resolve(targetDir);
 		},
+		rewireRelativeDependencies = function (targetDir) {
+			return localizeDependencies(targetDir, sourcePath).then(function () {
+				return targetDir;
+			});
+		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
@@ -80,5 +86,6 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 	}
 	return readjson(path.join(sourcePath, 'package.json')).
 		then(copyFiles).
+		then(rewireRelativeDependencies).
 		then(installDependencies);
 };

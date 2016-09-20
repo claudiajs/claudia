@@ -495,6 +495,21 @@ describe('create', function () {
 				expect(lambdaResult.Payload).toEqual('"hello local"');
 			}).then(done, done.fail);
 		});
+		it('rewires relative local dependencies to reference original location after copy', function (done) {
+			shell.cp('-r', path.join(__dirname, 'test-projects',  'relative-dependencies/*'), workingdir);
+			config.source = path.join(workingdir, 'lambda');
+			underTest(config).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+				return result;
+			}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello relative"');
+			}).then(done, done.fail);
+		});
 		it('removes optional dependencies after validation if requested', function (done) {
 			config['no-optional-dependencies'] = true;
 			createFromDir('optional-dependencies').then(function () {
