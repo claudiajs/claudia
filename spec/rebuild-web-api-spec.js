@@ -768,6 +768,7 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('additional errors', function () {
+		// TODO test new errors
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/additional-errors/*', workingdir);
 			shell.exec('npm install --production');
@@ -790,8 +791,18 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('fail response with bad request 400', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': { error: { additionalErrors: [ApiErrors.BadRequest]}}}}}, awsRegion)
-			.then(function () {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {
+				corsHandlers: false,
+				version: 2,
+				routes: {
+					'echo': {
+						'POST': {
+							error: { additionalErrors: [ApiErrors.BAD_REQUEST] }
+						}
+					}
+				}
+			}, awsRegion)
+				.then(function () {
 				return invoke('original/echo?fail=yes', {
 					headers: {'content-type': 'application/json'},
 					body: JSON.stringify({}),
@@ -800,6 +811,7 @@ describe('rebuildWebApi', function () {
 				});
 			}).then(function (response) {
 				expect(response.statusCode).toEqual(400); // BadRequest
+				expect(response.headers['content-type']).toEqual('application/json');
 				expect(JSON.parse(response.body)).toEqual({message: 'this call failed'});
 			}).then(done, function (e) {
 				console.log(e);
