@@ -186,8 +186,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return '$input.' + extractor + '(\'$\')';
 					}
 				},
-				errorTemplate = function (contentType) {
-					var contentType = contentType || errorContentType();
+				errorTemplate = function (forContentType) {
+					var contentType = forContentType || errorContentType();
 					if (!contentType || contentType === 'application/json') {
 						return '';
 					}
