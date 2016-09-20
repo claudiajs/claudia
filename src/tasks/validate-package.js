@@ -56,15 +56,19 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 				}
 				if (methodConfig.error && methodConfig.error.additionalErrors) {
 					if (!Array.isArray(methodConfig.error.additionalErrors)) {
-						throw routeMessage + 'error additionalErrors is not an array';
+						throw routeMessage + 'additionalErrors is not an array';
 					}
 					methodConfig.error.additionalErrors.forEach(function (additionalError) {
-						var additionalErrorConfig = additionalError && typeof additionalError === 'function' && additionalError.toConfig();
-						if (typeof additionalError !== 'function') {
-							throw routeMessage + 'error additionalError must be an Error/function';
+						if (!additionalError.code || !additionalError.pattern || !additionalError.template) {
+							throw routeMessage + 'additionalError must have code, pattern & template';
 						}
-						if (!additionalErrorConfig.code || !additionalErrorConfig.pattern || !additionalErrorConfig.template) {
-							throw routeMessage + 'error additionalErrorConfig must have code, pattern & template';
+						if (additionalError.headers) {
+							if (Object.keys(additionalError.headers).length === 0) {
+								throw routeMessage + 'additionalError template requests custom headers but does not enumerate any headers';
+							}
+							if (Array.isArray(additionalError.headers)) {
+								throw routeMessage + 'additionalError template requests custom headers but does not provide defaults';
+							}
 						}
 					});
 				}
