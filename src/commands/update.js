@@ -2,12 +2,11 @@
 var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
-	fs = require('fs'),
 	os = require('os'),
 	path = require('path'),
 	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
-	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
+	lambdaCode = require('../tasks/lambda-code'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
 	retriableWrap = require('../util/retriable-wrap'),
@@ -71,7 +70,8 @@ module.exports = function update(options, optionalLogger) {
 				updateResult.archive = packageArchive;
 			}
 			return updateResult;
-		};
+		},
+		s3Key;
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
@@ -123,12 +123,18 @@ module.exports = function update(options, optionalLogger) {
 		return zipdir(dir);
 	}).then(function (zipFile) {
 		packageArchive = zipFile;
-		return readFile(zipFile);
-	}).then(function (fileContents) {
+		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+	}).then(function (functionCode) {
 		logger.logStage('updating Lambda');
-		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
+		s3Key = functionCode.S3Key;
+		functionCode.FunctionName = lambdaConfig.name;
+		functionCode.Publish = true;
+		return lambda.updateFunctionCodePromise(functionCode);
 	}).then(function (result) {
 		updateResult = result;
+		if (s3Key) {
+			updateResult.s3key = s3Key;
+		}
 		return result;
 	}).then(function (result) {
 		if (options.version) {
@@ -181,6 +187,14 @@ module.exports.doc = {
 			optional: true,
 			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
 				'If not set, the temporary files will be removed after the Lambda function is successfully created'
+		},
+		{
+			argument: 'use-s3-bucket',
+			optional: true,
+			example: 'claudia-uploads',
+			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
+				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
 		}
 	]
 };

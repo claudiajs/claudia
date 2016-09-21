@@ -18,6 +18,7 @@ var Promise = require('bluebird'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
 	os = require('os'),
+	lambdaCode = require('../tasks/lambda-code'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -103,12 +104,12 @@ module.exports = function create(options, optionalLogger) {
 				};
 			});
 		},
-		createLambda = function (functionName, functionDesc, zipFile, roleArn) {
+		createLambda = function (functionName, functionDesc, functionCode, roleArn) {
 			return retry(
 				function () {
 					logger.logStage('creating Lambda');
 					return lambda.createFunctionPromise({
-						Code: { ZipFile: zipFile },
+						Code: functionCode,
 						FunctionName: functionName,
 						Description: functionDesc,
 						MemorySize: options.memory,
@@ -220,6 +221,7 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaMetaData;
 			});
 		},
+		s3Key,
 		formatResult = function (lambdaMetaData) {
 			var config = {
 				lambda: {
@@ -230,6 +232,9 @@ module.exports = function create(options, optionalLogger) {
 			};
 			if (lambdaMetaData.api) {
 				config.api =  lambdaMetaData.api;
+			}
+			if (s3Key) {
+				config.s3key = s3Key;
 			}
 			return config;
 		},
@@ -320,9 +325,10 @@ module.exports = function create(options, optionalLogger) {
 			});
 		}
 	}).then(function () {
-		return fs.readFileAsync(packageArchive);
-	}).then(function (fileContents) {
-		return createLambda(functionName, functionDesc, fileContents, roleMetadata.Role.Arn);
+		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+	}).then(function (functionCode) {
+		s3Key = functionCode.S3Key;
+		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
 	}).then(markAliases)
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
@@ -446,6 +452,14 @@ module.exports.doc = {
 			optional: true,
 			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
 				'If not set, the temporary files will be removed after the Lambda function is successfully created'
+		},
+		{
+			argument: 'use-s3-bucket',
+			optional: true,
+			example: 'claudia-uploads',
+			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
+				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
 		}
 	]
 };

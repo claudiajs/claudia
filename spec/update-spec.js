@@ -166,6 +166,38 @@ describe('update', function () {
 				expect(lambdaResult.Payload).toEqual('"hello relative"');
 			}).then(done, done.fail);
 		});
+
+		it('uses a s3 bucket if provided', function (done) {
+			var s3 = Promise.promisifyAll(new aws.S3()),
+				logger = new ArrayLogger(),
+				bucketName = testRunName + '-bucket',
+				archivePath;
+			s3.createBucketAsync({
+				Bucket: bucketName
+			}).then(function () {
+				newObjects.s3bucket = bucketName;
+			}).then(function () {
+				return underTest({keep: true, 'use-s3-bucket': bucketName, source: workingdir}, logger);
+			}).then(function (result) {
+				var expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObjectAsync({
+					Bucket: bucketName,
+					Key: expectedKey
+				});
+			}).then(function (fileResult) {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(function () {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
+			}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
 				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
