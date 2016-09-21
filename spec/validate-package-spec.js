@@ -115,6 +115,16 @@ describe('validatePackage', function () {
 			}).toThrow('invalid_credentials.js GET /echo credentials have to be either an ARN or a boolean');
 
 		});
+		it('fails when additional errors not an array', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-additional-errors-not-an-array'), 'main.router', 'main');
+			}).toThrow('main.js GET /echo error additionalErrors is not an array');
+		});
+		it('fails when additional errors are not Error/functions', function () {
+			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/api-gw-additional-errors-wrong'), 'main.router', 'main');
+			}).toThrow('main.js GET /echo error additionalError must be an Error/function');
+		});
 
 		it('does not fail when the api is well configured', function () {
 			expect(function () {

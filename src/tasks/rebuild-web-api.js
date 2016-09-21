@@ -14,19 +14,20 @@ var aws = require('aws-sdk'),
 	safeHash = require('../util/safe-hash'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
-module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion, optionalLogger, configCacheStageVar) {
+module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, requestedConfig, awsRegion,
+	optionalLogger, configCacheStageVar) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
-						promiseWrap(
-							new aws.APIGateway({region: awsRegion}),
-							{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
-						),
-						function () {
-							logger.logApiCall('rate-limited by AWS, waiting before retry');
-						},
-						/Async$/
-						),
+			promiseWrap(
+				new aws.APIGateway({ region: awsRegion }),
+				{ log: logger.logApiCall, logName: 'apigateway', suffix: 'Async' }
+			),
+			function () {
+				logger.logApiCall('rate-limited by AWS, waiting before retry');
+			},
+			/Async$/
+		),
 		upgradeConfig = function (config) {
 			var result;
 			if (config.version >= 2) {
@@ -58,7 +59,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return result;
 		},
 		getExistingResources = function () {
-			return apiGateway.getResourcesAsync({restApiId: restApiId, limit: 499});
+			return apiGateway.getResourcesAsync({ restApiId: restApiId, limit: 499 });
 		},
 		findRoot = function () {
 			var rootResource = findByPath(existingResources, '/');
@@ -133,7 +134,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return methodOptions && methodOptions.apiKeyRequired;
 				},
 				authorizationType = function () {
-					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
+					if (methodOptions && methodOptions.authorizationType && validAuthType(
+							methodOptions.authorizationType.toUpperCase())) {
 						return methodOptions.authorizationType.toUpperCase();
 					} else if (methodOptions.customAuthorizer) {
 						return 'CUSTOM';
@@ -184,23 +186,24 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return '$input.' + extractor + '(\'$\')';
 					}
 				},
-				errorTemplate = function () {
-					var contentType = errorContentType();
+				errorTemplate = function (forContentType) {
+					var contentType = forContentType || errorContentType();
 					if (!contentType || contentType === 'application/json') {
 						return '';
 					}
 					return '$input.path(\'$.errorMessage\')';
 				},
 				addCodeMapper = function (response) {
-					var methodResponseParams = { },
-						integrationResponseParams = { },
+					var methodResponseParams = {},
+						integrationResponseParams = {},
 						responseTemplates = {},
 						responseModels = {},
 						contentType = response.contentType || 'application/json',
 						headersInBody = function () {
 							return response.headers && Array.isArray(response.headers);
 						},
-						headerNames = response.headers && (Array.isArray(response.headers) ? response.headers : Object.keys(response.headers));
+						headerNames = response.headers && (Array.isArray(response.headers) ? response.headers : Object.keys(
+								response.headers));
 					if (supportsCors()) {
 						methodResponseParams = {
 							'method.response.header.Access-Control-Allow-Origin': false,
@@ -258,6 +261,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				authorizerId = function () {
 					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
+				},
+				additionalErrors = function () {
+					return methodOptions && methodOptions.error && Array.isArray(
+							methodOptions.error.additionalErrors) && methodOptions.error.additionalErrors;
 				};
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
@@ -269,12 +276,35 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}).then(function () {
 				return putLambdaIntegration(resourceId, methodName, credentials());
 			}).then(function () {
-				var results = [{code: successCode(), pattern: '', contentType: successContentType(), template: successTemplate(headers('success')), headers: headers('success')}];
+				var results = [{
+					code: successCode(),
+					pattern: '',
+					contentType: successContentType(),
+					template: successTemplate(headers('success')),
+					headers: headers('success')
+				}];
 				if (errorCode() !== successCode()) {
 					results[0].pattern = '^$';
-					results.push({code: errorCode(), pattern: '', contentType: errorContentType(), template: errorTemplate(), headers: headers('error')});
+					results.push({
+						code: errorCode(),
+						pattern: '',
+						contentType: errorContentType(),
+						template: errorTemplate(),
+						headers: headers('error')
+					});
 				}
-				return Promise.map(results, addCodeMapper, {concurrency: 1});
+				if (additionalErrors()) {
+					additionalErrors().forEach(function (additionalError) {
+						results.push({
+							code: String(additionalError.code),
+							pattern: additionalError.pattern,
+							template: additionalError.template || errorTemplate(additionalError.contentType),
+							contentType: additionalError.contentType || errorContentType(),
+							headers: additionalError.headers || headers('error')
+						});
+					});
+				}
+				return Promise.map(results, addCodeMapper, { concurrency: 1 });
 			});
 		},
 		createCorsHandler = function (resourceId, allowedMethods) {
@@ -306,10 +336,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			}).then(function () {
 				var responseParams = {
-						'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
-						'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
-						'method.response.header.Access-Control-Allow-Origin': '\'*\''
-					};
+					'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
+					'method.response.header.Access-Control-Allow-Methods': '\'' + allowedMethods.join(',') + ',OPTIONS\'',
+					'method.response.header.Access-Control-Allow-Origin': '\'*\''
+				};
 				if (apiConfig.corsHandlers) {
 					responseParams['method.response.header.Access-Control-Allow-Origin'] = 'integration.response.body';
 				}
@@ -331,16 +361,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return Promise.resolve(knownIds[path]);
 			} else {
 				return findResourceByPath(pathComponents.parentPath)
-				.then(function (parentId) {
-					return apiGateway.createResourceAsync({
-						restApiId: restApiId,
-						parentId: parentId,
-						pathPart: pathComponents.pathPart
+					.then(function (parentId) {
+						return apiGateway.createResourceAsync({
+							restApiId: restApiId,
+							parentId: parentId,
+							pathPart: pathComponents.pathPart
+						});
+					}).then(function (resource) {
+						knownIds[path] = resource.id;
+						return resource.id;
 					});
-				}).then(function (resource) {
-					knownIds[path] = resource.id;
-					return resource.id;
-				});
 			}
 		},
 		configurePath = function (path) {
@@ -352,7 +382,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return findResourceByPath(path).then(function (r) {
 				resourceId = r;
 			}).then(function () {
-				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
+				return Promise.map(supportedMethods, createMethodMapper, { concurrency: 1 });
 			}).then(function () {
 				if (supportsCors()) {
 					return createCorsHandler(resourceId, supportedMethods);
@@ -368,7 +398,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			};
 			if (resource.resourceMethods) {
-				return Promise.map(Object.keys(resource.resourceMethods), dropMethodMapper, {concurrency: 1});
+				return Promise.map(Object.keys(resource.resourceMethods), dropMethodMapper, { concurrency: 1 });
 			} else {
 				return Promise.resolve();
 			}
@@ -398,9 +428,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		readTemplates = function () {
 			return fs.readFileAsync(templateFile('apigw-params.txt'), 'utf8')
-			.then(function (fileContents) {
-				inputTemplate = fileContents;
-			});
+				.then(function (fileContents) {
+					inputTemplate = fileContents;
+				});
 		},
 		pathSort = function (resA, resB) {
 			if (resA.path > resB.path) {
@@ -412,18 +442,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		removeExistingResources = function () {
 			return getExistingResources()
-			.then(function (resources) {
-				existingResources = resources.items;
-				existingResources.sort(pathSort);
-				return existingResources;
-			}).then(findRoot)
-			.then(dropSubresources);
+				.then(function (resources) {
+					existingResources = resources.items;
+					existingResources.sort(pathSort);
+					return existingResources;
+				}).then(findRoot)
+				.then(dropSubresources);
 		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
-			.then(function () {
-				return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
-			});
+				.then(function () {
+					return Promise.map(Object.keys(apiConfig.routes), configurePath, { concurrency: 1 });
+				});
 		},
 		deployApi = function () {
 			var stageVars = {
@@ -441,9 +471,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		configureAuthorizers = function () {
 			if (apiConfig.authorizers && apiConfig.authorizers !== {}) {
-				return registerAuthorizers(apiConfig.authorizers, restApiId, awsRegion, functionVersion, logger).then(function (result) {
-					authorizerIds = result;
-				});
+				return registerAuthorizers(apiConfig.authorizers, restApiId, awsRegion, functionVersion, logger).then(
+					function (result) {
+						authorizerIds = result;
+					});
 			} else {
 				authorizerIds = {};
 			}
@@ -470,8 +501,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 
 		};
 	return getOwnerId(logger).then(function (accountOwnerId) {
-			ownerId = accountOwnerId;
-		})
+		ownerId = accountOwnerId;
+	})
 		.then(getExistingConfigHash)
 		.then(function (existingHash) {
 			if (existingHash && existingHash === configHash) {
