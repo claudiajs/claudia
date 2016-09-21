@@ -69,8 +69,10 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 				if (shell.exec('npm install --production > ' + npmlog + ' 2>&1').code !== 0) {
 					shell.cd(cwd);
 					return Promise.reject('npm install --production failed. Check ' + npmlog);
+				} else {
+					shell.rm(npmlog);
+					shell.cd(cwd);
 				}
-				shell.cd(cwd);
 			}
 			return Promise.resolve(targetDir);
 		},

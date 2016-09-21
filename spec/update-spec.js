@@ -126,6 +126,13 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 
+		it('keeps the archive on the disk if --keep is specified', function (done) {
+			underTest({source: workingdir, keep: true}).then(function (result) {
+				expect(result.archive).toBeTruthy();
+				expect(shell.test('-e', result.archive));
+			}).then(done, done.fail);
+		});
+
 		it('uses local dependencies if requested', function (done) {
 			shell.cp('-rf', path.join(__dirname, 'test-projects', 'local-dependencies', '*'), workingdir);
 

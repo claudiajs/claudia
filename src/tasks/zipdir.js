@@ -16,6 +16,7 @@ module.exports = function zipdir(path) {
 		var archive = archiver.create('zip', {}),
 			zipStream = fs.createWriteStream(targetFile);
 		zipStream.on('close', function () {
+			shell.rm('-rf', path);
 			resolve(targetFile);
 		});
 		archive.pipe(zipStream);

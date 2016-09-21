@@ -519,6 +519,13 @@ describe('create', function () {
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
 			}).then(done, done.fail);
 		});
+		it('keeps the archive on the disk if --keep is specified', function (done) {
+			config.keep = true;
+			createFromDir('hello-world').then(function (result) {
+				expect(result.archive).toBeTruthy();
+				expect(shell.test('-e', result.archive));
+			}).then(done, done.fail);
+		});
 	});
 	describe('creating the web api', function () {
 		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),

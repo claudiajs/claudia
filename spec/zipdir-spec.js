@@ -58,9 +58,16 @@ describe('zipdir', function () {
 			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+		}).then(done, done.fail);
+	});
+	it('removes the original dir if successful', function (done) {
+		var original = path.join(workingdir, 'original');
 
-			done();
-		}, done.fail);
+		shell.mkdir(original);
+		fs.writeFileSync(path.join(original, 'root.txt'), 'text1', 'utf8');
+		underTest(original).then(function () {
+			expect(shell.test('-e', original)).toBeFalsy();
+		}).then(done, done.fail);
 	});
 });
 

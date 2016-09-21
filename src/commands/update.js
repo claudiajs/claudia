@@ -62,6 +62,15 @@ module.exports = function update(options, optionalLogger) {
 						}
 					});
 			}
+		},
+		packageArchive,
+		cleanup = function () {
+			if (!options.keep) {
+				shell.rm(packageArchive);
+			} else {
+				updateResult.archive = packageArchive;
+			}
+			return updateResult;
 		};
 	options = options || {};
 	if (!options.source) {
@@ -112,8 +121,10 @@ module.exports = function update(options, optionalLogger) {
 	}).then(function (dir) {
 		logger.logStage('zipping package');
 		return zipdir(dir);
-	}).then(readFile)
-	.then(function (fileContents) {
+	}).then(function (zipFile) {
+		packageArchive = zipFile;
+		return readFile(zipFile);
+	}).then(function (fileContents) {
 		logger.logStage('updating Lambda');
 		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
 	}).then(function (result) {
@@ -124,9 +135,7 @@ module.exports = function update(options, optionalLogger) {
 			logger.logStage('setting version alias');
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
-	}).then(updateWebApi).then(function () {
-		return updateResult;
-	});
+	}).then(updateWebApi).then(cleanup);
 };
 module.exports.doc = {
 	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',
@@ -163,8 +172,15 @@ module.exports.doc = {
 		{
 			argument: 'cache-api-config',
 			optional: true,
+			example: 'claudiaConfigCache',
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
 				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+		},
+		{
+			argument: 'keep',
+			optional: true,
+			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
+				'If not set, the temporary files will be removed after the Lambda function is successfully created'
 		}
 	]
 };

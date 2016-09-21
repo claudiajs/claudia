@@ -266,6 +266,14 @@ module.exports = function create(options, optionalLogger) {
 				}]
 			});
 		},
+		cleanup = function (result) {
+			if (!options.keep) {
+				shell.rm(packageArchive);
+			} else {
+				result.archive = packageArchive;
+			}
+			return result;
+		},
 		packageArchive,
 		functionDesc,
 		functionName,
@@ -323,7 +331,7 @@ module.exports = function create(options, optionalLogger) {
 			return lambdaMetadata;
 		}
 	})
-	.then(saveConfig).then(formatResult);
+	.then(saveConfig).then(formatResult).then(cleanup);
 };
 
 module.exports.doc = {
@@ -429,8 +437,15 @@ module.exports.doc = {
 		{
 			argument: 'cache-api-config',
 			optional: true,
+			example: 'claudiaConfigCache',
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
 				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+		},
+		{
+			argument: 'keep',
+			optional: true,
+			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
+				'If not set, the temporary files will be removed after the Lambda function is successfully created'
 		}
 	]
 };
