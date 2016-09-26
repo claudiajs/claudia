@@ -9,7 +9,7 @@ global.MARKED = true;
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { hello: { 'GET' : {} }}
 	};
 };
