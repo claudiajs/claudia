@@ -2,7 +2,7 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { echo: { 'GET' : { error: { headers: {}}} }}
 	};
 };

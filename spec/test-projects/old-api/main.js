@@ -2,14 +2,11 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
+		version: 2,
 		routes: { echo: { 'GET' : {} }}
 	};
 };
 exports.router = function (event, context) {
 	'use strict';
-	context.succeed({
-		body: JSON.stringify(event),
-		statusCode: 200
-	});
+	context.succeed(event);
 };

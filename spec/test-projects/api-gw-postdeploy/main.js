@@ -2,7 +2,7 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { hello: { 'GET' : {} }}
 	};
 };
@@ -29,5 +29,11 @@ exports.postDeploy = function (options, lambdaDetails, utils) {
 };
 exports.router = function (event, context) {
 	'use strict';
-	context.succeed(event.env);
+	context.succeed({
+		body: JSON.stringify(event.stageVariables),
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		statusCode: 200
+	});
 };

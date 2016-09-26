@@ -38,6 +38,11 @@ describe('validatePackage', function () {
 		});
 		it('fails if the api version is not supported', function () {
 			expect(function () {
+				underTest(path.join(__dirname, 'test-projects/old-api'), 'main.router', 'main');
+			}).toThrow('main.js uses an unsupported API version. Upgrade your claudia installation');
+		});
+		it('fails if the api version is not supported', function () {
+			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/future-api'), 'main.router', 'main');
 			}).toThrow('main.js uses an unsupported API version. Upgrade your claudia installation');
 		});
