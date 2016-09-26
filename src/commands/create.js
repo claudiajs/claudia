@@ -114,7 +114,7 @@ module.exports = function create(options, optionalLogger) {
 						Description: functionDesc,
 						MemorySize: options.memory,
 						Timeout: options.timeout,
-						Handler: options.handler || (options['api-module'] + '.router'),
+						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true

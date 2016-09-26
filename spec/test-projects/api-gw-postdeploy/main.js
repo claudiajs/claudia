@@ -27,7 +27,7 @@ exports.postDeploy = function (options, lambdaDetails, utils) {
 		return options.postresult;
 	});
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed({
 		body: JSON.stringify(event.stageVariables),

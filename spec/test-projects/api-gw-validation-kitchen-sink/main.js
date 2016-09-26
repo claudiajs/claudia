@@ -24,7 +24,7 @@ exports.apiConfig = function () {
 		}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

@@ -10,7 +10,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		apiModule, apiConfig;
 	if (restApiModule) {
 		apiModulePath = restApiModule;
-		handlerMethod = 'router';
+		handlerMethod = 'proxyRouter';
 	}
 	try {
 		apiModule = require(path.join(dir, apiModulePath));

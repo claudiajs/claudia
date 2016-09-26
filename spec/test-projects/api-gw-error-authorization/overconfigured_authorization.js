@@ -7,7 +7,7 @@ exports.apiConfig = function () {
 		routes: { echo: { 'GET' : { authorizationType: 'AWS_IAM', customAuthorizer: 'customA' } }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

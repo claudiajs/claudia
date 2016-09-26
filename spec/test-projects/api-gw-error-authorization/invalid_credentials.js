@@ -6,7 +6,7 @@ exports.apiConfig = function () {
 		routes: { echo: { 'GET' : { invokeWithCredentials: 'XXX' } }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

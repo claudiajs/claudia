@@ -6,7 +6,7 @@ exports.apiConfig = function () {
 		routes: { echo: { 'GET' : { error: { headers: {}}} }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

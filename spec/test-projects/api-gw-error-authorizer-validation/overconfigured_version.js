@@ -7,7 +7,7 @@ exports.apiConfig = function () {
 		routes: { echo: { 'GET' : { customAuthorizer: 'first' } }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

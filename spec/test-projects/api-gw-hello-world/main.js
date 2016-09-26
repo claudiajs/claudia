@@ -6,7 +6,7 @@ exports.apiConfig = function () {
 		routes: { hello: { 'GET' : {} }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed({
 		statusCode: 200,
