@@ -1,5 +1,12 @@
 # Release history
 
+### 2.0.0, XX
+
+- support for --deploy-proxy-api
+- using AWS Proxy integration to support custom response codes and headers easier (requires claudia-api-builder 2.0.0)
+- stopping support for node 0.10
+
+
 ### 1.9.0, 21 September 2016
 
 - Reuse code easier across different functions: Claudia can now work working with local relative dependencies in package.json (referencing relative directories on your disk)

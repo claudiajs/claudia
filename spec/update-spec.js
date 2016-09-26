@@ -25,7 +25,7 @@ describe('update', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
@@ -213,6 +213,32 @@ describe('update', function () {
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
 				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(done, done.fail);
+		});
+	});
+	describe('when the lambda project contains a proxy api', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+			}).then(done, done.fail);
+		});
+		it('if using a different version, deploys a new stage', function (done) {
+			underTest({source: workingdir, version: 'development'}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development');
+			}).then(function () {
+				return invoke('development/hello?abc=def');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'def'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/hello');
+				expect(params.requestContext.stage).toEqual('development');
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
 		});
 	});
 	describe('when the lambda project contains a web api', function () {
