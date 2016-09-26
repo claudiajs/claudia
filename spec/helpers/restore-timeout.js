@@ -1,10 +1,5 @@
-/*global beforeEach, afterEach, jasmine*/
-var originalTimeout;
+/*global beforeEach, jasmine*/
 beforeEach(function () {
 	'use strict';
-	originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
-});
-afterEach(function () {
-	'use strict';
-	jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
+	jasmine.DEFAULT_TIMEOUT_INTERVAL = 5000;
 });
