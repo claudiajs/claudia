@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it*/
+/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, fit*/
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -28,7 +28,7 @@ describe('rebuildWebApi', function () {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
-		apiRouteConfig = {version: 2, routes: { echo: {'GET': {} } }};
+		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(function (done) {
 		this.destroyObjects(newObjects).catch(function (err) {
@@ -37,7 +37,7 @@ describe('rebuildWebApi', function () {
 	});
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
@@ -56,11 +56,10 @@ describe('rebuildWebApi', function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, done.fail);
 		});
-
 		describe('request parameter processing', function () {
 			it('captures query string parameters', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
@@ -68,7 +67,7 @@ describe('rebuildWebApi', function () {
 					return invoke('original/echo?name=mike&' + encodeURIComponent('to=m') + '=' + encodeURIComponent('val,a=b'));
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.queryString).toEqual({name: 'mike', 'to=m': 'val,a=b'});
+					expect(params.queryStringParameters).toEqual({name: 'mike', 'to=m': 'val,a=b'});
 				}).then(done, function (e) {
 					console.log(e);
 					done.fail(e);
@@ -80,7 +79,7 @@ describe('rebuildWebApi', function () {
 					return invoke('original/echo?name=O\'Reilly');
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.queryString).toEqual({name: 'O\'Reilly'});
+					expect(params.queryStringParameters).toEqual({name: 'O\'Reilly'});
 				}).then(done, function (e) {
 					console.log(e);
 					done.fail(e);
@@ -93,7 +92,7 @@ describe('rebuildWebApi', function () {
 					return invoke('original/people/Marcus');
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.pathParams.personId).toEqual('Marcus');
+					expect(params.pathParameters.personId).toEqual('Marcus');
 				}).then(done, done.fail);
 
 			});
@@ -104,7 +103,7 @@ describe('rebuildWebApi', function () {
 					return invoke('original/people/Mar\'cus');
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.pathParams.personId).toEqual('Mar\'cus');
+					expect(params.pathParameters.personId).toEqual('Mar\'cus');
 				}).then(done, done.fail);
 
 			});
@@ -118,8 +117,6 @@ describe('rebuildWebApi', function () {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3-val');
 					expect(params.headers['Capital-Head']).toEqual('Capital-Val');
-					expect(params.normalizedHeaders['auth-head']).toEqual('auth3-val');
-					expect(params.normalizedHeaders['capital-head']).toEqual('Capital-Val');
 				}).then(done, done.fail);
 			});
 			it('captures headers with quotes', function (done) {
@@ -132,8 +129,6 @@ describe('rebuildWebApi', function () {
 					var params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3\'val');
 					expect(params.headers['Capital-Head']).toEqual('Capital\'Val');
-					expect(params.normalizedHeaders['auth-head']).toEqual('auth3\'val');
-					expect(params.normalizedHeaders['capital-head']).toEqual('Capital\'Val');
 				}).then(done, done.fail);
 			});
 			it('captures stage variables', function (done) {
@@ -153,7 +148,7 @@ describe('rebuildWebApi', function () {
 					return invoke ('fromtest/echo');
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.env).toEqual({
+					expect(params.stageVariables).toEqual({
 						lambdaVersion: 'original',
 						authKey: 'abs123',
 						authBucket: 'bucket123'
@@ -161,7 +156,7 @@ describe('rebuildWebApi', function () {
 				}).then(done, done.fail);
 			});
 			it('captures form post variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -170,13 +165,12 @@ describe('rebuildWebApi', function () {
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
 					expect(params.body).toEqual(querystring.stringify({name: 'tom', surname: 'bond'}));
 				}).then(done, done.fail);
 			});
 			it('captures quoted form POST variables correctly', function (done) {
 				var body = 'first_name=Jobin\'s&receiver_email=xxx@yyy.com&address_country_code=CA&payer_business_name=Jobin\'s Services&address_state=Quebec';
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'content-type': 'application/x-www-form-urlencoded'},
@@ -185,48 +179,15 @@ describe('rebuildWebApi', function () {
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.post).toEqual({
-						first_name: 'Jobin\'s',
-						receiver_email: 'xxx@yyy.com',
-						address_country_code: 'CA',
-						payer_business_name: 'Jobin\'s Services',
-						address_state: 'Quebec'
-					});
 					expect(params.body).toEqual(body);
 				}).then(done, function (result) {
 					console.log(result);
 					done.fail(result);
 				});
 			});
-			it('captures form post variables even when the charset is provided with the content type', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
-				.then(function () {
-					return invoke('original/echo', {
-						headers: {'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-						body: querystring.stringify({name: 'tom', surname: 'bond'}),
-						method: 'POST'
-					});
-				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
-					expect(params.post).toEqual({name: 'tom', surname: 'bond'});
-				}).then(done, done.fail);
-			});
-			it('captures blank form POST variables', function (done) {
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
-				.then(function () {
-					return invoke('original/echo', {
-						headers: {'content-type': 'application/x-www-form-urlencoded'},
-						body: 'name=tom&surname=&title=mr',
-						method: 'POST'
-					});
-				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
-					expect(params.post).toEqual({name: 'tom', title: 'mr', surname: ''});
-				}).then(done, done.fail);
-			});
 			it('captures text/xml request bodies', function (done) {
 				var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'Content-Type': 'text/xml'},
@@ -240,7 +201,7 @@ describe('rebuildWebApi', function () {
 			});
 			it('captures application/xml request bodies', function (done) {
 				var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'Content-Type': 'application/xml'},
@@ -254,7 +215,7 @@ describe('rebuildWebApi', function () {
 			});
 			it('captures text/plain request bodies', function (done) {
 				var textContent = 'this is just plain text';
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'Content-Type': 'text/plain'},
@@ -269,7 +230,7 @@ describe('rebuildWebApi', function () {
 
 			it('captures quoted text/plain request bodies', function (done) {
 				var textContent = 'this is single \' quote';
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'Content-Type': 'text/plain'},
@@ -287,7 +248,7 @@ describe('rebuildWebApi', function () {
 						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
 					},
 					textContent = JSON.stringify(jsonContent);
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
+				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
 						headers: {'Content-Type': 'application/json'},
@@ -296,53 +257,60 @@ describe('rebuildWebApi', function () {
 					});
 				}).then(function (contents) {
 					var params = JSON.parse(contents.body);
-					expect(params.body).toEqual(jsonContent);
-				}).then(done, done.fail);
-			});
-			it('application/json responses comes with the unparsed raw body as string', function (done) {
-				var jsonContent = {
-						fileKey : 'Jim\'s map.mup',
-						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
-					},
-					textContent = JSON.stringify(jsonContent);
-				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {'echo': { 'POST': {}}}}, awsRegion)
-				.then(function () {
-					return invoke('original/echo', {
-						headers: {'Content-Type': 'application/json'},
-						body: textContent,
-						method: 'POST'
-					});
-				}).then(function (contents) {
-					var params = JSON.parse(contents.body),
-						rawBody = params.rawBody;
-					expect(rawBody).toEqual(textContent);
+					expect(JSON.parse(params.body)).toEqual(jsonContent);
 				}).then(done, done.fail);
 			});
 		});
 
 		it('creates multiple methods for the same resource', function (done) {
-			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 2, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
+			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {echo: { GET: {}, POST: {}, PUT: {}}}}, awsRegion)
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'POST'});
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.method).toEqual('POST');
-				expect(params.context.path).toEqual('/echo');
+				expect(params.requestContext.httpMethod).toEqual('POST');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'PUT'});
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.method).toEqual('PUT');
-				expect(params.context.path).toEqual('/echo');
+				expect(params.requestContext.httpMethod).toEqual('PUT');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, done.fail);
 		});
-		it('maps sub-resources with intermediate paths', function (done) {
+		it('maps ANY method', function (done) {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {echo: { ANY: {}}}}, awsRegion)
+			.then(function () {
+				return invoke('original/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+			}).then(function () {
+				return invoke('original/echo', {method: 'POST'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.requestContext.httpMethod).toEqual('POST');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+			}).then(function () {
+				return invoke('original/echo', {method: 'PUT'});
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.requestContext.httpMethod).toEqual('PUT');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
+
+		});
+		fit('maps sub-resources with intermediate paths', function (done) {
 			apiRouteConfig.routes['echo/sub/res'] = {POST: {}};
 			apiRouteConfig.routes['echo/hello'] = {POST: {}};
 			apiRouteConfig.routes['sub/hello'] = {POST: {}};
