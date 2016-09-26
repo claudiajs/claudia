@@ -55,6 +55,9 @@ module.exports = function create(options, optionalLogger) {
 			if (options.handler && options['api-module']) {
 				return 'incompatible arguments: cannot specify handler and api-module at the same time.';
 			}
+			if (!options.handler && options['deploy-proxy-api']) {
+				return 'deploy-proxy-api requires a handler. please specify with --handler';
+			}
 			if (options.handler && options.handler.indexOf('/') >= 0) {
 				return 'Lambda handler module has to be in the main project directory';
 			}
@@ -204,6 +207,34 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaMetadata;
 			});
 		},
+		deployProxyApi = function (lambdaMetadata) {
+			var apiConfig = {
+					version: 3,
+					corsHandlers: true,
+					routes: {'/{proxy+}': { ANY: {}}}
+				},
+				alias = options.version || 'latest',
+				apiGateway = retriableWrap(promiseWrap(
+					new aws.APIGateway({region: options.region}),
+					{log: logger.logApiCall, logName: 'apigateway'}
+				),
+				function () {
+					logger.logStage('rate-limited by AWS, waiting before retry');
+				});
+			logger.logStage('creating REST API');
+
+			return apiGateway.createRestApiPromise({
+				name: lambdaMetadata.FunctionName
+			}).then(function (result) {
+				lambdaMetadata.api = {
+					id: result.id,
+					url: apiGWUrl(result.id, options.region, alias)
+				};
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
+			}).then(function () {
+				return lambdaMetadata;
+			});
+		},
 		saveConfig = function (lambdaMetaData) {
 			var config = {
 				lambda: {
@@ -336,6 +367,8 @@ module.exports = function create(options, optionalLogger) {
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
 			return createWebApi(lambdaMetadata, packageFileDir);
+		} else if (options['deploy-proxy-api']) {
+			return deployProxyApi(lambdaMetadata);
 		} else {
 			return lambdaMetadata;
 		}
@@ -362,9 +395,16 @@ module.exports.doc = {
 			argument: 'api-module',
 			optional: true,
 			description: 'The main module to use when creating Web APIs. \n' +
-				'If you provide this parameter, the handler option is ignored.\n' +
+				'If you provide this parameter, do not set the handler option.\n' +
 				'This should be a module created using the Claudia API Builder.',
 			example: 'if the api is defined in web.js, this would be web'
+		},
+		{
+			argument: 'deploy-proxy-api',
+			optional: true,
+			description: 'If specified, a proxy API will be created for the Lambda \n' +
+				' function on API Gateway, and forward all requests to function. \n' +
+				' This is an alternative way to create web APIs to --api-module.'
 		},
 		{
 			argument: 'name',

@@ -23,7 +23,7 @@ describe('create', function () {
 			return underTest(config, logger).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
-				newObjects.restApi = result.api && result.api.id;
+				newObjects.restApi = (result.api && result.api.id) || (result.proxyApi && result.proxyApi.id);
 				return result;
 			});
 		};
@@ -35,7 +35,7 @@ describe('create', function () {
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
@@ -86,6 +86,14 @@ describe('create', function () {
 			config['api-module'] = 'main';
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('incompatible arguments: cannot specify handler and api-module at the same time.');
+			}).then(done);
+		});
+		it('fails if deploy-proxy-api is specified but handler is not', function (done) {
+			config['deploy-proxy-api'] = true;
+			config.handler = undefined;
+			config['api-module'] = 'abc';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
 			}).then(done);
 		});
 		it('fails if the api module contains a folder', function (done) {
@@ -566,6 +574,57 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('deploying a proxy api', function () {
+		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/);
+		beforeEach(function () {
+			config['deploy-proxy-api'] = true;
+		});
+		it('creates a proxy web API', function (done) {
+			createFromDir('apigw-proxy-echo').then(function (creationResult) {
+				var apiId = creationResult.api && creationResult.api.id;
+				expect(apiId).toBeTruthy();
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
+				return apiId;
+			}).then(function (apiId) {
+				return apiGateway.getRestApiAsync({restApiId: apiId});
+			}).then(function (restApi) {
+				expect(restApi.name).toEqual(testRunName);
+			}).then(done, done.fail);
+		});
+		it('saves the api ID without module into claudia.json', function (done) {
+			createFromDir('apigw-proxy-echo').then(function (creationResult) {
+				var savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({id: creationResult.api.id});
+			}).then(done, done.fail);
+		});
+		it('sets up the API to route all calls to Lambda', function (done) {
+			createFromDir('apigw-proxy-echo').then(function (creationResult) {
+				return creationResult.api.id;
+			}).then(function (apiId) {
+				return callApi(apiId, awsRegion, 'latest/hello/there?abc=xkcd&dd=yy');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'xkcd', dd: 'yy'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/hello/there');
+				expect(params.requestContext.stage).toEqual('latest');
+			}).then(done, done.fail);
+		});
+		it('sets up a versioned API with the stage name corresponding to the lambda alias', function (done) {
+			config.version = 'development';
+			createFromDir('apigw-proxy-echo').then(function (creationResult) {
+				return creationResult.api.id;
+			}).then(function (apiId) {
+				return callApi(apiId, awsRegion, 'development/hello/there?abc=xkcd&dd=yy');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'xkcd', dd: 'yy'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/hello/there');
+				expect(params.requestContext.stage).toEqual('development');
+			}).then(done, done.fail);
+		});
+	});
 	describe('creating the web api', function () {
 		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
 			apiId;
@@ -576,7 +635,6 @@ describe('create', function () {
 		it('ignores the handler but creates an API if the api-module is provided', function (done) {
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				var apiId = creationResult.api && creationResult.api.id;
-				newObjects.restApi = apiId;
 				expect(apiId).toBeTruthy();
 				expect(creationResult.api.module).toEqual('main');
 				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
