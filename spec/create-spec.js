@@ -81,6 +81,13 @@ describe('create', function () {
 				expect(message).toEqual('Lambda handler module has to be in the main project directory');
 			}).then(done);
 		});
+		it('fails if both handler and api module are provided', function (done) {
+			config.handler = 'main.handler';
+			config['api-module'] = 'main';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('incompatible arguments: cannot specify handler and api-module at the same time.');
+			}).then(done);
+		});
 		it('fails if the api module contains a folder', function (done) {
 			config.handler = undefined;
 			config['api-module'] = 'api/main';
@@ -638,9 +645,9 @@ describe('create', function () {
 				return callApi(apiId, awsRegion, 'latest/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.env).toEqual({
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'latest',
-					claudiaConfig: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
 				});
 			}).then(done, done.fail);
 		});

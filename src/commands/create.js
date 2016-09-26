@@ -52,6 +52,9 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
 			}
+			if (options.handler && options['api-module']) {
+				return 'incompatible arguments: cannot specify handler and api-module at the same time.';
+			}
 			if (options.handler && options.handler.indexOf('/') >= 0) {
 				return 'Lambda handler module has to be in the main project directory';
 			}
