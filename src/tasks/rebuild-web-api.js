@@ -72,7 +72,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			});
 		},
 		corsHeaderValue = function () {
-			var val = apiConfig.corsHeaders || 'Content-Type,X-Amz-Date,Authorization,X-Api-Key';
+			var val = apiConfig.corsHeaders || 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token';
 			if (!supportsCors()) {
 				return '';
 			}
