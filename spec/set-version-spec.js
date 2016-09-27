@@ -120,8 +120,8 @@ describe('setVersion', function () {
 				return invoke('dev/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'dev'
 				});
 			}).then(done, done.fail);
@@ -143,8 +143,8 @@ describe('setVersion', function () {
 			}).then(function (contents) {
 				var params;
 				params = JSON.parse(contents.body);
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'fromtest',
 					authKey: 'abs123',
 					authBucket: 'bucket123'

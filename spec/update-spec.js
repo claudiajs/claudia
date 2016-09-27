@@ -316,7 +316,7 @@ describe('update', function () {
 				return invoke('latest/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
@@ -337,7 +337,7 @@ describe('update', function () {
 				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
@@ -352,12 +352,12 @@ describe('update', function () {
 				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'development',
-					claudiaConfig: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
 				});
 			}).then(done, done.fail);
 		});
@@ -373,7 +373,7 @@ describe('update', function () {
 				return invoke('original/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
