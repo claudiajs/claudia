@@ -15,9 +15,12 @@ claudia create {OPTIONS}
 *  `--handler`:  _optional_ Main function for Lambda to execute, as module.function
   * _For example_: if it is in the main.js file and exported as router, this would be main.router
 *  `--api-module`:  _optional_ The main module to use when creating Web APIs. 
-  If you provide this parameter, the handler option is ignored.
+  If you provide this parameter, do not set the handler option.
   This should be a module created using the Claudia API Builder.
   * _For example_: if the api is defined in web.js, this would be web
+*  `--deploy-proxy-api`:  _optional_ If specified, a proxy API will be created for the Lambda 
+  function on API Gateway, and forward all requests to function.
+  This is an alternative way to create web APIs to --api-module.
 *  `--name`:  _optional_ lambda function name
   * _For example_: awesome-microservice
   * _Defaults to_: the project name from package.json

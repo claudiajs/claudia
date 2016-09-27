@@ -1,11 +1,10 @@
 # Release history
 
-### 2.0.0, XX
+### 2.0.0, 27 September 2016 
 
 - support for --deploy-proxy-api
-- using AWS Proxy integration to support custom response codes and headers easier (requires claudia-api-builder 2.0.0)
+- using AWS Proxy integration to support custom response codes and headers easier (will only work with claudia-api-builder 2.0.0)
 - stopping support for node 0.10
-
 
 ### 1.9.0, 21 September 2016
 
