@@ -17,6 +17,7 @@ claudia [command] {OPTIONS}
 * [`add-scheduled-event`](add-scheduled-event.md) Add a recurring notification event
 * [`test-lambda`](test-lambda.md) Execute the lambda function and print out the response
 * [`destroy`](destroy.md) Undeploy the lambda function and destroy the API and security roles
+* [`generate-serverless-express-proxy`](generate-serverless-express-proxy.md) Create a lambda proxy API wrapper for an express app using aws-serverless-express
 
 ## Options:
 
