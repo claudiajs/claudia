@@ -211,7 +211,10 @@ module.exports = function create(options, optionalLogger) {
 			var apiConfig = {
 					version: 3,
 					corsHandlers: true,
-					routes: {'/{proxy+}': { ANY: {}}}
+					routes: {
+						'{proxy+}': { ANY: {}},
+						'': { ANY: {}}
+					}
 				},
 				alias = options.version || 'latest',
 				apiGateway = retriableWrap(promiseWrap(

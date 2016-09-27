@@ -597,7 +597,7 @@ describe('create', function () {
 				expect(savedContents.api).toEqual({id: creationResult.api.id});
 			}).then(done, done.fail);
 		});
-		it('sets up the API to route all calls to Lambda', function (done) {
+		it('sets up the API to route sub-resource calls to Lambda', function (done) {
 			createFromDir('apigw-proxy-echo').then(function (creationResult) {
 				return creationResult.api.id;
 			}).then(function (apiId) {
@@ -610,6 +610,20 @@ describe('create', function () {
 				expect(params.requestContext.stage).toEqual('latest');
 			}).then(done, done.fail);
 		});
+		it('sets up the API to route root calls to Lambda', function (done) {
+			createFromDir('apigw-proxy-echo').then(function (creationResult) {
+				return creationResult.api.id;
+			}).then(function (apiId) {
+				return callApi(apiId, awsRegion, 'latest?abc=xkcd&dd=yy');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'xkcd', dd: 'yy'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/');
+				expect(params.requestContext.stage).toEqual('latest');
+			}).then(done, done.fail);
+		});
+
 		it('sets up a versioned API with the stage name corresponding to the lambda alias', function (done) {
 			config.version = 'development';
 			createFromDir('apigw-proxy-echo').then(function (creationResult) {
