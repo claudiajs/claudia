@@ -307,6 +307,27 @@ describe('update', function () {
 				});
 			}).then(done, done.fail);
 		});
+		it('upgrades the function handler from 1.x', function (done) {
+			lambda.updateFunctionConfigurationPromise({
+				FunctionName: testRunName,
+				Handler: 'main.router'
+			}).then(function () {
+				return underTest({source: updateddir});
+			}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
+			}).then(function () {
+				return invoke('latest/echo?name=mike');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
+					lambdaVersion: 'latest'
+				});
+			}).then(done, done.fail);
+		});
+
 		it('works when the source is a relative path', function (done) {
 			shell.cd(path.dirname(updateddir));
 			updateddir = './' + path.basename(updateddir);

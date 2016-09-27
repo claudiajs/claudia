@@ -94,6 +94,7 @@ module.exports = function update(options, optionalLogger) {
 			}
 			return updateResult;
 		},
+		requiresHandlerUpdate = false,
 		s3Key;
 	options = options || {};
 	if (!options.source) {
@@ -125,6 +126,10 @@ module.exports = function update(options, optionalLogger) {
 		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
 	}).then(function (result) {
 		functionConfig = result;
+		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
+		if (requiresHandlerUpdate) {
+			functionConfig.Handler = functionConfig.Handler.replace(/\.router$/, '.proxyRouter');
+		}
 	}).then(function () {
 		if (apiConfig) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
@@ -138,12 +143,14 @@ module.exports = function update(options, optionalLogger) {
 		packageDir = dir;
 		if (options['no-optional-dependencies']) {
 			return cleanOptionalDependencies(dir, logger);
-		} else {
-			return dir;
 		}
-	}).then(function (dir) {
+	}).then(function () {
+		if (requiresHandlerUpdate) {
+			return lambda.updateFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler});
+		}
+	}).then(function () {
 		logger.logStage('zipping package');
-		return zipdir(dir);
+		return zipdir(packageDir);
 	}).then(function (zipFile) {
 		packageArchive = zipFile;
 		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
