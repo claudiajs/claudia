@@ -1,6 +1,10 @@
 # Release history
 
-### 2.0.0, 27 September 2016 
+### 2.1.0, 28 September 2016
+
+- support for `--generate-serverless-express-proxy`, helping users create aws-serverless-express wrappers.
+
+### 2.0.0, 2.0.1, 2.0.2 27 September 2016 
 
 - support for --deploy-proxy-api
 - using AWS Proxy integration to support custom response codes and headers easier (will only work with claudia-api-builder 2.0.0)

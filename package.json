@@ -1,7 +1,7 @@
 {
   "name": "claudia",
-  "version": "2.0.2",
-  "description": "deploy Node.js microservices to AWS easily",
+  "version": "2.1.0",
+  "description": "Deploy Node.js projects to AWS Lambda and API Gateway easily.",
   "license": "MIT",
   "repository": {
     "type": "git",
