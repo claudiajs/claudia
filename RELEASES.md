@@ -1,6 +1,6 @@
 # Release history
 
-### 2.1.0, 28 September 2016
+### 2.1.0, 5 October 2016
 
 - support for `--generate-serverless-express-proxy`, helping users create aws-serverless-express wrappers.
 
