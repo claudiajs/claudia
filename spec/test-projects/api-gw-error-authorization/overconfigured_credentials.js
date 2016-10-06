@@ -2,11 +2,11 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { echo: { 'GET' : { authorizationType: 'CUSTOM', invokeWithCredentials: true } }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

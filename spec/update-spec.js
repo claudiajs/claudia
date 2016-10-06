@@ -25,7 +25,7 @@ describe('update', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
@@ -126,6 +126,13 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 
+		it('keeps the archive on the disk if --keep is specified', function (done) {
+			underTest({source: workingdir, keep: true}).then(function (result) {
+				expect(result.archive).toBeTruthy();
+				expect(shell.test('-e', result.archive));
+			}).then(done, done.fail);
+		});
+
 		it('uses local dependencies if requested', function (done) {
 			shell.cp('-rf', path.join(__dirname, 'test-projects', 'local-dependencies', '*'), workingdir);
 
@@ -141,7 +148,7 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 		it('removes optional dependencies after validation if requested', function (done) {
-			shell.cp('-rf', 'spec/test-projects/optional-dependencies/*', workingdir);
+			shell.cp('-rf', path.join(__dirname, '/test-projects/optional-dependencies/*'), workingdir);
 			underTest({source: workingdir, 'no-optional-dependencies': true}).then(function () {
 				return lambda.invokePromise({FunctionName: testRunName});
 			}).then(function (lambdaResult) {
@@ -149,7 +156,47 @@ describe('update', function () {
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
 			}).then(done, done.fail);
 		});
+		it('rewires relative dependencies to reference original location after copy', function (done) {
+			shell.cp('-r', path.join(__dirname, 'test-projects/relative-dependencies/*'), workingdir);
+			shell.cp('-r', path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
+			underTest({source: path.join(workingdir, 'lambda')}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello relative"');
+			}).then(done, done.fail);
+		});
 
+		it('uses a s3 bucket if provided', function (done) {
+			var s3 = Promise.promisifyAll(new aws.S3()),
+				logger = new ArrayLogger(),
+				bucketName = testRunName + '-bucket',
+				archivePath;
+			s3.createBucketAsync({
+				Bucket: bucketName
+			}).then(function () {
+				newObjects.s3bucket = bucketName;
+			}).then(function () {
+				return underTest({keep: true, 'use-s3-bucket': bucketName, source: workingdir}, logger);
+			}).then(function (result) {
+				var expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObjectAsync({
+					Bucket: bucketName,
+					Key: expectedKey
+				});
+			}).then(function (fileResult) {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(function () {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
+			}).then(function () {
+				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
 
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
@@ -166,6 +213,32 @@ describe('update', function () {
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
 				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
 			}).then(done, done.fail);
+		});
+	});
+	describe('when the lambda project contains a proxy api', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+			}).then(done, done.fail);
+		});
+		it('if using a different version, deploys a new stage', function (done) {
+			underTest({source: workingdir, version: 'development'}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development');
+			}).then(function () {
+				return invoke('development/hello?abc=def');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'def'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/hello');
+				expect(params.requestContext.stage).toEqual('development');
+			}).then(done, function (e) {
+				console.log(e);
+				done.fail();
+			});
 		});
 	});
 	describe('when the lambda project contains a web api', function () {
@@ -226,14 +299,35 @@ describe('update', function () {
 				return invoke('latest/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'latest'
 				});
 			}).then(done, done.fail);
 		});
+		it('upgrades the function handler from 1.x', function (done) {
+			lambda.updateFunctionConfigurationPromise({
+				FunctionName: testRunName,
+				Handler: 'main.router'
+			}).then(function () {
+				return underTest({source: updateddir});
+			}).then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
+			}).then(function () {
+				return invoke('latest/echo?name=mike');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
+					lambdaVersion: 'latest'
+				});
+			}).then(done, done.fail);
+		});
+
 		it('works when the source is a relative path', function (done) {
 			shell.cd(path.dirname(updateddir));
 			updateddir = './' + path.basename(updateddir);
@@ -243,10 +337,10 @@ describe('update', function () {
 				return invoke('latest/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'latest'
 				});
 			}).then(done, done.fail);
@@ -264,10 +358,10 @@ describe('update', function () {
 				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'development'
 				});
 			}).then(done, done.fail);
@@ -279,12 +373,12 @@ describe('update', function () {
 				return invoke('development/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'development',
-					claudiaConfig: 'D6QF7E10IBssKX0MRcJwJqj8FB7ULGJTH/eGENZ9DHY='
+					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
 				});
 			}).then(done, done.fail);
 		});
@@ -300,10 +394,10 @@ describe('update', function () {
 				return invoke('original/echo?name=mike');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.queryString).toEqual({name: 'mike'});
-				expect(params.context.method).toEqual('GET');
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.queryStringParameters).toEqual({name: 'mike'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'original'
 				});
 			}).then(done, done.fail);

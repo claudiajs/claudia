@@ -2,9 +2,8 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
-		authorizers: { first: { lambdaName: 'ln', lambdaVersion: {a: 1} } },
-		routes: { echo: { 'GET' : { customAuthorizer: 'first' } }}
+		version: 2,
+		routes: { echo: { 'GET' : {} }}
 	};
 };
 exports.proxyRouter = function (event, context) {

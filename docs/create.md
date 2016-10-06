@@ -15,9 +15,12 @@ claudia create {OPTIONS}
 *  `--handler`:  _optional_ Main function for Lambda to execute, as module.function
   * _For example_: if it is in the main.js file and exported as router, this would be main.router
 *  `--api-module`:  _optional_ The main module to use when creating Web APIs. 
-  If you provide this parameter, the handler option is ignored.
+  If you provide this parameter, do not set the handler option.
   This should be a module created using the Claudia API Builder.
   * _For example_: if the api is defined in web.js, this would be web
+*  `--deploy-proxy-api`:  _optional_ If specified, a proxy API will be created for the Lambda 
+  function on API Gateway, and forward all requests to function.
+  This is an alternative way to create web APIs to --api-module.
 *  `--name`:  _optional_ lambda function name
   * _For example_: awesome-microservice
   * _Defaults to_: the project name from package.json
@@ -47,3 +50,10 @@ claudia create {OPTIONS}
 *  `--use-local-dependencies`:  _optional_ Do not install dependencies, use local node_modules directory instead
 *  `--cache-api-config`:  _optional_ Name of the stage variable for storing the current API configuration signature.
   If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment
+  * _For example_: claudiaConfigCache
+*  `--keep`:  _optional_ keep the produced package archive on disk for troubleshooting purposes.
+  If not set, the temporary files will be removed after the Lambda function is successfully created
+*  `--use-s3-bucket`:  _optional_ The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.
+  You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact
+  after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda
+  * _For example_: claudia-uploads

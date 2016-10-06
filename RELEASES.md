@@ -1,5 +1,21 @@
 # Release history
 
+### 2.1.0, 5 October 2016
+
+- support for `--generate-serverless-express-proxy`, helping users create aws-serverless-express wrappers.
+
+### 2.0.0, 2.0.1, 2.0.2 27 September 2016 
+
+- support for --deploy-proxy-api
+- using AWS Proxy integration to support custom response codes and headers easier (will only work with claudia-api-builder 2.0.0)
+- stopping support for node 0.10
+
+### 1.9.0, 21 September 2016
+
+- Reuse code easier across different functions: Claudia can now work working with local relative dependencies in package.json (referencing relative directories on your disk)
+- Use Claudia easier in storage-restricted environments, such as cloud continuous integration: Temporary files produced for packaging are now cleaned up automatically after deployment. Specify --keep with `create` or `update` to keep the zip files around for troubleshooting (claudia will print out the location of the archive in that case). (A huge thanks to [Philipp Holly](https://github.com/phips28))
+- Use Claudia easier with low bandwidth and larger functions, and keep binary packages on S3 for auditing purposes: supply a S3 bucket name with `--use-s3-bucket <bucket-name>` when using `claudia create` or `claudia update` and Claudia will send a binary archive to S3 then install it to Lambda from there, instead of uploading code directly to Lambda. It will also print out the uploaded file key in the command results, so you can easily integrate it with auditing tools. 
+
 ### 1.8.0, 7 September 2016
 
 - support for `--no-optional-dependencies`, allowing you to exclude things like aws-sdk and imagemagick from the package uploaded to Lambda

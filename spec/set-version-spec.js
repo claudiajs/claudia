@@ -120,8 +120,8 @@ describe('setVersion', function () {
 				return invoke('dev/echo');
 			}).then(function (contents) {
 				var params = JSON.parse(contents.body);
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'dev'
 				});
 			}).then(done, done.fail);
@@ -143,8 +143,8 @@ describe('setVersion', function () {
 			}).then(function (contents) {
 				var params;
 				params = JSON.parse(contents.body);
-				expect(params.context.path).toEqual('/echo');
-				expect(params.env).toEqual({
+				expect(params.requestContext.resourcePath).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'fromtest',
 					authKey: 'abs123',
 					authBucket: 'bucket123'
@@ -155,6 +155,60 @@ describe('setVersion', function () {
 			});
 		});
 	});
+	describe('when the lambda project contains a proxy api', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true, role: this.genericRole}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.restApi = result.api && result.api.id;
+			}).then(done, done.fail);
+		});
+		it('creates a new api deployment', function (done) {
+			underTest({source: workingdir, version: 'dev'})
+			.then(function (result) {
+				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/dev');
+			}).then(function () {
+				return invoke('dev/echo');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.requestContext.resourcePath).toEqual('/{proxy+}');
+				expect(params.path).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
+					lambdaVersion: 'dev'
+				});
+			}).then(done, done.fail);
+		});
+		it('keeps the old stage variables if they exist', function (done) {
+			var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/);
+			apiGateway.createDeploymentAsync({
+				restApiId: newObjects.restApi,
+				stageName: 'fromtest',
+				variables: {
+					authKey: 'abs123',
+					authBucket: 'bucket123',
+					lambdaVersion: 'fromtest'
+				}
+			}).then(function () {
+				return underTest({source: workingdir, version: 'fromtest'});
+			}).then(function () {
+				return invoke('fromtest/echo');
+			}).then(function (contents) {
+				var params;
+				params = JSON.parse(contents.body);
+				expect(params.requestContext.resourcePath).toEqual('/{proxy+}');
+				expect(params.path).toEqual('/echo');
+				expect(params.stageVariables).toEqual({
+					lambdaVersion: 'fromtest',
+					authKey: 'abs123',
+					authBucket: 'bucket123'
+				});
+			}).then(done, function (e) {
+				console.log(JSON.stringify(e));
+				done.fail(e);
+			});
+		});
+	});
+
 	it('logs progress', function (done) {
 		var logger = new ArrayLogger();
 		shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);

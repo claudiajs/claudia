@@ -2,11 +2,11 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { echo: { 'GET' : { error: { headers: {}}} }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

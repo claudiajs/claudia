@@ -10,7 +10,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		apiModule, apiConfig;
 	if (restApiModule) {
 		apiModulePath = restApiModule;
-		handlerMethod = 'router';
+		handlerMethod = 'proxyRouter';
 	}
 	try {
 		apiModule = require(path.join(dir, apiModulePath));
@@ -34,7 +34,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		if (!apiConfig || !apiConfig.routes || !Object.keys(apiConfig.routes).length) {
 			throw apiModulePath + '.js does not configure any API methods';
 		}
-		if (apiConfig.version && apiConfig.version > 2) {
+		if (apiConfig.version !== 3) {
 			throw apiModulePath + '.js uses an unsupported API version. Upgrade your claudia installation';
 		}
 		Object.keys(apiConfig.routes).forEach(function (route) {

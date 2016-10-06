@@ -18,6 +18,7 @@ var Promise = require('bluebird'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
 	os = require('os'),
+	lambdaCode = require('../tasks/lambda-code'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -50,6 +51,12 @@ module.exports = function create(options, optionalLogger) {
 			}
 			if (!options.handler && !options['api-module']) {
 				return 'Lambda handler is missing. please specify with --handler';
+			}
+			if (options.handler && options['api-module']) {
+				return 'incompatible arguments: cannot specify handler and api-module at the same time.';
+			}
+			if (!options.handler && options['deploy-proxy-api']) {
+				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
 			if (options.handler && options.handler.indexOf('/') >= 0) {
 				return 'Lambda handler module has to be in the main project directory';
@@ -103,17 +110,17 @@ module.exports = function create(options, optionalLogger) {
 				};
 			});
 		},
-		createLambda = function (functionName, functionDesc, zipFile, roleArn) {
+		createLambda = function (functionName, functionDesc, functionCode, roleArn) {
 			return retry(
 				function () {
 					logger.logStage('creating Lambda');
 					return lambda.createFunctionPromise({
-						Code: { ZipFile: zipFile },
+						Code: functionCode,
 						FunctionName: functionName,
 						Description: functionDesc,
 						MemorySize: options.memory,
 						Timeout: options.timeout,
-						Handler: options.handler || (options['api-module'] + '.router'),
+						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true
@@ -200,6 +207,37 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaMetadata;
 			});
 		},
+		deployProxyApi = function (lambdaMetadata) {
+			var apiConfig = {
+					version: 3,
+					corsHandlers: true,
+					routes: {
+						'{proxy+}': { ANY: {}},
+						'': { ANY: {}}
+					}
+				},
+				alias = options.version || 'latest',
+				apiGateway = retriableWrap(promiseWrap(
+					new aws.APIGateway({region: options.region}),
+					{log: logger.logApiCall, logName: 'apigateway'}
+				),
+				function () {
+					logger.logStage('rate-limited by AWS, waiting before retry');
+				});
+			logger.logStage('creating REST API');
+
+			return apiGateway.createRestApiPromise({
+				name: lambdaMetadata.FunctionName
+			}).then(function (result) {
+				lambdaMetadata.api = {
+					id: result.id,
+					url: apiGWUrl(result.id, options.region, alias)
+				};
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
+			}).then(function () {
+				return lambdaMetadata;
+			});
+		},
 		saveConfig = function (lambdaMetaData) {
 			var config = {
 				lambda: {
@@ -220,6 +258,7 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaMetaData;
 			});
 		},
+		s3Key,
 		formatResult = function (lambdaMetaData) {
 			var config = {
 				lambda: {
@@ -230,6 +269,9 @@ module.exports = function create(options, optionalLogger) {
 			};
 			if (lambdaMetaData.api) {
 				config.api =  lambdaMetaData.api;
+			}
+			if (s3Key) {
+				config.s3key = s3Key;
 			}
 			return config;
 		},
@@ -265,6 +307,14 @@ module.exports = function create(options, optionalLogger) {
 					'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
 				}]
 			});
+		},
+		cleanup = function (result) {
+			if (!options.keep) {
+				shell.rm(packageArchive);
+			} else {
+				result.archive = packageArchive;
+			}
+			return result;
 		},
 		packageArchive,
 		functionDesc,
@@ -312,18 +362,21 @@ module.exports = function create(options, optionalLogger) {
 			});
 		}
 	}).then(function () {
-		return fs.readFileAsync(packageArchive);
-	}).then(function (fileContents) {
-		return createLambda(functionName, functionDesc, fileContents, roleMetadata.Role.Arn);
+		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+	}).then(function (functionCode) {
+		s3Key = functionCode.S3Key;
+		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
 	}).then(markAliases)
 	.then(function (lambdaMetadata) {
 		if (options['api-module']) {
 			return createWebApi(lambdaMetadata, packageFileDir);
+		} else if (options['deploy-proxy-api']) {
+			return deployProxyApi(lambdaMetadata);
 		} else {
 			return lambdaMetadata;
 		}
 	})
-	.then(saveConfig).then(formatResult);
+	.then(saveConfig).then(formatResult).then(cleanup);
 };
 
 module.exports.doc = {
@@ -345,9 +398,16 @@ module.exports.doc = {
 			argument: 'api-module',
 			optional: true,
 			description: 'The main module to use when creating Web APIs. \n' +
-				'If you provide this parameter, the handler option is ignored.\n' +
+				'If you provide this parameter, do not set the handler option.\n' +
 				'This should be a module created using the Claudia API Builder.',
 			example: 'if the api is defined in web.js, this would be web'
+		},
+		{
+			argument: 'deploy-proxy-api',
+			optional: true,
+			description: 'If specified, a proxy API will be created for the Lambda \n' +
+				' function on API Gateway, and forward all requests to function. \n' +
+				' This is an alternative way to create web APIs to --api-module.'
 		},
 		{
 			argument: 'name',
@@ -429,8 +489,23 @@ module.exports.doc = {
 		{
 			argument: 'cache-api-config',
 			optional: true,
+			example: 'claudiaConfigCache',
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
 				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+		},
+		{
+			argument: 'keep',
+			optional: true,
+			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
+				'If not set, the temporary files will be removed after the Lambda function is successfully created'
+		},
+		{
+			argument: 'use-s3-bucket',
+			optional: true,
+			example: 'claudia-uploads',
+			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
+				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
 		}
 	]
 };

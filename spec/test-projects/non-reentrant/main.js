@@ -9,12 +9,12 @@ global.MARKED = true;
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		routes: { hello: { 'GET' : {} }}
 	};
 };
 
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	console.log(event);
 	context.succeed('hello world');

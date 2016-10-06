@@ -2,12 +2,12 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 2,
+		version: 3,
 		authorizers: { first: { lambdaName: 'ln', lambdaArn: 'bla' } },
 		routes: { echo: { 'GET' : { customAuthorizer: 'first' } }}
 	};
 };
-exports.router = function (event, context) {
+exports.proxyRouter = function (event, context) {
 	'use strict';
 	context.succeed(event);
 };

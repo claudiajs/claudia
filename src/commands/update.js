@@ -2,12 +2,12 @@
 var Promise = require('bluebird'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
-	fs = require('fs'),
 	os = require('os'),
 	path = require('path'),
 	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
-	readFile = Promise.promisify(fs.readFile),
 	aws = require('aws-sdk'),
+	allowApiInvocation = require('../tasks/allow-api-invocation'),
+	lambdaCode = require('../tasks/lambda-code'),
 	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
 	retriableWrap = require('../util/retriable-wrap'),
@@ -16,6 +16,7 @@ var Promise = require('bluebird'),
 	apiGWUrl = require('../util/apigw-url'),
 	promiseWrap = require('../util/promise-wrap'),
 	NullLogger = require('../util/null-logger'),
+	getOwnerId = require('../tasks/get-owner-account-id'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
@@ -25,44 +26,76 @@ module.exports = function update(options, optionalLogger) {
 		alias = (options && options.version) || 'latest',
 		packageDir,
 		updateWebApi = function () {
-			var apiModule, apiDef, apiModulePath;
-			if (apiConfig && apiConfig.id && apiConfig.module) {
+			if (apiConfig && apiConfig.id) {
 				logger.logStage('updating REST API');
-				try {
-					apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
-					apiModule = require(apiModulePath);
-					apiDef = apiModule.apiConfig();
-				} catch (e) {
-					console.error(e.stack || e);
-					return Promise.reject('cannot load api config from ' + apiModulePath);
-				}
 				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
-				return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
-					.then(function () {
-						if (apiModule.postDeploy) {
-							return apiModule.postDeploy(
-								options,
-								{
-									name: lambdaConfig.name,
-									alias: alias,
-									apiId: apiConfig.id,
-									apiUrl: updateResult.url,
-									region: lambdaConfig.region
-								},
-								{
-									apiGatewayPromise: apiGateway,
-									aws: aws,
-									Promise: Promise
-								}
-							);
-						}
-					}).then(function (postDeployResult) {
-						if (postDeployResult) {
-							updateResult.deploy = postDeployResult;
-						}
-					});
+				if (apiConfig.module) {
+					return updateClaudiaApiBuilderApi();
+				} else {
+					return updateProxyApi();
+				}
 			}
-		};
+		},
+		updateProxyApi = function () {
+			return getOwnerId(logger).then(function (ownerId) {
+				return allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerId, lambdaConfig.region);
+			}).then(function () {
+				return apiGateway.createDeploymentPromise({
+					restApiId: apiConfig.id,
+					stageName: alias,
+					variables: {
+						lambdaVersion: alias
+					}
+				});
+			});
+		},
+		updateClaudiaApiBuilderApi = function () {
+			var apiModule, apiDef, apiModulePath;
+			try {
+				apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
+				apiModule = require(apiModulePath);
+				apiDef = apiModule.apiConfig();
+			} catch (e) {
+				console.error(e.stack || e);
+				return Promise.reject('cannot load api config from ' + apiModulePath);
+			}
+
+			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
+				.then(function () {
+					if (apiModule.postDeploy) {
+						return apiModule.postDeploy(
+							options,
+							{
+								name: lambdaConfig.name,
+								alias: alias,
+								apiId: apiConfig.id,
+								apiUrl: updateResult.url,
+								region: lambdaConfig.region
+							},
+							{
+								apiGatewayPromise: apiGateway,
+								aws: aws,
+								Promise: Promise
+							}
+						);
+					}
+				}).then(function (postDeployResult) {
+					if (postDeployResult) {
+						updateResult.deploy = postDeployResult;
+					}
+				});
+		},
+		packageArchive,
+		cleanup = function () {
+			if (!options.keep) {
+				shell.rm(packageArchive);
+			} else {
+				updateResult.archive = packageArchive;
+			}
+			return updateResult;
+		},
+		requiresHandlerUpdate = false,
+		s3Key;
 	options = options || {};
 	if (!options.source) {
 		options.source = shell.pwd();
@@ -93,6 +126,10 @@ module.exports = function update(options, optionalLogger) {
 		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
 	}).then(function (result) {
 		functionConfig = result;
+		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
+		if (requiresHandlerUpdate) {
+			functionConfig.Handler = functionConfig.Handler.replace(/\.router$/, '.proxyRouter');
+		}
 	}).then(function () {
 		if (apiConfig) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
@@ -106,27 +143,35 @@ module.exports = function update(options, optionalLogger) {
 		packageDir = dir;
 		if (options['no-optional-dependencies']) {
 			return cleanOptionalDependencies(dir, logger);
-		} else {
-			return dir;
 		}
-	}).then(function (dir) {
+	}).then(function () {
+		if (requiresHandlerUpdate) {
+			return lambda.updateFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler});
+		}
+	}).then(function () {
 		logger.logStage('zipping package');
-		return zipdir(dir);
-	}).then(readFile)
-	.then(function (fileContents) {
+		return zipdir(packageDir);
+	}).then(function (zipFile) {
+		packageArchive = zipFile;
+		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+	}).then(function (functionCode) {
 		logger.logStage('updating Lambda');
-		return lambda.updateFunctionCodePromise({FunctionName: lambdaConfig.name, ZipFile: fileContents, Publish: true});
+		s3Key = functionCode.S3Key;
+		functionCode.FunctionName = lambdaConfig.name;
+		functionCode.Publish = true;
+		return lambda.updateFunctionCodePromise(functionCode);
 	}).then(function (result) {
 		updateResult = result;
+		if (s3Key) {
+			updateResult.s3key = s3Key;
+		}
 		return result;
 	}).then(function (result) {
 		if (options.version) {
 			logger.logStage('setting version alias');
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
-	}).then(updateWebApi).then(function () {
-		return updateResult;
-	});
+	}).then(updateWebApi).then(cleanup);
 };
 module.exports.doc = {
 	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',
@@ -163,8 +208,23 @@ module.exports.doc = {
 		{
 			argument: 'cache-api-config',
 			optional: true,
+			example: 'claudiaConfigCache',
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
 				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+		},
+		{
+			argument: 'keep',
+			optional: true,
+			description: 'keep the produced package archive on disk for troubleshooting purposes.\n' +
+				'If not set, the temporary files will be removed after the Lambda function is successfully created'
+		},
+		{
+			argument: 'use-s3-bucket',
+			optional: true,
+			example: 'claudia-uploads',
+			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
+				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
 		}
 	]
 };

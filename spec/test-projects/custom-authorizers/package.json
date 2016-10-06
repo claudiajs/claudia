@@ -3,18 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "create-authorizer": "claudia create --name testAuth --region us-east-1 --handler authorizer.auth --version dev --config claudia-auth.json",
-    "update-authorizer": "claudia update --version dev --config claudia-auth.json",
-    "create-api": "claudia create --name testApi --region us-east-1 --api-module index --config claudia-api.json --version dev",
-    "update-api": "claudia update --config claudia-api.json --version dev"
-  },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "claudia-api-builder": "^1.6.0"
-  },
-  "devDependencies": {
-    "claudia": "^1.7.0"
+    "claudia-api-builder": "github:claudiajs/claudia-api-builder"
   }
 }
