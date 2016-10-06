@@ -57,6 +57,9 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 				if (methodConfig.customAuthorizer && (!apiConfig.authorizers || !apiConfig.authorizers[methodConfig.customAuthorizer])) {
 					throw routeMessage + 'requests an undefined custom authorizer ' + methodConfig.customAuthorizer;
 				}
+				if (methodConfig.cognitoAuthorizer && (!apiConfig.authorizers || !apiConfig.authorizers[methodConfig.cognitoAuthorizer])) {
+					throw routeMessage + 'requests an undefined Cognito User Pools authorizer ' + methodConfig.cognitoAuthorizer;
+				}
 				if (methodConfig.authorizationType && !validAuthType(methodConfig.authorizationType)) {
 					throw routeMessage + 'authorization type ' + methodConfig.authorizationType + ' is invalid';
 				}

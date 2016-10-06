@@ -28,7 +28,9 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			});
 		},
 		getAuthorizerArn = function (authConfig) {
-			if (authConfig.lambdaArn) {
+			if (!authConfig.lambdaName && authConfig.providerARNs) {
+				return Promise.resolve(null)
+			} else if (authConfig.lambdaArn) {
 				return Promise.resolve(authConfig.lambdaArn);
 			} else {
 				return lambda.getFunctionConfigurationPromise({FunctionName: authConfig.lambdaName}).then(function (lambdaConfig) {
