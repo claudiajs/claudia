@@ -75,8 +75,8 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 			Object.keys(apiConfig.authorizers).forEach(function (authorizerName) {
 				var authorizer = apiConfig.authorizers[authorizerName],
 					authorizerMessage =  apiModulePath + '.js authorizer ' + authorizerName + ' ';
-				if (!authorizer.lambdaName && !authorizer.lambdaArn) {
-					throw authorizerMessage + 'requires either lambdaName or lambdaArn';
+				if (!authorizer.lambdaName && !authorizer.lambdaArn && !authorizer.providerARNs) {
+					throw authorizerMessage + 'requires either lambdaName or lambdaArn or providerARNs';
 				}
 				if (authorizer.lambdaName && authorizer.lambdaArn) {
 					throw authorizerMessage + 'is ambiguous - both lambdaName or lambdaArn are defined';
