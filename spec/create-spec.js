@@ -151,7 +151,7 @@ describe('create', function () {
 		});
 		it('fails if local dependencies and optional dependencies are mixed', function (done) {
 			config['use-local-dependencies'] = true;
-			config['no-optional-dependencies'] = true;
+			config['optional-dependencies'] = false;
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 				done();
@@ -526,7 +526,7 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('removes optional dependencies after validation if requested', function (done) {
-			config['no-optional-dependencies'] = true;
+			config['optional-dependencies'] = false;
 			createFromDir('optional-dependencies').then(function () {
 				return lambda.invokePromise({FunctionName: testRunName});
 			}).then(function (lambdaResult) {

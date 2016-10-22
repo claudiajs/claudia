@@ -46,7 +46,7 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
 			}
-			if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
+			if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
 				return 'incompatible arguments --use-local-dependencies and --no-optional-dependencies';
 			}
 			if (!options.handler && !options['api-module']) {
@@ -333,7 +333,7 @@ module.exports = function create(options, optionalLogger) {
 		return validatePackage(dir, options.handler, options['api-module']);
 	}).then(function (dir) {
 		packageFileDir = dir;
-		if (options['no-optional-dependencies']) {
+		if (options['optional-dependencies'] === false) {
 			return cleanOptionalDependencies(dir, logger);
 		} else {
 			return dir;
