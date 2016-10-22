@@ -10,6 +10,8 @@ describe('collectFiles', function () {
 	'use strict';
 	var destdir, sourcedir, pwd,
 		configurePackage = function (packageConf) {
+			packageConf.name = packageConf.name  || 'testproj';
+			packageConf.version = packageConf.version  || '1.0.0';
 			fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
 		},
 		isSameDir = function (dir1, dir2) {
@@ -71,7 +73,7 @@ describe('collectFiles', function () {
 			}, done.fail);
 		});
 		it('works when files is a single string', function (done) {
-			configurePackage({files: 'roo*'});
+			configurePackage({files: ['root.txt']});
 			underTest(sourcedir).then(function (packagePath) {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -253,7 +255,7 @@ describe('collectFiles', function () {
 				}
 			});
 			underTest(sourcedir).then(done.fail, function (reason) {
-				expect(/^npm install --production failed/.test(reason)).toBeTruthy();
+				expect(reason).toMatch(/^npm install --production failed/);
 				done();
 			});
 		});
@@ -289,20 +291,7 @@ describe('collectFiles', function () {
 		underTest(sourcedir, false, logger).then(function () {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
-				['call', 'cp', 'package.json'],
-				['call', 'cp', 'root.txt'],
-				['call', 'rm', 'node_modules'],
-				['call', 'rm', '.git'],
-				['call', 'rm', '.gitignore'],
-				['call', 'rm', '*.swp'],
-				['call', 'rm', '._*'],
-				['call', 'rm', '.DS_Store'],
-				['call', 'rm', '.hg'],
-				['call', 'rm', '.npmrc'],
-				['call', 'rm', '.svn'],
-				['call', 'rm', 'config.gypi'],
-				['call', 'rm', 'CVS'],
-				['call', 'rm', 'npm-debug.log'],
+				['call', 'npm pack ' + sourcedir],
 				['call', 'npm install --production']
 			]);
 		}).then(done, done.fail);

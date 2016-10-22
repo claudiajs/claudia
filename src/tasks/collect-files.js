@@ -1,11 +1,13 @@
-/*global module, require */
+/*global module, require, Promise */
 var tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
-	Promise = require('bluebird'),
+	runNpm = require('../util/run-npm'),
 	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path'),
 	localizeDependencies = require('./localize-dependencies'),
+	gunzip = require('gunzip-maybe'),
+	tarStream = require('tar-fs'),
 	NullLogger = require('../util/null-logger');
 
 module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
@@ -25,56 +27,34 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 				return 'source directory does not contain package.json';
 			}
 		},
-		getRemovalFileList = function (ignoreFileListName) {
-			var ignoreFile = path.join(sourcePath, ignoreFileListName),
-				patternList;
-			if (!shell.test('-e', ignoreFile)) {
-				return [];
-			}
-			patternList = fs.readFileSync(ignoreFile, 'utf8').split('\n');
-			return patternList.filter(function (file) {
-				return (file && file.trim() && file.trim()[0] !== '#');
+		extractTarGz = function (archive, dir) {
+			return new Promise(function (resolve, reject) {
+				var extractStream = tarStream.extract(dir);
+				extractStream.on('finish', resolve);
+				extractStream.on('error', reject);
+				fs.createReadStream(archive).pipe(gunzip()).pipe(extractStream);
 			});
 		},
 		copyFiles = function (packageConfig) {
-			var files, targetDir = tmppath(), includedFiles = packageConfig.files,
-				removeAfterCopy = ['node_modules', '.git', '.gitignore', '*.swp', '._*', '.DS_Store', '.hg', '.npmrc', '.svn', 'config.gypi', 'CVS', 'npm-debug.log'],
-				ignoreFileLists = ['.gitignore', '.npmignore'];
-			if (!includedFiles) {
-				includedFiles = '*';
-				ignoreFileLists.forEach(function (fileName) {
-					removeAfterCopy = removeAfterCopy.concat(getRemovalFileList(fileName));
-				});
-			}
-			files = ['package.json'].concat(includedFiles);
-			shell.mkdir('-p', targetDir);
-			files.forEach(function (file) {
-				logger.logApiCall('cp', file);
-				shell.cp('-rf', path.join(sourcePath, file), targetDir);
+			var packDir = tmppath(),
+				targetDir = tmppath(),
+				expectedName = packageConfig.name + '-' + packageConfig.version + '.tgz';
+			shell.mkdir('-p', packDir);
+			return runNpm(packDir, 'pack ' + path.resolve(sourcePath), logger).then(function () {
+				return extractTarGz(path.join(packDir, expectedName), packDir);
+			}).then(function () {
+				shell.mv(path.join(packDir, 'package'), targetDir);
+				shell.rm('-rf', packDir);
+				return targetDir;
 			});
-			removeAfterCopy.forEach(function (pattern) {
-				logger.logApiCall('rm', pattern);
-				shell.rm('-rf', path.join(targetDir, pattern));
-			});
-			return Promise.resolve(targetDir);
 		},
 		installDependencies = function (targetDir) {
-			var cwd = shell.pwd(),
-				npmlog = tmppath();
 			if (useLocalDependencies) {
 				shell.cp('-r', path.join(sourcePath, 'node_modules'), targetDir);
+				return Promise.resolve(targetDir);
 			} else {
-				logger.logApiCall('npm install --production');
-				shell.cd(targetDir);
-				if (shell.exec('npm install --production > ' + npmlog + ' 2>&1').code !== 0) {
-					shell.cd(cwd);
-					return Promise.reject('npm install --production failed. Check ' + npmlog);
-				} else {
-					shell.rm(npmlog);
-					shell.cd(cwd);
-				}
+				return runNpm(targetDir, 'install --production', logger);
 			}
-			return Promise.resolve(targetDir);
 		},
 		rewireRelativeDependencies = function (targetDir) {
 			return localizeDependencies(targetDir, sourcePath).then(function () {
