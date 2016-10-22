@@ -3,6 +3,7 @@ var loadConfig = require('../util/loadconfig'),
 	readJSON = require('../util/readjson'),
 	Promise = require('bluebird'),
 	path = require('path'),
+	iamNameSanitize = require('../util/iam-name-sanitize'),
 	aws = require('aws-sdk');
 module.exports = function addS3EventSource(options) {
 	'use strict';
@@ -34,7 +35,7 @@ module.exports = function addS3EventSource(options) {
 					putRolePolicy = Promise.promisify(iam.putRolePolicy.bind(iam));
 					return putRolePolicy({
 						RoleName: lambdaConfig.role,
-						PolicyName: 's3-' + options.bucket + '-access',
+						PolicyName: iamNameSanitize('s3-' + options.bucket + '-access'),
 						PolicyDocument: policyContents
 					});
 				});
@@ -47,7 +48,7 @@ module.exports = function addS3EventSource(options) {
 				Principal: 's3.amazonaws.com',
 				SourceArn: 'arn:aws:s3:::' + options.bucket,
 				Qualifier: options.version,
-				StatementId:  options.bucket  + '-access'
+				StatementId:  iamNameSanitize(options.bucket  + '-access')
 			});
 		},
 		addBucketNotificationConfig = function () {
