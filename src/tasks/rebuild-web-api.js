@@ -155,7 +155,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': false,
 						'method.response.header.Access-Control-Allow-Methods': false,
-						'method.response.header.Access-Control-Allow-Origin': false
+						'method.response.header.Access-Control-Allow-Origin': false,
+						'method.response.header.Access-Control-Allow-Credentials': false
 					};
 				}
 				return apiGateway.putMethodResponseAsync({
@@ -175,7 +176,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
 						'method.response.header.Access-Control-Allow-Methods': '\'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT\'',
-						'method.response.header.Access-Control-Allow-Origin': '\'*\''
+						'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+						'method.response.header.Access-Control-Allow-Credentials': '\'true\''
 					};
 				}
 				return apiGateway.putIntegrationResponseAsync({

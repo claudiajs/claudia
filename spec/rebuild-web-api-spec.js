@@ -654,12 +654,14 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(function () {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
 		});
@@ -674,6 +676,7 @@ describe('rebuildWebApi', function () {
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
 		});
@@ -690,6 +693,8 @@ describe('rebuildWebApi', function () {
 					expect(response.headers['access-control-allow-methods']).toBeFalsy();
 					expect(response.headers['access-control-allow-headers']).toBeFalsy();
 					expect(response.headers['access-control-allow-origin']).toBeFalsy();
+					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
+
 				}).then(done, done.fail);
 			});
 		});
@@ -707,13 +712,15 @@ describe('rebuildWebApi', function () {
 						body: JSON.stringify({
 							'Access-Control-Allow-Methods': 'GET,OPTIONS',
 							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
-							'Access-Control-Allow-Origin': 'custom-origin'
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
 						})
 					});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
 					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
 					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
 				}).then(done, function (e) {
 					console.log(e);
 					done.fail();
