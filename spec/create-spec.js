@@ -161,7 +161,7 @@ describe('create', function () {
 			createFromDir('echo-dependency-problem').then(function () {
 				done.fail('create succeeded');
 			}, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
 				return iam.getRoleAsync({RoleName: testRunName + '-executor'}).then(function () {
 					done.fail('iam role was created');

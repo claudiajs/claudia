@@ -98,7 +98,7 @@ describe('update', function () {
 			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', workingdir);
 			underTest({source: workingdir})
 			.then(done.fail, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
 				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
 			}).then(function (result) {
@@ -281,7 +281,7 @@ describe('update', function () {
 		it('validates the package before creating a new lambda version', function (done) {
 			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', updateddir);
 			underTest({source: updateddir}).then(done.fail, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
 				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
 			}).then(function (result) {
