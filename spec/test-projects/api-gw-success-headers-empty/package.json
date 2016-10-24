@@ -1,5 +1,6 @@
 {
   "name": "api-gw-hello-world",
   "private": true,
+  "version": "1.0.0",
   "files": ["main.js"]
 }
