@@ -144,7 +144,7 @@ describe('collectFiles', function () {
 
 			});
 		});
-		['.gitignore', '.somename.swp', '._somefile', '.DS_Store', '.npmrc', 'npm-debug.log', 'config.gypi'].forEach(function (fileName) {
+		['.gitignore', '.somename.swp', '._somefile', '.DS_Store', '.npmrc', 'npm-debug.log'].forEach(function (fileName) {
 			it('excludes ' + fileName + ' file from the package', function (done) {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
 				configurePackage({});

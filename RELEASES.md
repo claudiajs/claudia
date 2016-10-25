@@ -1,5 +1,12 @@
 # Release history
 
+### 2.1.1, 25 October 2016
+
+- bugfix for setting Access-Control-Allow-Credentials header for CORS
+- bugfix for `--no-optional-dependencies`, thanks to [jveres](https://github.com/jveres)
+- bugfix for wildcards including files in package.json
+- Claudia is now using NPM to package files, instead of directly copying individual files, so all NPM tricks and workflow events for packaging are directly supported
+
 ### 2.1.0, 5 October 2016
 
 - support for `--generate-serverless-express-proxy`, helping users create aws-serverless-express wrappers.
