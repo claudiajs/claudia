@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, describe*/
+/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, describe */
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -821,6 +821,119 @@ describe('rebuildWebApi', function () {
 					authKey: 'abs123',
 					authBucket: 'bucket123'
 				});
+			}).then(done, done.fail);
+		});
+	});
+	describe('setting request parameters for caching', function () {
+		var testMethodConfig = function (methodConfig, resourcePath, method) {
+			var echoResourceId;
+			apiRouteConfig.routes = methodConfig;
+			return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesAsync({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === resourcePath) {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getMethodAsync({
+					httpMethod: method,
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			});
+		};
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiAsync({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		it('sets no request parameters if path params are not present', function (done) {
+			testMethodConfig({ '/echo': {GET: {}}}, '/echo', 'GET').then(function (result) {
+				expect(result.requestParameters).toBeFalsy();
+				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
+			}).then(done, done.fail);
+		});
+		it('allows setting request parameters with config', function (done) {
+			testMethodConfig({
+				'/echo': {
+					GET: {
+						requestParameters: {
+							querystring: {
+								name: true,
+								title: false
+							},
+							header: {
+								'x-bz': true
+							}
+						}
+					}
+				}
+			}, '/echo', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.querystring.name': true,
+					'method.request.querystring.title': false,
+					'method.request.header.x-bz': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters.sort()).toEqual(['method.request.querystring.name', 'method.request.querystring.title', 'method.request.header.x-bz'].sort());
+			}).then(done, done.fail);
+		});
+		it('sets request parameters for paths automatically', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {}
+				}
+			}, '/echo/{name}', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.path.name': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters).toEqual(['method.request.path.name']);
+			}).then(done, done.fail);
+		});
+		it('appends additional parameters to path params', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {
+						requestParameters: {
+							querystring: {
+								title: true
+							}
+						}
+					}
+				}
+			}, '/echo/{name}', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.path.name': true,
+					'method.request.querystring.title': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters.sort()).toEqual(['method.request.path.name', 'method.request.querystring.title'].sort());
+			}).then(done, done.fail);
+		});
+		it('does not sets parameters on options', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {
+						querystring: {
+							title: true
+						}
+					}
+				}
+			}, '/echo/{name}', 'OPTIONS').then(function (result) {
+				expect(result.requestParameters).toBeFalsy();
+				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
 			}).then(done, done.fail);
 		});
 	});

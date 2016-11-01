@@ -9,6 +9,7 @@ var aws = require('aws-sdk'),
 	retriableWrap = require('../util/retriable-wrap'),
 	NullLogger = require('../util/null-logger'),
 	safeHash = require('../util/safe-hash'),
+	flattenRequestParameters = require('./flatten-request-parameters'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion, optionalLogger, configCacheStageVar) {
@@ -60,13 +61,14 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		},
-		putLambdaIntegration = function (resourceId, methodName, credentials) {
+		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters) {
 			return apiGateway.putIntegrationAsync({
 				restApiId: restApiId,
 				resourceId: resourceId,
 				httpMethod: methodName,
 				credentials: credentials,
 				type: 'AWS_PROXY',
+				cacheKeyParameters: cacheKeyParameters,
 				integrationHttpMethod: 'POST',
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 			});
@@ -78,8 +80,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 			return '\'' + val + '\'';
 		},
-		createMethod = function (methodName, resourceId, methodOptions) {
-			var apiKeyRequired = function () {
+		createMethod = function (methodName, resourceId, path) {
+			var methodOptions = apiConfig.routes[path][methodName],
+				apiKeyRequired = function () {
 					return methodOptions && methodOptions.apiKeyRequired;
 				},
 				authorizationType = function () {
@@ -123,16 +126,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				authorizerId = function () {
 					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
-				};
+				},
+				parameters = flattenRequestParameters(methodOptions.requestParameters, path);
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
 				authorizerId: authorizerId(),
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
+				requestParameters: parameters,
 				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
-				return putLambdaIntegration(resourceId, methodName, credentials());
+				return putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters));
 			}).then(function () {
 				return addMethodResponse();
 			});
@@ -214,7 +219,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			var resourceId,
 				supportedMethods = Object.keys(apiConfig.routes[path]),
 				createMethodMapper = function (methodName) {
-					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
+					return createMethod(methodName, resourceId, path);
 				};
 			return findResourceByPath(path).then(function (r) {
 				resourceId = r;
