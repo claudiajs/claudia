@@ -1,5 +1,9 @@
 # Release history
 
+### 2.1.2, 4 November 2016
+
+- bugfix for setting cache params and method params with API gateway.
+
 ### 2.1.1, 25 October 2016
 
 - bugfix for setting Access-Control-Allow-Credentials header for CORS
