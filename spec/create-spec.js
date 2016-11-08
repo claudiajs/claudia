@@ -89,6 +89,12 @@ describe('create', function () {
 				expect(message).toEqual('Lambda handler module has to be in the main project directory');
 			}).then(done);
 		});
+		it('fails if the handler does not contain a dot', function (done) {
+			config.handler = 'api';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('Lambda handler function not specified. Please specify with --handler module.function');
+			}).then(done);
+		});
 		it('fails if both handler and api module are provided', function (done) {
 			config.handler = 'main.handler';
 			config['api-module'] = 'main';
@@ -109,6 +115,13 @@ describe('create', function () {
 			config['api-module'] = 'api/main';
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('API module has to be in the main project directory');
+			}).then(done);
+		});
+		it('fails if the api module contains an extension', function (done) {
+			config.handler = undefined;
+			config['api-module'] = 'api.js';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('API module must be a module name, without the file extension or function name');
 			}).then(done);
 		});
 
