@@ -6,7 +6,8 @@ beforeEach(function () {
 		Promise = require('bluebird'),
 		shell = require('shelljs'),
 		retriableWrap = require('../../src/util/retriable-wrap'),
-		awsRegion = 'us-east-1';
+		awsRegion = 'us-east-1',
+		cwd = shell.pwd();
 
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
@@ -61,7 +62,7 @@ beforeEach(function () {
 		if (!newObjects) {
 			return Promise.resolve();
 		}
-
+		shell.cd(cwd);
 		if (newObjects.workingdir && shell.test('-e', newObjects.workingdir)) {
 			shell.rm('-rf', newObjects.workingdir);
 		}
