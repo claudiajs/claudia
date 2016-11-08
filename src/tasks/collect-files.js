@@ -6,6 +6,7 @@ var tmppath = require('../util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
 	localizeDependencies = require('./localize-dependencies'),
+	expectedArchiveName = require('../util/expected-archive-name'),
 	gunzip = require('gunzip-maybe'),
 	tarStream = require('tar-fs'),
 	NullLogger = require('../util/null-logger');
@@ -38,7 +39,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 		copyFiles = function (packageConfig) {
 			var packDir = tmppath(),
 				targetDir = tmppath(),
-				expectedName = packageConfig.name + '-' + packageConfig.version + '.tgz';
+				expectedName = expectedArchiveName(packageConfig);
 			shell.mkdir('-p', packDir);
 			return runNpm(packDir, 'pack ' + path.resolve(sourcePath), logger).then(function () {
 				return extractTarGz(path.join(packDir, expectedName), packDir);

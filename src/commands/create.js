@@ -14,6 +14,7 @@ var Promise = require('bluebird'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
+	lambdaNameSanitize = require('../util/lambda-name-sanitize'),
 	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
@@ -99,7 +100,7 @@ module.exports = function create(options, optionalLogger) {
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
 			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
-				var name = options.name || (jsonConfig.name && jsonConfig.name.trim()),
+				var name = options.name || lambdaNameSanitize(jsonConfig.name),
 					description = options.description || (jsonConfig.description && jsonConfig.description.trim());
 				if (!name) {
 					return Promise.reject('project name is missing. please specify with --name or in package.json');

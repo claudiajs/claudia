@@ -144,7 +144,7 @@ describe('collectFiles', function () {
 
 			});
 		});
-		['.gitignore', '.somename.swp', '._somefile', '.DS_Store', '.npmrc', 'npm-debug.log'].forEach(function (fileName) {
+		['.gitignore', '.somename.swp', '._somefile', '.DS_Store', 'npm-debug.log'].forEach(function (fileName) {
 			it('excludes ' + fileName + ' file from the package', function (done) {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
 				configurePackage({});
@@ -154,6 +154,15 @@ describe('collectFiles', function () {
 				}).then(done, done.fail);
 
 			});
+		});
+		it('leaves .npmrc if it exists', function (done) {
+			var fileName = '.npmrc';
+			fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
+			configurePackage({});
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, fileName))).toBeTruthy();
+			}).then(done, done.fail);
 		});
 		['.gitignore', '.npmignore'].forEach(function (fileName) {
 			it('ignores the wildcard contents specified in ' + fileName, function (done) {
@@ -298,7 +307,16 @@ describe('collectFiles', function () {
 			});
 		});
 	});
-
+	it('works with scoped packages', function (done) {
+		configurePackage({name: '@test/packname'});
+		underTest(sourcedir).then(function (packagePath) {
+			destdir = packagePath;
+			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
+			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+			expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
+		}).then(done, done.fail);
+	});
 	it('logs progress', function (done) {
 		var logger = new ArrayLogger();
 		configurePackage({

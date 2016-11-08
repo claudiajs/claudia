@@ -21,8 +21,13 @@ describe('create', function () {
 			}
 			shell.cp('-r',
 				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*',
-				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/.*',
 				workingdir);
+			if (shell.test('-e', path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'))) {
+				shell.cp(
+					path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'),
+					workingdir
+				);
+			}
 			return underTest(config, logger).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -436,6 +441,20 @@ describe('create', function () {
 				});
 			}).then(function () {
 				return lambda.getFunctionConfigurationPromise({FunctionName: 'hello-world'});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
+			}).then(done, done.fail);
+		});
+		it('renames scoped NPM packages to a sanitized Lambda name', function (done) {
+			config.name = undefined;
+			createFromDir('hello-world-scoped').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: 'test_hello-world-executor',
+					region: awsRegion,
+					name: 'test_hello-world'
+				});
+			}).then(function () {
+				return lambda.getFunctionConfigurationPromise({FunctionName: 'test_hello-world'});
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
