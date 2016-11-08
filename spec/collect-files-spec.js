@@ -283,7 +283,7 @@ describe('collectFiles', function () {
 				}
 			});
 			underTest(sourcedir).then(done.fail, function (reason) {
-				expect(reason).toMatch(/^npm install --production failed/);
+				expect(reason).toMatch(/npm install --production failed/);
 				done();
 			});
 		});
@@ -326,10 +326,11 @@ describe('collectFiles', function () {
 			}
 		});
 		underTest(sourcedir, false, logger).then(function () {
+			var npmPath = shell.which('npm');
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
-				['call', 'npm pack ' + sourcedir],
-				['call', 'npm install --production']
+				['call', npmPath + ' pack ' + sourcedir],
+				['call', npmPath + ' install --production']
 			]);
 		}).then(done, done.fail);
 	});
