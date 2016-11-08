@@ -213,6 +213,25 @@ describe('collectFiles', function () {
 				done();
 			}, done.fail);
 		});
+		it('uses the local .npmrc file if it exists', function (done) {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'uuid': '^2.0.0'
+				},
+				optionalDependencies: {
+					'minimist': '^1.2.0'
+				}
+			});
+			fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
+			underTest(sourcedir).then(function (packagePath) {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
+				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
+				done();
+			}, done.fail);
+		});
 		it('uses local node_modules instead of running npm install if localDependencies is set to true', function (done) {
 			configurePackage({
 				dependencies: {

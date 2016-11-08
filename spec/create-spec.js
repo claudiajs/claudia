@@ -19,7 +19,10 @@ describe('create', function () {
 			if (!shell.test('-e', workingdir)) {
 				shell.mkdir('-p', workingdir);
 			}
-			shell.cp('-r', path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*', workingdir);
+			shell.cp('-r',
+				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*',
+				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/.*',
+				workingdir);
 			return underTest(config, logger).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -532,6 +535,14 @@ describe('create', function () {
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
+			}).then(done, done.fail);
+		});
+		it('removes .npmrc from the package', function (done) {
+			createFromDir('ls-dir').then(function () {
+				return lambda.invokePromise({FunctionName: testRunName});
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"files":["main.js","node_modules","package.json"]}');
 			}).then(done, done.fail);
 		});
 		it('keeps the archive on the disk if --keep is specified', function (done) {

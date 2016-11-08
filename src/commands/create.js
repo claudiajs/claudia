@@ -5,6 +5,7 @@ var Promise = require('bluebird'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
+	cleanUpPackage = require('../tasks/clean-up-package'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
 	templateFile = require('../util/template-file'),
@@ -13,7 +14,6 @@ var Promise = require('bluebird'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
-	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
 	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
 	fs = Promise.promisifyAll(require('fs')),
@@ -333,11 +333,7 @@ module.exports = function create(options, optionalLogger) {
 		return validatePackage(dir, options.handler, options['api-module']);
 	}).then(function (dir) {
 		packageFileDir = dir;
-		if (options['optional-dependencies'] === false) {
-			return cleanOptionalDependencies(dir, logger);
-		} else {
-			return dir;
-		}
+		return cleanUpPackage(dir, options, logger);
 	}).then(function (dir) {
 		logger.logStage('zipping package');
 		return zipdir(dir);

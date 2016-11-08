@@ -41,6 +41,25 @@ describe('runNpm', function () {
 			done();
 		}, done.fail);
 	});
+	it('uses local .npmrc if exists', function (done) {
+		configurePackage({
+			dependencies: {
+				'uuid': '^2.0.0'
+			},
+			optionalDependencies: {
+				'minimist': '^1.2.0'
+			}
+		});
+		fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
+		underTest(sourcedir, 'install --production', logger).then(function (packagePath) {
+			expect(packagePath).toEqual(sourcedir);
+			expect(shell.pwd()).toEqual(pwd);
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			done();
+		}, done.fail);
+
+	});
 	it('fails if npm install fails', function (done) {
 		configurePackage({
 			files: ['root.txt'],

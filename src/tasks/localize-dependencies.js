@@ -3,6 +3,7 @@ var Promise = require('bluebird'),
 	fs = require('fs'),
 	path = require('path'),
 	Promise = require('bluebird'),
+	shell = require('shelljs'),
 	writeFile = Promise.promisify(fs.writeFile),
 	readjson = require('../util/readjson');
 
@@ -30,5 +31,10 @@ module.exports = function (workdir, referencedir) {
 		return content;
 	}).then(function (content) {
 		return writeFile(packagePath, JSON.stringify(content), {encoding: 'utf8'});
+	}).then(function () {
+		var npmRcPath = path.join(referencedir, '.npmrc');
+		if (shell.test('-e', npmRcPath)) {
+			shell.cp(npmRcPath, workdir);
+		}
 	});
 };

@@ -13,11 +13,12 @@ describe('localizeDependencies', function () {
 	var workdir, referencedir;
 	beforeEach(function () {
 		workdir = path.join(os.tmpdir(), uuid.v4());
-		referencedir = '/abc/def';
+		referencedir = path.join(os.tmpdir(), uuid.v4());
 		shell.mkdir(workdir);
+		shell.mkdir(referencedir);
 	});
 	afterEach(function () {
-		shell.rm('-rf', workdir);
+		shell.rm('-rf', workdir, referencedir);
 	});
 	it('does not modify package properties that have nothing to do with dependencies', function (done) {
 		var referenceJSON;
@@ -111,6 +112,21 @@ describe('localizeDependencies', function () {
 				});
 			}).then(done, done.fail);
 		});
+	});
+	it('does not create .npmrc if the original directory does not have one', function (done) {
+		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
+		localizeDependencies(workdir, referencedir).then(function () {
+			expect(shell.test('-e', path.join(workdir, '.npmrc'))).toBeFalsy();
+		}).then(done, done.fail);
+	});
+	it('copies .npmrc if the original directory contains it', function (done) {
+		fs.writeFileSync(path.join(referencedir, '.npmrc'), 'optional = false', 'utf8');
+		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
+		localizeDependencies(workdir, referencedir).then(function () {
+			var npmRcPath = path.join(workdir, '.npmrc');
+			expect(shell.test('-e', npmRcPath)).toBeTruthy();
+			expect(fs.readFileSync(npmRcPath, 'utf8')).toEqual('optional = false');
+		}).then(done, done.fail);
 	});
 
 });

@@ -4,7 +4,7 @@ var Promise = require('bluebird'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
-	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
+	cleanUpPackage = require('../tasks/clean-up-package'),
 	aws = require('aws-sdk'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	lambdaCode = require('../tasks/lambda-code'),
@@ -141,9 +141,7 @@ module.exports = function update(options, optionalLogger) {
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
 	}).then(function (dir) {
 		packageDir = dir;
-		if (options['optional-dependencies'] === false) {
-			return cleanOptionalDependencies(dir, logger);
-		}
+		return cleanUpPackage(dir, options, logger);
 	}).then(function () {
 		if (requiresHandlerUpdate) {
 			return lambda.updateFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler});
