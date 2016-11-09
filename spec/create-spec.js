@@ -546,6 +546,7 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('rewires relative local dependencies to reference original location after copy', function (done) {
+			shell.mkdir('-p', workingdir);
 			shell.cp('-r', path.join(__dirname, 'test-projects',  'relative-dependencies/*'), workingdir);
 			config.source = path.join(workingdir, 'lambda');
 			underTest(config).then(function (result) {

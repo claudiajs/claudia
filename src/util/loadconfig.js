@@ -6,7 +6,7 @@ var	path = require('path'),
 
 module.exports = function loadConfig(options, validate) {
 	'use strict';
-	var sourceDir = shell.pwd(),
+	var sourceDir = shell.pwd().toString(),
 		fileName,
 		configMissingError = function () {
 			if (options && options.config) {

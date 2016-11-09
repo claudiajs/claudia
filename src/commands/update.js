@@ -98,7 +98,7 @@ module.exports = function update(options, optionalLogger) {
 		s3Key;
 	options = options || {};
 	if (!options.source) {
-		options.source = shell.pwd();
+		options.source = shell.pwd().toString();
 	}
 	if (options.source === os.tmpdir()) {
 		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');

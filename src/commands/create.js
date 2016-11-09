@@ -24,7 +24,7 @@ var Promise = require('bluebird'),
 module.exports = function create(options, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
-		source = (options && options.source) || shell.pwd(),
+		source = (options && options.source) || shell.pwd().toString(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = promiseWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),

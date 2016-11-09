@@ -7,7 +7,7 @@ var path = require('path'),
 	runNpm = require('../util/run-npm');
 module.exports = function generateServerlessExpressProxy(options, optionalLogger) {
 	'use strict';
-	var source = (options && options.source) || shell.pwd(),
+	var source = (options && options.source) || shell.pwd().toString(),
 		logger = optionalLogger || new NullLogger(),
 		serverlessModule = (options && options['aws-serverless-express-module']) || 'aws-serverless-express',
 		proxyModuleName = (options && options['proxy-module-name']) || 'lambda',

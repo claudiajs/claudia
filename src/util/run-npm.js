@@ -3,7 +3,7 @@ var shell = require('shelljs'),
 	tmppath = require('./tmppath');
 module.exports = function runNpm(dir, options, logger) {
 	'use strict';
-	var cwd = shell.pwd(),
+	var cwd = shell.pwd().toString(),
 		npmlog = tmppath(),
 		command = shell.which('npm') + ' ' + options,
 		env = shell.env;

@@ -13,7 +13,7 @@ var minimist = require('minimist'),
 			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region', 'profile'],
 			boolean: ['quiet'],
-			default: { 'source': shell.pwd() }
+			default: { 'source': shell.pwd().toString() }
 		});
 	},
 	main = function () {
