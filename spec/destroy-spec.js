@@ -62,7 +62,7 @@ describe('destroy', function () {
 			underTest({ source: workingdir }).then(function () {
 				return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
 			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaRole);
+				expect(expectedException.code).toEqual('NoSuchEntity');
 			}).then(done, done.fail);
 		});
 		it('destroys the policies for the lambda function', function (done) {
@@ -94,7 +94,7 @@ describe('destroy', function () {
 			underTest({ source: workingdir }).then(function () {
 				return iam.getRoleAsync({ RoleName: newObjects.lambdaRole });
 			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaRole);
+				expect(expectedException.code).toEqual('NoSuchEntity');
 			}).then(done, done.fail);
 		});
 		it('destroys the policies for the lambda function', function (done) {
