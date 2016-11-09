@@ -1,5 +1,11 @@
 # Release history
 
+### 2.1.3, 9 November 2016
+
+- bugfix for using scoped packages @company/name (https://github.com/claudiajs/claudia/issues/80), thanks to Nicolas Cochard
+- bugfix for using local .npmrc files inside project folders (https://github.com/claudiajs/claudia/issues/81)
+- prevent ambiguous definitions when handler specified without . or api module specified with function/extension
+
 ### 2.1.2, 4 November 2016
 
 - bugfix for setting cache params and method params with API gateway.
