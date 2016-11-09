@@ -52,7 +52,7 @@ module.exports = function addS3EventSource(options) {
 			});
 		},
 		addBucketNotificationConfig = function () {
-			var s3 = Promise.promisifyAll(new aws.S3()),
+			var s3 = Promise.promisifyAll(new aws.S3({signatureVersion: 'v4'})),
 				eventConfig = {
 					LambdaFunctionArn: lambdaConfig.arn,
 					Events: ['s3:ObjectCreated:*']

@@ -13,7 +13,7 @@ var	Promise = require('bluebird'),
 	uploadToS3 = function (filePath, bucket, logger) {
 		'use strict';
 		var fileKey = path.basename(filePath),
-			s3 = promiseWrap(new aws.S3(), {log: logger.logApiCall, logName: 's3'});
+			s3 = promiseWrap(new aws.S3({signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'});
 		return s3.uploadPromise({
 				Bucket: bucket,
 				Key: fileKey,
