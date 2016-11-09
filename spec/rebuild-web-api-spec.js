@@ -560,6 +560,8 @@ describe('rebuildWebApi', function () {
 			var authorizerLambdaDir = path.join(workingdir, 'authorizer'),
 				genericRole = this.genericRole;
 			lambda = new aws.Lambda({region: awsRegion});
+			shell.mkdir('-p', workingdir);
+			shell.mkdir('-p', authorizerLambdaDir);
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
 

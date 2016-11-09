@@ -435,7 +435,7 @@ describe('update', function () {
 	});
 	it('logs call execution', function (done) {
 		var logger = new ArrayLogger();
-		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/', workingdir);
+		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
 		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.restApi = result.api && result.api.id;

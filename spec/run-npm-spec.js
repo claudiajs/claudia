@@ -68,7 +68,7 @@ describe('runNpm', function () {
 			}
 		});
 		underTest(sourcedir, 'install --production', logger).then(done.fail, function (reason) {
-			expect(reason).toMatch(/^npm install --production failed/);
+			expect(reason).toMatch(/npm install --production failed/);
 			done();
 		});
 	});
