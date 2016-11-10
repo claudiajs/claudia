@@ -1,6 +1,7 @@
 /*global module, require, Promise */
 var shell = require('shelljs'),
 	removeKeysWithPrefix = require('./remove-keys-with-prefix'),
+	execPromise = require('./exec-promise'),
 	tmppath = require('./tmppath');
 module.exports = function runNpm(dir, options, logger) {
 	'use strict';
@@ -13,12 +14,13 @@ module.exports = function runNpm(dir, options, logger) {
 	if (shell.test('-e', '.npmrc')) {
 		env = removeKeysWithPrefix(shell.env, 'npm_');
 	}
-	if (shell.exec(command + ' > ' + npmlog + ' 2>&1', {env: env}).code !== 0) {
+	return execPromise(command + ' > ' + npmlog + ' 2>&1', {env: env}).then(function () {
+		shell.rm(npmlog);
+		shell.cd(cwd);
+		return dir;
+	}).catch(function () {
 		shell.cd(cwd);
 		return Promise.reject(command + ' failed. Check ' + npmlog);
-	}
-	shell.rm(npmlog);
-	shell.cd(cwd);
-	return Promise.resolve(dir);
+	});
 };
 

@@ -49,7 +49,7 @@
     "minimal-request-promise": "^1.1.0",
     "minimist": "^1.2.0",
     "oh-no-i-insist": "^1.0.0",
-    "shelljs": "^0.7.5",
+    "shelljs": "^0.5.3",
     "tar-fs": "^1.14.0",
     "uuid": "^2.0.1"
   },
