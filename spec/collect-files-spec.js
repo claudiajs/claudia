@@ -317,6 +317,21 @@ describe('collectFiles', function () {
 			expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
 		}).then(done, done.fail);
 	});
+	it('works with folders containing a space', function (done) {
+		var oldsource = sourcedir;
+		sourcedir = oldsource + ' with space';
+		shell.mv(oldsource, sourcedir);
+		configurePackage({name: 'test123'});
+		underTest(sourcedir).then(function (packagePath) {
+			destdir = packagePath;
+			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
+			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
+			expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
+			sourcedir = oldsource;
+		}).then(done, done.fail);
+	});
+
 	it('logs progress', function (done) {
 		var logger = new ArrayLogger();
 		configurePackage({
@@ -326,11 +341,10 @@ describe('collectFiles', function () {
 			}
 		});
 		underTest(sourcedir, false, logger).then(function () {
-			var npmPath = shell.which('npm');
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
-				['call', npmPath + ' pack ' + sourcedir],
-				['call', npmPath + ' install --production']
+				['call', 'npm pack "' + sourcedir + '"'],
+				['call', 'npm install --production']
 			]);
 		}).then(done, done.fail);
 	});

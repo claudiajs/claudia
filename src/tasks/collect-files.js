@@ -41,7 +41,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 				targetDir = tmppath(),
 				expectedName = expectedArchiveName(packageConfig);
 			shell.mkdir('-p', packDir);
-			return runNpm(packDir, 'pack ' + path.resolve(sourcePath), logger).then(function () {
+			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger).then(function () {
 				return extractTarGz(path.join(packDir, expectedName), packDir);
 			}).then(function () {
 				shell.mv(path.join(packDir, 'package'), targetDir);
