@@ -1,5 +1,10 @@
 # Release history
 
+### 2.1.5, 11 November 2016
+
+- downgrade shelljs to avoid bug that would silently cause some files not to be copied when using --local-dependencies
+- bugfix for deployment from directories containing a space (https://github.com/claudiajs/claudia/issues/84)
+
 ### 2.1.4, 2.1.3, 9 November 2016
 
 - force V4 signing for S3, to support european S3 operations
