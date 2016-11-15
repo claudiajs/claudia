@@ -1,36 +1,23 @@
 /*global module, require */
-var Promise = require('bluebird'),
-aws = require('aws-sdk'),
-loadConfig = require('../util/loadconfig');
+var aws = require('aws-sdk'),
+	loadConfig = require('../util/loadconfig'),
+	retriableWrap = require('../util/retriable-wrap'),
+	destroyRole = require('../util/destroy-role');
 module.exports = function destroy(options) {
 	'use strict';
-	var lambdaConfig, apiConfig,
-		iam = Promise.promisifyAll(new aws.IAM()),
-		destroyRole = function (roleName) {
-			var deleteSinglePolicy = function (policyName) {
-				return iam.deleteRolePolicyAsync({
-					PolicyName: policyName,
-					RoleName: roleName
-				});
-			};
-			return iam.listRolePoliciesAsync({ RoleName: roleName }).then(function (result) {
-				return Promise.map(result.PolicyNames, deleteSinglePolicy);
-			}).then(function () {
-				return iam.deleteRoleAsync({ RoleName: roleName });
-			});
-		};
+	var lambdaConfig, apiConfig;
 
 	return loadConfig(options, { lambda: { name: true, region: true, role: true } })
 		.then(function (config) {
 			lambdaConfig = config.lambda;
 			apiConfig = config.api;
 		}).then(function () {
-			var lambda = Promise.promisifyAll(new aws.Lambda({ region: lambdaConfig.region }), { suffix: 'Promise' });
-			return lambda.deleteFunctionPromise({ FunctionName: lambdaConfig.name });
+			var lambda = new aws.Lambda({ region: lambdaConfig.region });
+			return lambda.deleteFunction({ FunctionName: lambdaConfig.name }).promise();
 		}).then(function () {
-			var apiGateway = Promise.promisifyAll(new aws.APIGateway({ region: lambdaConfig.region }));
+			var apiGateway = retriableWrap(new aws.APIGateway({ region: lambdaConfig.region }));
 			if (apiConfig) {
-				return apiGateway.deleteRestApiAsync({
+				return apiGateway.deleteRestApiPromise({
 					restApiId: apiConfig.id
 				});
 			}
