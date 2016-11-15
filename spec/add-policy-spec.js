@@ -1,11 +1,10 @@
 /*global describe, require, it, expect, beforeEach, afterEach  */
 var underTest = require('../src/tasks/add-policy'),
-	aws = require('aws-sdk'),
-	Promise = require('bluebird');
+	aws = require('aws-sdk');
 describe('add-policy', function () {
 	'use strict';
 	var testRunName,
-		iam = Promise.promisifyAll(new aws.IAM()),
+		iam = new aws.IAM(),
 		lambdaRolePolicy = {
 			'Version': '2012-10-17',
 			'Statement': [{
@@ -18,10 +17,10 @@ describe('add-policy', function () {
 		};
 	beforeEach(function (done) {
 		testRunName = 'role-test' + Date.now();
-		iam.createRoleAsync({
+		iam.createRole({
 			RoleName: testRunName,
 			AssumeRolePolicyDocument: JSON.stringify(lambdaRolePolicy)
-		}).then(done, done.fail);
+		}).promise().then(done, done.fail);
 	});
 	afterEach(function (done) {
 		this.destroyObjects({lambdaRole: testRunName}).then(done, done.fail);
@@ -29,10 +28,10 @@ describe('add-policy', function () {
 	it('appends a policy from the templates folder to the role', function (done) {
 		var expectedPolicy = require('../json-templates/log-writer');
 		underTest('log-writer', testRunName).then(function () {
-			return iam.getRolePolicyAsync({
+			return iam.getRolePolicy({
 				PolicyName: 'log-writer',
 				RoleName: testRunName
-			});
+			}).promise();
 		}).then(function (policy) {
 			expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(expectedPolicy);
 		}).then(done, done.fail);

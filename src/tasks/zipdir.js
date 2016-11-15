@@ -1,6 +1,5 @@
-/*global module, require */
-var Promise = require('bluebird'),
-	shell = require('shelljs'),
+/*global module, require, Promise */
+var shell = require('shelljs'),
 	tmppath = require('../util/tmppath'),
 	archiver = require('archiver'),
 	fs = require('fs');

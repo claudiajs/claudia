@@ -1,8 +1,7 @@
-/*global require, module */
+/*global require, module, Promise */
 var	path = require('path'),
 	readjson = require('../util/readjson'),
-	shell = require('shelljs'),
-	Promise = require('bluebird');
+	shell = require('shelljs');
 
 module.exports = function loadConfig(options, validate) {
 	'use strict';

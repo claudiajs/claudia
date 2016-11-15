@@ -5,8 +5,6 @@ var os = require('os'),
 	shell = require('shelljs'),
 	readjson = require('../src/util/readjson'),
 	fs = require('fs'),
-	Promise = require('bluebird'),
-	writeFile = Promise.promisify(fs.writeFile),
 	localizeDependencies = require('../src/tasks/localize-dependencies');
 describe('localizeDependencies', function () {
 	'use strict';
@@ -43,7 +41,7 @@ describe('localizeDependencies', function () {
 		var writeTemplate = function (overrideKey, value) {
 			return readjson(path.join(__dirname, '..', 'package.json')).then(function (content) {
 				content[overrideKey] = value;
-				return writeFile(path.join(workdir, 'package.json'), JSON.stringify(content), {encoding: 'utf8'});
+				return fs.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), {encoding: 'utf8'});
 			});
 		};
 		it('does not modify remote dependencies in ' + depType, function (done) {

@@ -1,7 +1,6 @@
-/* global require, describe, it, expect, beforeEach, jasmine*/
+/* global require, describe, it, expect, beforeEach, jasmine, Promise*/
 var underTest = require('../src/util/retriable-wrap'),
-	aws = require('aws-sdk'),
-	Promise = require('bluebird');
+	aws = require('aws-sdk');
 describe('retriableWrap', function () {
 	'use strict';
 	var source,

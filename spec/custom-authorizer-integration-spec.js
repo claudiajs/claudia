@@ -4,11 +4,10 @@ var create = require('../src/commands/create'),
 	setVersion = require('../src/commands/set-version'),
 	destroy = require('../src/commands/destroy'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../src/util/fs-promise'),
 	awsRegion = 'us-east-1';
 describe('customAuthorizers', function () {
 	'use strict';
