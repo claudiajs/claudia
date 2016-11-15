@@ -1,5 +1,4 @@
-/*global require, module*/
-var Promise = require('bluebird');
+/*global module, Promise*/
 module.exports = function markAlias(functionName, lambda, versionName, versionAlias) {
 	'use strict';
 	var config = {
