@@ -17,7 +17,7 @@ describe('testLambda', function () {
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
