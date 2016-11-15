@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, Promise */
 var underTest = require('../src/commands/add-sns-event-source'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -7,17 +7,16 @@ var underTest = require('../src/commands/add-sns-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('addSNSEventSource', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, s3, config, logs, lambda, sns;
 	beforeEach(function () {
 		workingdir = tmppath();
-		s3 = Promise.promisifyAll(new aws.S3());
-		logs = Promise.promisifyAll(new aws.CloudWatchLogs({region: awsRegion}));
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
-		sns = Promise.promisifyAll(new aws.SNS({region: awsRegion}));
+		s3 = new aws.S3();
+		logs = new aws.CloudWatchLogs({region: awsRegion});
+		lambda = new aws.Lambda({region: awsRegion});
+		sns = new aws.SNS({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000;
@@ -71,9 +70,9 @@ describe('addSNSEventSource', function () {
 		beforeEach(function (done) {
 			createConfig = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			sns.createTopicAsync({
+			sns.createTopic({
 				Name: testRunName + '-topic'
-			}).then(function (result) {
+			}).promise().then(function (result) {
 				newObjects.snsTopic = result.TopicArn;
 				config.topic = result.TopicArn;
 			}).then(done);
@@ -82,15 +81,15 @@ describe('addSNSEventSource', function () {
 			var functionArn;
 			createLambda()
 			.then(function () {
-				return lambda.getFunctionConfigurationPromise({
+				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName
-				});
+				}).promise();
 			}).then(function (lambdaResult) {
 				functionArn = lambdaResult.FunctionArn;
 			}).then(function () {
 				return underTest(config);
 			}).then(function () {
-				return sns.listSubscriptionsByTopicAsync({TopicArn: config.topic});
+				return sns.listSubscriptionsByTopic({TopicArn: config.topic}).promise();
 			}).then(function (config) {
 				expect(config.Subscriptions.length).toBe(1);
 				expect(config.Subscriptions[0].Endpoint).toEqual(functionArn);
@@ -101,14 +100,15 @@ describe('addSNSEventSource', function () {
 			.then(function () {
 				return underTest(config);
 			}).then(function () {
-				return sns.publishAsync({
+				return sns.publish({
 					Message: JSON.stringify({name: 'Mike'}),
 					TopicArn: config.topic
-				});
+				}).promise();
 			}).then(function () {
 				return retry(function () {
 					console.log('trying to get events from ' + '/aws/lambda/' + testRunName);
-					return logs.filterLogEventsAsync({logGroupName: '/aws/lambda/' + testRunName, filterPattern: 'aws sns EventSubscription'})
+					return logs.filterLogEvents({logGroupName: '/aws/lambda/' + testRunName, filterPattern: 'aws sns EventSubscription'})
+						.promise()
 						.then(function (logEvents) {
 							if (logEvents.events.length) {
 								return logEvents.events;
@@ -126,16 +126,16 @@ describe('addSNSEventSource', function () {
 			config.version = 'special';
 			createLambda()
 			.then(function () {
-				return lambda.getFunctionConfigurationPromise({
+				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName,
 					Qualifier: 'special'
-				});
+				}).promise();
 			}).then(function (lambdaResult) {
 				functionArn = lambdaResult.FunctionArn;
 			}).then(function () {
 				return underTest(config);
 			}).then(function () {
-				return sns.listSubscriptionsByTopicAsync({TopicArn: config.topic});
+				return sns.listSubscriptionsByTopic({TopicArn: config.topic}).promise();
 			}).then(function (config) {
 				expect(config.Subscriptions.length).toBe(1);
 				expect(config.Subscriptions[0].Endpoint).toEqual(functionArn);
@@ -148,14 +148,15 @@ describe('addSNSEventSource', function () {
 			.then(function () {
 				return underTest(config);
 			}).then(function () {
-				return sns.publishAsync({
+				return sns.publish({
 					Message: JSON.stringify({name: 'Mike'}),
 					TopicArn: config.topic
-				});
+				}).promise();
 			}).then(function () {
 				return retry(function () {
 					console.log('trying to get events from ' + '/aws/lambda/' + testRunName);
-					return logs.filterLogEventsAsync({logGroupName: '/aws/lambda/' + testRunName, filterPattern: 'aws sns EventSubscription'})
+					return logs.filterLogEvents({logGroupName: '/aws/lambda/' + testRunName, filterPattern: 'aws sns EventSubscription'})
+						.promise()
 						.then(function (logEvents) {
 							if (logEvents.events.length) {
 								return logEvents.events;
