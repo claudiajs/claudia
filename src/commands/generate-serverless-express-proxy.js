@@ -1,8 +1,7 @@
 /*global module, require, Promise */
 var path = require('path'),
 	shell = require('shelljs'),
-	Bluebird = require('bluebird'),
-	fs = Bluebird.promisifyAll(require('fs')),
+	fs = require('../util/fs-promise'),
 	NullLogger = require('../util/null-logger'),
 	runNpm = require('../util/run-npm');
 module.exports = function generateServerlessExpressProxy(options, optionalLogger) {
