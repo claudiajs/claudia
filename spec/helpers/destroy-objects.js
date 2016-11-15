@@ -4,6 +4,7 @@ beforeEach(function () {
 	'use strict';
 	var aws = require('aws-sdk'),
 		Promise = require('bluebird'),
+		destroyRole = require('../../src/util/destroy-role'),
 		shell = require('shelljs'),
 		retriableWrap = require('../../src/util/retriable-wrap'),
 		awsRegion = 'us-east-1',
@@ -12,26 +13,10 @@ beforeEach(function () {
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
 			logs = new aws.CloudWatchLogs({region: awsRegion}),
-			apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}), {suffix: 'Promise'})),
-			iam = Promise.promisifyAll(new aws.IAM()),
-			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
-			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
+			apiGatewayPromise = retriableWrap(new aws.APIGateway({region: awsRegion})),
 			s3 = Promise.promisifyAll(new aws.S3()),
 			sns = Promise.promisifyAll(new aws.SNS({region: awsRegion})),
 			events = Promise.promisifyAll(new aws.CloudWatchEvents({region: awsRegion})),
-			destroyRole = function (roleName) {
-				var deleteSinglePolicy = function (policyName) {
-					return iam.deleteRolePolicyAsync({
-						PolicyName: policyName,
-						RoleName: roleName
-					});
-				};
-				return iam.listRolePoliciesAsync({RoleName: roleName}).then(function (result) {
-					return Promise.map(result.PolicyNames, deleteSinglePolicy);
-				}).then(function () {
-					return iam.deleteRoleAsync({RoleName: roleName});
-				});
-			},
 			destroyRule = function (ruleName) {
 				return events.listTargetsByRuleAsync({Rule: ruleName}).then(function (config) {
 					var ids = config.Targets.map(function (target) {
@@ -58,7 +43,6 @@ beforeEach(function () {
 				});
 			};
 
-
 		if (!newObjects) {
 			return Promise.resolve();
 		}
@@ -69,17 +53,17 @@ beforeEach(function () {
 
 		return Promise.resolve().then(function () {
 			if (newObjects.restApi) {
-				return apiGateway.deleteRestApiPromise({
+				return apiGatewayPromise.deleteRestApiPromise({
 					restApiId: newObjects.restApi
 				});
 			}
 		}).then(function () {
 			if (newObjects.lambdaFunction) {
-				return deleteFunction({FunctionName: newObjects.lambdaFunction});
+				return lambda.deleteFunction({FunctionName: newObjects.lambdaFunction}).promise();
 			}
 		}).then(function () {
 			if (newObjects.lambdaFunction) {
-				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).catch(function () {
+				return logs.deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).promise().catch(function () {
 					return true;
 				});
 			}
@@ -99,7 +83,7 @@ beforeEach(function () {
 			}
 		}).then(function () {
 			if (newObjects.logGroup) {
-				return deleteLogGroup({logGroupName: newObjects.logGroup});
+				return logs.deleteLogGroup({logGroupName: newObjects.logGroup}).promise();
 			}
 		}).then(function () {
 			if (newObjects.s3Bucket) {

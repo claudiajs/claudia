@@ -1,6 +1,5 @@
-/*global module, require, console */
-var Promise = require('bluebird'),
-	path = require('path'),
+/*global module, require, console, Promise */
+var path = require('path'),
 	shell = require('shelljs'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
@@ -11,13 +10,13 @@ var Promise = require('bluebird'),
 	templateFile = require('../util/template-file'),
 	validatePackage = require('../tasks/validate-package'),
 	retriableWrap = require('../util/retriable-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
 	lambdaNameSanitize = require('../util/lambda-name-sanitize'),
-	promiseWrap = require('../util/promise-wrap'),
 	retry = require('oh-no-i-insist'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../util/fs-promise'),
 	os = require('os'),
 	lambdaCode = require('../tasks/lambda-code'),
 	NullLogger = require('../util/null-logger');
@@ -26,8 +25,13 @@ module.exports = function create(options, optionalLogger) {
 	var logger = optionalLogger || new NullLogger(),
 		source = (options && options.source) || shell.pwd().toString(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
-		lambda = promiseWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
+		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
+		apiGatewayPromise = retriableWrap(
+						loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
+						function () {
+							logger.logStage('rate-limited by AWS, waiting before retry');
+						}),
 		roleMetadata,
 		policyFiles = function () {
 			var files = shell.ls('-R', options.policies);
@@ -121,7 +125,7 @@ module.exports = function create(options, optionalLogger) {
 			return retry(
 				function () {
 					logger.logStage('creating Lambda');
-					return lambda.createFunctionPromise({
+					return lambda.createFunction({
 						Code: functionCode,
 						FunctionName: functionName,
 						Description: functionDesc,
@@ -131,11 +135,13 @@ module.exports = function create(options, optionalLogger) {
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true
-					});
+					}).promise();
 				},
 				3000, 10,
 				function (error) {
-					return error && error.cause && error.cause.message == 'The role defined for the function cannot be assumed by Lambda.';
+					return error &&
+						error.code === 'InvalidParameterValueException' &&
+						error.message == 'The role defined for the function cannot be assumed by Lambda.';
 				},
 				function () {
 					logger.logStage('waiting for IAM role propagation');
@@ -156,15 +162,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			var apiModule, apiConfig, apiModulePath,
-				alias = options.version || 'latest',
-				apiGateway = retriableWrap(promiseWrap(
-									new aws.APIGateway({region: options.region}),
-									{log: logger.logApiCall, logName: 'apigateway'}
-								),
-								function () {
-									logger.logStage('rate-limited by AWS, waiting before retry');
-								}
-							);
+				alias = options.version || 'latest';
 			logger.logStage('creating REST API');
 			try {
 				apiModulePath = path.join(packageDir, options['api-module']);
@@ -179,7 +177,7 @@ module.exports = function create(options, optionalLogger) {
 			if (!apiConfig) {
 				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
 			}
-			return apiGateway.createRestApiPromise({
+			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
 
@@ -201,7 +199,7 @@ module.exports = function create(options, optionalLogger) {
 							region: options.region
 						},
 						{
-							apiGatewayPromise: apiGateway,
+							apiGatewayPromise: apiGatewayPromise,
 							aws: aws,
 							Promise: Promise
 						}
@@ -223,17 +221,10 @@ module.exports = function create(options, optionalLogger) {
 						'': { ANY: {}}
 					}
 				},
-				alias = options.version || 'latest',
-				apiGateway = retriableWrap(promiseWrap(
-					new aws.APIGateway({region: options.region}),
-					{log: logger.logApiCall, logName: 'apigateway'}
-				),
-				function () {
-					logger.logStage('rate-limited by AWS, waiting before retry');
-				});
+				alias = options.version || 'latest';
 			logger.logStage('creating REST API');
 
-			return apiGateway.createRestApiPromise({
+			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
 				lambdaMetadata.api = {
@@ -285,22 +276,22 @@ module.exports = function create(options, optionalLogger) {
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
-				return iam.getRolePromise({RoleName: options.role});
+				return iam.getRole({RoleName: options.role}).promise();
 			} else {
 				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 					.then(function (lambdaRolePolicy) {
-						return iam.createRolePromise({
+						return iam.createRole({
 							RoleName: functionName + '-executor',
 							AssumeRolePolicyDocument: lambdaRolePolicy
-						});
+						}).promise();
 					});
 			}
 		},
 		addExtraPolicies = function () {
-			return Promise.map(policyFiles(), function (fileName) {
+			return Promise.all(policyFiles().map(function (fileName) {
 				var policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
-			});
+			}));
 		},
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
@@ -358,11 +349,11 @@ module.exports = function create(options, optionalLogger) {
 		}
 	}).then(function () {
 		if (options['allow-recursion']) {
-			return iam.putRolePolicyPromise({
+			return iam.putRolePolicy({
 				RoleName:  roleMetadata.Role.RoleName,
 				PolicyName: 'recursive-execution',
 				PolicyDocument: recursivePolicy(functionName)
-			});
+			}).promise();
 		}
 	}).then(function () {
 		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);

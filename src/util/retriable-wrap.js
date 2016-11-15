@@ -1,20 +1,23 @@
-/*global module, require*/
+/*global module, require, Promise*/
 var retry = require('oh-no-i-insist'),
-	Promise = require('bluebird');
-module.exports = function retriableWrap(apiObject, onRetry, pattern, timeout, retries) {
+	listWrappableFunctions = require('./list-wrappable-functions');
+
+module.exports = function retriableWrap(apiObject, onRetry, timeout, retries, suffix) {
 	'use strict';
-	timeout = timeout || 3000;
-	retries = retries || 10;
-	pattern = pattern || /Promise$/;
-	Object.keys(apiObject).forEach(function (key) {
-		var oldFunc;
-		if (pattern.test(key) && (typeof apiObject[key] === 'function')) {
+	var rx,
+		remapKey = function (key) {
+			var oldFunc;
 			oldFunc = apiObject[key];
-			apiObject[key] = function () {
+			apiObject[key + suffix] = function () {
 				var callArgs = arguments;
 				return retry(
 					function () {
-						return oldFunc.apply(apiObject, callArgs);
+						var result = oldFunc.apply(apiObject, callArgs);
+						if (result && result.promise && typeof result.promise === 'function') {
+							return result.promise();
+						} else {
+							return result;
+						}
 					},
 					timeout, retries,
 					function (failure) {
@@ -24,8 +27,18 @@ module.exports = function retriableWrap(apiObject, onRetry, pattern, timeout, re
 					Promise
 				);
 			};
-		}
-	});
+		},
+		matching = function (key) {
+			return !rx.test(key);
+		};
+
+	timeout = timeout || 3000;
+	retries = retries || 10;
+	suffix = suffix || 'Promise';
+	rx = new RegExp(suffix + '$');
+
+	listWrappableFunctions(apiObject).filter(matching).forEach(remapKey);
+
 	return apiObject;
 };
 

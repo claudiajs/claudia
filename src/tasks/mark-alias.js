@@ -7,9 +7,9 @@ module.exports = function markAlias(functionName, lambda, versionName, versionAl
 			FunctionVersion: versionName,
 			Name: versionAlias
 		};
-	return lambda.updateAliasPromise(config).catch(function (e) {
+	return lambda.updateAlias(config).promise().catch(function (e) {
 		if (e && e.code === 'ResourceNotFoundException') {
-			return lambda.createAliasPromise(config);
+			return lambda.createAlias(config).promise();
 		} else {
 			return Promise.reject(e);
 		}

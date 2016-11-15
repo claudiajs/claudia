@@ -5,7 +5,6 @@ var underTest = require('../src/tasks/mark-alias'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('markAlias', function () {
 	'use strict';
@@ -14,7 +13,7 @@ describe('markAlias', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		lambda = new aws.Lambda({region: awsRegion});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
@@ -34,23 +33,23 @@ describe('markAlias', function () {
 		});
 		it('creates a new version alias of the lambda function', function (done) {
 			underTest(testRunName, lambda, '1', 'testver').then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'testver'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'testver'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
 			}).then(done, done.fail);
 		});
 		it('migrates an alias if it already exists', function (done) {
 			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
-			lambda.createAliasPromise({
+			lambda.createAlias({
 				FunctionName: testRunName,
 				FunctionVersion: '1',
 				Name: 'dev'
-			}).then(function () {
+			}).promise().then(function () {
 				return update({source: workingdir});
 			}).then(function () {
 				return underTest(testRunName, lambda, '2', 'testver');
 			}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'testver'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'testver'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
 			}).then(done, done.fail);

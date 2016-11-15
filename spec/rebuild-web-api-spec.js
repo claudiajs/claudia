@@ -2,7 +2,6 @@
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
 	querystring = require('querystring'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
@@ -14,7 +13,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
+		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion})),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -41,7 +40,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -134,7 +133,7 @@ describe('rebuildWebApi', function () {
 			it('captures stage variables', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
-					return apiGateway.createDeploymentAsync({
+					return apiGateway.createDeploymentPromise({
 						restApiId: apiId,
 						stageName: 'fromtest',
 						variables: {
@@ -349,7 +348,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {apiKeyRequired: true};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -360,7 +359,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -368,7 +367,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (methodConfig) {
 				expect(methodConfig.apiKeyRequired).toBeFalsy();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -382,7 +381,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -393,7 +392,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -401,7 +400,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (methodConfig) {
 				expect(methodConfig.authorizationType).toEqual('NONE');
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -417,7 +416,7 @@ describe('rebuildWebApi', function () {
 			};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -428,7 +427,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -436,7 +435,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -446,17 +445,17 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
-			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
+			var iam = new aws.IAM({region: awsRegion}),
 				echoResourceId,
 				testCredentials;
-			iam.getUserAsync().then(function (data) {
+			iam.getUser().promise().then(function (data) {
 				testCredentials = data.User.Arn;
 				apiRouteConfig.routes.echo.POST = {
 					invokeWithCredentials: testCredentials
 				};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -467,7 +466,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -475,7 +474,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -491,7 +490,7 @@ describe('rebuildWebApi', function () {
 			};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -502,7 +501,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -510,7 +509,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -555,11 +554,11 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('custom authorizers', function () {
-		var authorizerLambdaName, lambda;
+		var authorizerLambdaName;
 		beforeEach(function (done) {
 			var authorizerLambdaDir = path.join(workingdir, 'authorizer'),
 				genericRole = this.genericRole;
-			lambda = new aws.Lambda({region: awsRegion});
+
 			shell.mkdir('-p', workingdir);
 			shell.mkdir('-p', authorizerLambdaDir);
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
@@ -569,7 +568,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({name: testRunName});
+				return apiGateway.createRestApiPromise({name: testRunName});
 			}).then(function (result) {
 				apiId = result.id;
 				newObjects.restApi = result.id;
@@ -580,6 +579,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		afterEach(function (done) {
+			var lambda = new aws.Lambda({region: awsRegion});
 			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
 		});
 		it('assigns authorizers by name', function (done) {
@@ -591,7 +591,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {customAuthorizer: 'second'};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -602,14 +602,14 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
 				authorizerIds[authorizers.items[0].name] = authorizers.items[0].id;
 				authorizerIds[authorizers.items[1].name] = authorizers.items[1].id;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -618,7 +618,7 @@ describe('rebuildWebApi', function () {
 				expect(methodConfig.authorizationType).toEqual('NONE');
 				expect(methodConfig.authorizerId).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -636,7 +636,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -737,7 +737,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -804,7 +804,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('preserves old stage variables', function (done) {
-			apiGateway.createDeploymentAsync({
+			apiGateway.createDeploymentPromise({
 				restApiId: apiId,
 				stageName: 'original',
 				variables: {
@@ -832,7 +832,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes = methodConfig;
 			return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -843,7 +843,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: method,
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -855,7 +855,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -947,7 +947,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -978,7 +978,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {

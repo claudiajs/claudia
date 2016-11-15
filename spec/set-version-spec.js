@@ -10,11 +10,10 @@ var underTest = require('../src/commands/set-version'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('setVersion', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects,
+	var workingdir, testRunName, iam, lambda, newObjects, apiGateway,
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -26,7 +25,8 @@ describe('setVersion', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		lambda = new aws.Lambda({region: awsRegion});
+		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion}));
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
@@ -72,7 +72,7 @@ describe('setVersion', function () {
 		});
 		it('creates a new version alias of the lambda function', function (done) {
 			underTest({source: workingdir, version: 'dev'}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'dev'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'dev'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
 			}).then(done, done.fail);
@@ -82,23 +82,23 @@ describe('setVersion', function () {
 			update({source: workingdir}).then(function () {
 				return underTest({source: workingdir, version: 'dev'});
 			}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'dev'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'dev'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
 			}).then(done, done.fail);
 		});
 		it('migrates an alias if it already exists', function (done) {
 			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
-			lambda.createAliasPromise({
+			lambda.createAlias({
 				FunctionName: testRunName,
 				FunctionVersion: '1',
 				Name: 'dev'
-			}).then(function () {
+			}).promise().then(function () {
 				return update({source: workingdir});
 			}).then(function () {
 				return underTest({source: workingdir, version: 'dev'});
 			}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'dev'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'dev'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
 			}).then(done, done.fail);
@@ -127,8 +127,7 @@ describe('setVersion', function () {
 			}).then(done, done.fail);
 		});
 		it('keeps the old stage variables if they exist', function (done) {
-			var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/);
-			apiGateway.createDeploymentAsync({
+			apiGateway.createDeploymentPromise({
 				restApiId: newObjects.restApi,
 				stageName: 'fromtest',
 				variables: {
@@ -179,8 +178,7 @@ describe('setVersion', function () {
 			}).then(done, done.fail);
 		});
 		it('keeps the old stage variables if they exist', function (done) {
-			var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/);
-			apiGateway.createDeploymentAsync({
+			apiGateway.createDeploymentPromise({
 				restApiId: newObjects.restApi,
 				stageName: 'fromtest',
 				variables: {

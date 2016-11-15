@@ -1,10 +1,9 @@
-/*global module, require*/
-var Promise = require('bluebird'),
-	aws = require('aws-sdk'),
+/*global module, require, Promise*/
+var aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/retriable-wrap'),
-	promiseWrap = require('../util/promise-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	apiGWUrl = require('../util/apigw-url'),
 	NullLogger = require('../util/null-logger'),
 	markAlias = require('../tasks/mark-alias'),
@@ -35,9 +34,9 @@ module.exports = function setVersion(options, optionalLogger) {
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
-			promiseWrap(
+			loggingWrap(
 				new aws.APIGateway({region:  lambdaConfig.region}),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
@@ -46,7 +45,7 @@ module.exports = function setVersion(options, optionalLogger) {
 			});
 	}).then(function () {
 		logger.logStage('updating versions');
-		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
+		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
 	}).then(function (versionResult) {
 		return markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version);
 	}).then(function () {
