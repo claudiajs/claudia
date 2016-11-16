@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, setTimeout, Promise */
 var underTest = require('../src/commands/add-s3-event-source'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -7,14 +7,21 @@ var underTest = require('../src/commands/add-s3-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('addS3EventSource', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, s3;
+	var workingdir, testRunName, newObjects, s3,
+		promiseDelay = function (delay) {
+			return new Promise(function (resolve) {
+				setTimeout(function () {
+					resolve();
+				}, delay);
+			});
+		};
+
 	beforeEach(function () {
 		workingdir = tmppath();
-		s3 = Promise.promisifyAll(new aws.S3());
+		s3 = new aws.S3();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
@@ -62,10 +69,10 @@ describe('addS3EventSource', function () {
 		var bucketSuffix = '.bucket';
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
-			s3.createBucketAsync({
+			s3.createBucket({
 				Bucket: testRunName + bucketSuffix,
 				ACL: 'private'
-			}).then(function () {
+			}).promise().then(function () {
 				newObjects.s3Bucket = testRunName + bucketSuffix;
 			}).then(done);
 		});
@@ -78,19 +85,19 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				// needs better...
 				console.log('waiting for IAM propagation');
-				return Promise.delay(5000);
+				return promiseDelay(5000);
 			}).then(function () {
-				return s3.putObjectAsync({
+				return s3.putObject({
 					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt',
 					Body: 'file contents',
 					ACL: 'private'
-				});
+				}).promise();
 			}).then(function () {
-				return s3.waitForAsync('objectNotExists', {
+				return s3.waitFor('objectNotExists', {
 					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt'
-				});
+				}).promise();
 			}).then(done, done.fail);
 		});
 		it('adds a prefix if requested', function (done) {
@@ -100,9 +107,9 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: '/in/'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
+				return s3.getBucketNotificationConfiguration({
 					Bucket: testRunName + bucketSuffix
-				});
+				}).promise();
 			}).then(function (config) {
 				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
 					Name: 'Prefix',
@@ -117,9 +124,9 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'special'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
+				return s3.getBucketNotificationConfiguration({
 					Bucket: testRunName + bucketSuffix
-				});
+				}).promise();
 			}).then(function (config) {
 				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
 			}).then(done, done.fail);
@@ -133,19 +140,19 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				// needs better...
 				console.log('waiting for IAM propagation');
-				return Promise.delay(5000);
+				return promiseDelay(5000);
 			}).then(function () {
-				return s3.putObjectAsync({
+				return s3.putObject({
 					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt',
 					Body: 'file contents',
 					ACL: 'private'
-				});
+				}).promise();
 			}).then(function () {
-				return s3.waitForAsync('objectNotExists', {
+				return s3.waitFor('objectNotExists', {
 					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt'
-				});
+				}).promise();
 			}).then(done, done.fail);
 		});
 		it('does not change any existing notification configurations', function (done) {
@@ -160,9 +167,9 @@ describe('addS3EventSource', function () {
 			}).then(function () {
 				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'crazy',  prefix: '/crazy/'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
+				return s3.getBucketNotificationConfiguration({
 					Bucket: testRunName + bucketSuffix
-				});
+				}).promise();
 			}).then(function (config) {
 				expect(config.LambdaFunctionConfigurations.length).toEqual(2);
 				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
