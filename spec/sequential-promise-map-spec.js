@@ -48,12 +48,12 @@ describe('sequentialPromiseMap', function () {
 		}).catch(done.fail);
 	});
 	it('does not resolve until all promises resolve', function (done) {
-		sequentialPromiseMap(['a', 'b'], generator).then(done.fail, done.fail);
+		sequentialPromiseMap(['a', 'b', 'c'], generator).then(done.fail, done.fail);
 		waitFor(0).then(function (promiseContainer) {
 			promiseContainer.promise.resolve('eee');
 		});
-		waitFor(1).then(function (promiseContainer) {
-			expect(promiseContainer.promise.arg).toEqual('b');
+		waitFor(1).then(function () {
+			expect(promises.length).toEqual(2);
 		}).then(done);
 	});
 	it('resolves after all the promises resolve', function (done) {
