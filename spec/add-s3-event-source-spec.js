@@ -21,9 +21,7 @@ describe('addS3EventSource', function () {
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the bucket is not defined in options', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {

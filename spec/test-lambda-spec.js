@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, jasmine */
 var underTest = require('../src/commands/test-lambda'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -21,9 +21,7 @@ describe('testLambda', function () {
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {

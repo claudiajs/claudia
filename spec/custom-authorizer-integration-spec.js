@@ -86,7 +86,7 @@ describe('customAuthorizers', function () {
 			return destroy({source: workingdir, config: 'claudia-api.json'});
 		}).catch(function (err) {
 			console.log('error cleaning up', err);
-		}).finally(done);
+		}).then(done);
 	});
 
 	describe('create wires up authorizers intially', function () {

@@ -27,9 +27,7 @@ describe('addSNSEventSource', function () {
 		};
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the topic is not defined in options', function (done) {
 		config.topic = '';

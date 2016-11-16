@@ -30,9 +30,7 @@ describe('rebuildWebApi', function () {
 		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {

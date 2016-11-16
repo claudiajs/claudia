@@ -33,9 +33,7 @@ describe('addScheduledEvent', function () {
 
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the event file is not defined in options', function (done) {
 		config.event = '';

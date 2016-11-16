@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, jasmine */
 var underTest = require('../src/tasks/mark-alias'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -19,9 +19,7 @@ describe('markAlias', function () {
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	describe('when the lambda project exists', function () {
 		beforeEach(function (done) {

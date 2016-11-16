@@ -50,9 +50,7 @@ describe('create', function () {
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	describe('config validation', function () {
 		it('fails if the source folder is same as os tmp folder', function (done) {

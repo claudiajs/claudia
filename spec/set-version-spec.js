@@ -33,9 +33,7 @@ describe('setVersion', function () {
 	});
 
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the options do not contain a version name', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
