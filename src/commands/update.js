@@ -1,6 +1,5 @@
-/*global module, require, console*/
-var Promise = require('bluebird'),
-	zipdir = require('../tasks/zipdir'),
+/*global module, require, console, Promise*/
+var zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
@@ -14,7 +13,7 @@ var Promise = require('bluebird'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
-	promiseWrap = require('../util/promise-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	NullLogger = require('../util/null-logger'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
 	loadConfig = require('../util/loadconfig');
@@ -112,9 +111,9 @@ module.exports = function update(options, optionalLogger) {
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
-				promiseWrap(
+				loggingWrap(
 					new aws.APIGateway({region: lambdaConfig.region}),
 					{log: logger.logApiCall, logName: 'apigateway'}
 				),
@@ -123,7 +122,7 @@ module.exports = function update(options, optionalLogger) {
 				}
 		);
 	}).then(function () {
-		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
+		return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise();
 	}).then(function (result) {
 		functionConfig = result;
 		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
@@ -144,7 +143,7 @@ module.exports = function update(options, optionalLogger) {
 		return cleanUpPackage(dir, options, logger);
 	}).then(function () {
 		if (requiresHandlerUpdate) {
-			return lambda.updateFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler});
+			return lambda.updateFunctionConfiguration({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler}).promise();
 		}
 	}).then(function () {
 		logger.logStage('zipping package');
@@ -157,7 +156,7 @@ module.exports = function update(options, optionalLogger) {
 		s3Key = functionCode.S3Key;
 		functionCode.FunctionName = lambdaConfig.name;
 		functionCode.Publish = true;
-		return lambda.updateFunctionCodePromise(functionCode);
+		return lambda.updateFunctionCode(functionCode).promise();
 	}).then(function (result) {
 		updateResult = result;
 		if (s3Key) {

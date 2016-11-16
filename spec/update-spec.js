@@ -5,8 +5,7 @@ var underTest = require('../src/commands/update'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
-	Promise = require('bluebird'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../src/util/fs-promise'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
@@ -24,15 +23,13 @@ describe('update', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		lambda = new aws.Lambda({region: awsRegion});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -100,7 +97,7 @@ describe('update', function () {
 			.then(done.fail, function (reason) {
 				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 			}).then(done, done.fail);
@@ -109,7 +106,7 @@ describe('update', function () {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(3);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -119,7 +116,7 @@ describe('update', function () {
 		});
 		it('updates the lambda with a new version', function (done) {
 			underTest({source: workingdir}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
@@ -141,7 +138,7 @@ describe('update', function () {
 			shell.cp('-r', path.join(workingdir, 'local_modules', '*'),  path.join(workingdir, 'node_modules'));
 
 			underTest({source: workingdir, 'use-local-dependencies': true}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello local"');
@@ -150,7 +147,7 @@ describe('update', function () {
 		it('removes optional dependencies after validation if requested', function (done) {
 			shell.cp('-rf', path.join(__dirname, '/test-projects/optional-dependencies/*'), workingdir);
 			underTest({source: workingdir, 'optional-dependencies': false}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
@@ -160,7 +157,7 @@ describe('update', function () {
 			shell.cp('-r', path.join(__dirname, 'test-projects/relative-dependencies/*'), workingdir);
 			shell.cp('-r', path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
 			underTest({source: path.join(workingdir, 'lambda')}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello relative"');
@@ -168,13 +165,13 @@ describe('update', function () {
 		});
 
 		it('uses a s3 bucket if provided', function (done) {
-			var s3 = Promise.promisifyAll(new aws.S3()),
+			var s3 = new aws.S3(),
 				logger = new ArrayLogger(),
 				bucketName = testRunName + '-bucket',
 				archivePath;
-			s3.createBucketAsync({
+			s3.createBucket({
 				Bucket: bucketName
-			}).then(function () {
+			}).promise().then(function () {
 				newObjects.s3bucket = bucketName;
 			}).then(function () {
 				return underTest({keep: true, 'use-s3-bucket': bucketName, source: workingdir}, logger);
@@ -182,16 +179,16 @@ describe('update', function () {
 				var expectedKey = path.basename(result.archive);
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
-				return s3.headObjectAsync({
+				return s3.headObject({
 					Bucket: bucketName,
 					Key: expectedKey
-				});
+				}).promise();
 			}).then(function (fileResult) {
 				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
 			}).then(function () {
 				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
 			}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
@@ -200,7 +197,7 @@ describe('update', function () {
 
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'great'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
 			}).then(done, done.fail);
@@ -211,7 +208,7 @@ describe('update', function () {
 			underTest().then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(done, done.fail);
 		});
 	});
@@ -271,7 +268,7 @@ describe('update', function () {
 			}).then(done.fail, function (reason) {
 				expect(reason.code).toEqual('NotFoundException');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -283,7 +280,7 @@ describe('update', function () {
 			underTest({source: updateddir}).then(done.fail, function (reason) {
 				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -308,10 +305,10 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 		it('upgrades the function handler from 1.x', function (done) {
-			lambda.updateFunctionConfigurationPromise({
+			lambda.updateFunctionConfiguration({
 				FunctionName: testRunName,
 				Handler: 'main.router'
-			}).then(function () {
+			}).promise().then(function () {
 				return underTest({source: updateddir});
 			}).then(function (result) {
 				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
