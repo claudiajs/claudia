@@ -836,6 +836,8 @@ describe('create', function () {
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',
+				'apigateway.setupRequestListeners',
+				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
 				'apigateway.createResource',
 				'apigateway.putMethod',

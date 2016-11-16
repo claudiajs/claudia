@@ -23,6 +23,8 @@ var path = require('path'),
 module.exports = function create(options, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
+		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay']) || 5000,
+		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries']) || 15,
 		source = (options && options.source) || shell.pwd().toString(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
@@ -137,7 +139,7 @@ module.exports = function create(options, optionalLogger) {
 						Publish: true
 					}).promise();
 				},
-				3000, 10,
+				awsDelay, awsRetries,
 				function (error) {
 					return error &&
 						error.code === 'InvalidParameterValueException' &&
@@ -500,6 +502,20 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 'aws-delay',
+			optional: true,
+			example: '3000',
+			description: 'number of milliseconds betweeen retrying AWS operations if they fail',
+			default: '5000'
+		},
+		{
+			argument: 'aws-retries',
+			optional: true,
+			example: '15',
+			description: 'number of times to retry AWS operations if they fail',
+			default: '15'
 		}
 	]
 };

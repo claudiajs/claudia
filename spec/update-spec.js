@@ -452,6 +452,8 @@ describe('update', function () {
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.getRestApi',
+				'apigateway.setupRequestListeners',
+				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
 				'apigateway.deleteResource',
 				'apigateway.createResource',
