@@ -1,6 +1,5 @@
 /*global require, module, Promise*/
-var aws = require('aws-sdk'),
-	find = require('../util/find');
+var aws = require('aws-sdk');
 module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion, path) {
 	'use strict';
 	var lambda = new aws.Lambda({region: awsRegion}),
@@ -28,7 +27,7 @@ module.exports = function allowApiInvocation(functionName, functionVersion, rest
 		return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 	}).then(function (currentPolicy) {
 		var statements = (currentPolicy && currentPolicy.Statement) || [];
-		if (!find(statements, matchesPolicy)) {
+		if (!statements.find(matchesPolicy)) {
 			return lambda.addPermission(policy).promise();
 		}
 	}, function (e) {
