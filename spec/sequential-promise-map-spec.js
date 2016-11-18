@@ -66,6 +66,18 @@ describe('sequentialPromiseMap', function () {
 		waitFor(1).then(function (promiseContainer) {
 			promiseContainer.promise.resolve('bbb');
 		});
+	});
+	it('does not modify the original array', function (done) {
+		var originalArray = ['a', 'b'];
+		sequentialPromiseMap(originalArray, generator).then(function () {
+			expect(originalArray).toEqual(['a', 'b']);
+		}).then(done, done.fail);
+		waitFor(0).then(function (promiseContainer) {
+			promiseContainer.promise.resolve('aaa');
+		});
+		waitFor(1).then(function (promiseContainer) {
+			promiseContainer.promise.resolve('bbb');
+		});
 
 	});
 	it('does not execute subsequent promises after a failure', function (done) {
