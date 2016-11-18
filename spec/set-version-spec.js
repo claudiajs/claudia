@@ -221,8 +221,10 @@ describe('setVersion', function () {
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.publishVersion', 'lambda.updateAlias', 'lambda.createAlias']);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
-			expect(logger.getApiCallLogForService('apigateway', true)).toEqual(['apigateway.createDeployment']);
+			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
+				'apigateway.createDeployment',
+				'apigateway.setupRequestListeners',
+				'apigateway.setAcceptHeader']);
 		}).then(done, done.fail);
-
 	});
 });
