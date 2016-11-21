@@ -316,7 +316,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return removeExistingResources()
 				.then(configureAuthorizers)
 				.then(rebuildApi)
-				.then(deployApi);
+				.then(deployApi)
+				.then(function () {
+					return { cacheReused: false };
+				});
 		},
 		getExistingConfigHash = function () {
 			if (!configCacheStageVar) {
@@ -339,6 +342,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		.then(function (existingHash) {
 			if (existingHash && existingHash === configHash) {
 				logger.logStage('Reusing cached API configuration');
+				return { cacheReused: true };
 			} else {
 				return uploadApiConfig();
 			}

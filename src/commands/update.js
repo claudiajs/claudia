@@ -60,7 +60,7 @@ module.exports = function update(options, optionalLogger) {
 			}
 
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
-				.then(function () {
+				.then(function (rebuildResult) {
 					if (apiModule.postDeploy) {
 						return apiModule.postDeploy(
 							options,
@@ -69,7 +69,8 @@ module.exports = function update(options, optionalLogger) {
 								alias: alias,
 								apiId: apiConfig.id,
 								apiUrl: updateResult.url,
-								region: lambdaConfig.region
+								region: lambdaConfig.region,
+								apiCacheReused: rebuildResult.cacheReused
 							},
 							{
 								apiGatewayPromise: apiGateway,

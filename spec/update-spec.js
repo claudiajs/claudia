@@ -408,7 +408,10 @@ describe('update', function () {
 				postcheck: 'option-123',
 				postresult: 'option-result-post'
 			}).then(function (updateResult) {
-				expect(updateResult.deploy).toEqual('option-result-post');
+				expect(updateResult.deploy).toEqual({
+					result: 'option-result-post',
+					wasApiCacheUsed: false
+				});
 			}).then(function () {
 				return invoke('postdeploy/hello');
 			}).then(function (contents) {
@@ -428,7 +431,27 @@ describe('update', function () {
 				done.fail();
 			});
 		});
-
+		it('passes cache check results to the post-deploy step', function (done) {
+			shell.cp('-rf', 'spec/test-projects/api-gw-postdeploy/*', updateddir);
+			underTest({
+				source: updateddir,
+				version: 'development',
+				postcheck: 'option-123',
+				'cache-api-config': 'claudiaConfig',
+				postresult: 'option-result-post'
+			}).then(function (updateResult) {
+				expect(updateResult.deploy.wasApiCacheUsed).toBeFalsy();
+				return underTest({
+					source: updateddir,
+					version: 'development',
+					postcheck: 'option-123',
+					'cache-api-config': 'claudiaConfig',
+					postresult: 'option-result-post'
+				});
+			}).then(function (updateResult) {
+				expect(updateResult.deploy.wasApiCacheUsed).toBeTruthy();
+			}).then(done, done.fail);
+		});
 	});
 	it('logs call execution', function (done) {
 		var logger = new ArrayLogger();

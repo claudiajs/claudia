@@ -1000,7 +1000,8 @@ describe('rebuildWebApi', function () {
 		it('runs through the whole deployment if there was no previous stage by this name', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				return underTest(newObjects.lambdaFunction, 'latest', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -1008,7 +1009,8 @@ describe('rebuildWebApi', function () {
 		it('runs throough the whole deployment if there was no config hash in the previous stage with the same name', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined).then(function () {
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -1017,7 +1019,8 @@ describe('rebuildWebApi', function () {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				apiRouteConfig.routes.echo.POST = {};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog()).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -1025,7 +1028,8 @@ describe('rebuildWebApi', function () {
 		it('skips deleting and creating resources if there was a previous stage with the same name and config hash', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeTruthy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 					'apigateway.getStage',
 					'apigateway.setupRequestListeners',
@@ -1033,7 +1037,6 @@ describe('rebuildWebApi', function () {
 				]);
 				expect(logger.getStageLog(true)).toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
-
 		});
 	});
 });

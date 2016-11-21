@@ -786,7 +786,10 @@ describe('create', function () {
 			config.postresult = 'option-result-post';
 			createFromDir('api-gw-postdeploy').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
-				expect(creationResult.api.deploy).toEqual('option-result-post');
+				expect(creationResult.api.deploy).toEqual({
+					result: 'option-result-post',
+					wasApiCacheUsed: false
+				});
 			}).then(function () {
 				return callApi(apiId, awsRegion, 'postdeploy/hello', {retry: 403});
 			}).then(function (contents) {
