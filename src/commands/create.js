@@ -65,14 +65,8 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && options['deploy-proxy-api']) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
-			if (options.handler && options.handler.indexOf('/') >= 0) {
-				return 'Lambda handler module has to be in the main project directory';
-			}
 			if (options.handler && options.handler.indexOf('.') < 0) {
 				return 'Lambda handler function not specified. Please specify with --handler module.function';
-			}
-			if (options['api-module'] && options['api-module'].indexOf('/') >= 0) {
-				return 'API module has to be in the main project directory';
 			}
 			if (options['api-module'] && options['api-module'].indexOf('.') >= 0) {
 				return 'API module must be a module name, without the file extension or function name';

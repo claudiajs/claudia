@@ -84,12 +84,6 @@ describe('create', function () {
 				done();
 			});
 		});
-		it('fails if the handler contains a folder', function (done) {
-			config.handler = 'api/main.router';
-			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('Lambda handler module has to be in the main project directory');
-			}).then(done);
-		});
 		it('fails if the handler does not contain a dot', function (done) {
 			config.handler = 'api';
 			createFromDir('hello-world').then(done.fail, function (message) {
@@ -109,13 +103,6 @@ describe('create', function () {
 			config['api-module'] = 'abc';
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
-			}).then(done);
-		});
-		it('fails if the api module contains a folder', function (done) {
-			config.handler = undefined;
-			config['api-module'] = 'api/main';
-			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('API module has to be in the main project directory');
 			}).then(done);
 		});
 		it('fails if the api module contains an extension', function (done) {
@@ -429,6 +416,38 @@ describe('create', function () {
 		});
 	});
 	describe('creating the function', function () {
+		it('wires up the handler so the function is executable', function (done) {
+			createFromDir('echo').then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse',
+					Payload: JSON.stringify({
+						message: 'hello ' + testRunName
+					})
+				}).promise();
+			}).then(function (result) {
+				expect(JSON.parse(result.Payload)).toEqual({message: 'hello ' + testRunName});
+			}).then(done, done.fail);
+		});
+		it('wires up handlers from subfolders', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config.handler = 'subdir/mainfromsub.handler';
+			shell.cd(workingdir);
+			underTest(config).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse',
+					Payload: JSON.stringify({
+						message: 'hello ' + testRunName
+					})
+				}).promise();
+			}).then(function (result) {
+				expect(JSON.parse(result.Payload)).toEqual({message: 'hello ' + testRunName});
+			}).then(done, done.fail);
+		});
+
 		it('returns an object containing the new claudia configuration', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(creationResult.lambda).toEqual({
@@ -628,6 +647,24 @@ describe('create', function () {
 				expect(restApi.name).toEqual(testRunName);
 			}).then(done, done.fail);
 		});
+		it('creates a proxy web API using a handler from a subfolder', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config.handler = 'subdir/mainfromsub.handler';
+			shell.cd(workingdir);
+			underTest(config).then(function (creationResult) {
+				return creationResult.api.id;
+			}).then(function (apiId) {
+				return callApi(apiId, awsRegion, 'latest?abc=xkcd&dd=yy');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'xkcd', dd: 'yy'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/');
+				expect(params.requestContext.stage).toEqual('latest');
+			}).then(done, done.fail);
+		});
 		it('saves the api ID without module into claudia.json', function (done) {
 			createFromDir('apigw-proxy-echo').then(function (creationResult) {
 				var savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
@@ -733,6 +770,22 @@ describe('create', function () {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
+		it('wires up the api module from a subfolder', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config['api-module'] = 'subdir/mainfromsub';
+			shell.cd(workingdir);
+
+			underTest(config).then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+			}).then(function () {
+				return callApi(apiId, awsRegion, 'latest/hello');
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+
 		it('when the version is provided, creates the deployment with that name', function (done) {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
