@@ -13,6 +13,7 @@ var zipdir = require('../tasks/zipdir'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	loggingWrap = require('../util/logging-wrap'),
 	NullLogger = require('../util/null-logger'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
@@ -62,6 +63,7 @@ module.exports = function update(options, optionalLogger) {
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
 				.then(function (rebuildResult) {
 					if (apiModule.postDeploy) {
+						Promise.map = sequentialPromiseMap;
 						return apiModule.postDeploy(
 							options,
 							{

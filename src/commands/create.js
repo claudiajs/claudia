@@ -18,6 +18,7 @@ var path = require('path'),
 	retry = require('oh-no-i-insist'),
 	fs = require('../util/fs-promise'),
 	os = require('os'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
@@ -185,6 +186,7 @@ module.exports = function create(options, optionalLogger) {
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
 			}).then(function () {
 				if (apiModule.postDeploy) {
+					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
 						options,
 						{
