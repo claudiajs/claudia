@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "dependencies": {
     "JSV": {
       "version": "4.0.2",
