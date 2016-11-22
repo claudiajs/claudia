@@ -1,5 +1,12 @@
 # Release history
 
+### 2.1.6, 22 November 2016
+
+- Lambda now supports loading Node modules from subdirectories, so Claudia no longer warns about it
+- API Gateway post-deploy steps now get `apiCacheReused` in Lambda properties, set to `true` if API definition was reused from cache
+- Claudia now uses native promises and promise support in AWS SDK instead of Bluebird
+- Dependencies are shrinkwrapped to prevent problems with sub-dependencies breaking backwards compatibility
+
 ### 2.1.5, 11 November 2016
 
 - downgrade shelljs to avoid bug that would silently cause some files not to be copied when using --local-dependencies
