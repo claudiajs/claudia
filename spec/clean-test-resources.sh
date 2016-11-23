@@ -1,3 +1,9 @@
+SCRIPT_DIR=`dirname $BASH_SOURCE[0]` 
+PROJECT_DIR=`dirname $SCRIPT_DIR`
+[[ -e $PROJECT_DIR/.env ]] && source $PROJECT_DIR/.env
+
+echo using $AWS_PROFILE
+
 functions=`aws lambda list-functions --query 'Functions[?starts_with(FunctionName,\`test\`)].FunctionName' --output text`
 for fun in $functions; do
   echo deleting function $fun
