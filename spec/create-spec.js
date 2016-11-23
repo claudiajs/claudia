@@ -904,4 +904,68 @@ describe('create', function () {
 			]);
 		}).then(done, done.fail);
 	});
+	describe('environment variables', function () {
+		var standardEnvKeys,
+			logger,
+			nonStandard = function (key) {
+				return standardEnvKeys.indexOf(key) < 0;
+			};
+		beforeEach(function () {
+			logger = new ArrayLogger();
+			standardEnvKeys = [
+				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION', 'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION', 'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
+				].sort();
+		});
+		it('does not add any additional environment variables if env not provided', function (done) {
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toBeUndefined();
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				expect(Object.keys(JSON.parse(result.Payload)).sort()).toEqual(standardEnvKeys);
+			}).then(done, done.fail);
+		});
+		it('refuses to work when set-env is set but invalid', function (done) {
+			config['set-env'] = 'XPATH,YPATH=/var/lib';
+			createFromDir('env-vars', logger).then(done.fail, function (message) {
+				expect(message).toEqual('Cannot read variables from set-env, Invalid CSV element XPATH');
+				expect(logger.getApiCallLogForService('lambda', true)).toEqual([]);
+				expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+				done();
+			});
+		});
+		it('adds env variables specified in a key-value pair', function (done) {
+			config['set-env'] = 'XPATH=/var/www,YPATH=/var/lib';
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/var/www',
+						'YPATH': '/var/lib'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
+				expect(env.XPATH).toEqual('/var/www');
+				expect(env.YPATH).toEqual('/var/lib');
+			}).then(done, done.fail);
+		});
+
+	});
 });

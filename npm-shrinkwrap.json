@@ -2,11 +2,6 @@
   "name": "claudia",
   "version": "2.1.6",
   "dependencies": {
-    "JSV": {
-      "version": "4.0.2",
-      "from": "JSV@>=4.0.0",
-      "resolved": "https://registry.npmjs.org/JSV/-/JSV-4.0.2.tgz"
-    },
     "acorn": {
       "version": "3.3.0",
       "from": "acorn@>=3.1.0 <4.0.0",
@@ -68,9 +63,9 @@
       "resolved": "https://registry.npmjs.org/async/-/async-1.5.2.tgz"
     },
     "aws-sdk": {
-      "version": "2.7.0",
+      "version": "2.7.7",
       "from": "aws-sdk@>=2.7.0 <3.0.0",
-      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.7.0.tgz"
+      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.7.7.tgz"
     },
     "babel-core": {
       "version": "5.8.38",
@@ -728,6 +723,11 @@
       "from": "jsonlint@>=1.6.2 <1.7.0",
       "resolved": "https://registry.npmjs.org/jsonlint/-/jsonlint-1.6.2.tgz"
     },
+    "JSV": {
+      "version": "4.0.2",
+      "from": "JSV@>=4.0.0",
+      "resolved": "https://registry.npmjs.org/JSV/-/JSV-4.0.2.tgz"
+    },
     "kind-of": {
       "version": "3.0.4",
       "from": "kind-of@>=3.0.2 <4.0.0",
@@ -881,15 +881,15 @@
       "from": "nomnom@>=1.5.0",
       "resolved": "https://registry.npmjs.org/nomnom/-/nomnom-1.8.1.tgz",
       "dependencies": {
-        "chalk": {
-          "version": "0.4.0",
-          "from": "chalk@>=0.4.0 <0.5.0",
-          "resolved": "https://registry.npmjs.org/chalk/-/chalk-0.4.0.tgz"
-        },
         "ansi-styles": {
           "version": "1.0.0",
           "from": "ansi-styles@>=1.0.0 <1.1.0",
           "resolved": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-1.0.0.tgz"
+        },
+        "chalk": {
+          "version": "0.4.0",
+          "from": "chalk@>=0.4.0 <0.5.0",
+          "resolved": "https://registry.npmjs.org/chalk/-/chalk-0.4.0.tgz"
         },
         "strip-ansi": {
           "version": "0.1.1",
@@ -967,15 +967,15 @@
       "from": "peek-stream@>=1.1.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/peek-stream/-/peek-stream-1.1.1.tgz",
       "dependencies": {
-        "through2": {
-          "version": "0.5.1",
-          "from": "through2@>=0.5.1 <0.6.0",
-          "resolved": "https://registry.npmjs.org/through2/-/through2-0.5.1.tgz"
-        },
         "readable-stream": {
           "version": "1.0.34",
           "from": "readable-stream@>=1.0.17 <1.1.0",
           "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-1.0.34.tgz"
+        },
+        "through2": {
+          "version": "0.5.1",
+          "from": "through2@>=0.5.1 <0.6.0",
+          "resolved": "https://registry.npmjs.org/through2/-/through2-0.5.1.tgz"
         },
         "xtend": {
           "version": "3.0.0",
