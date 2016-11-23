@@ -519,6 +519,20 @@ module.exports.doc = {
 			example: '15',
 			description: 'number of times to retry AWS operations if they fail',
 			default: '15'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set',
+			default: 'empty'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set',
+			default: 'undefined'
 		}
 	]
 };
