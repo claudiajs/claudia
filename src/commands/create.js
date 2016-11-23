@@ -20,7 +20,7 @@ var path = require('path'),
 	os = require('os'),
 	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
-	parseKeyValueCSV = require('../util/parse-key-value-csv'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -49,7 +49,6 @@ module.exports = function create(options, optionalLogger) {
 			});
 		},
 		validationError = function () {
-			var envVars;
 			if (source === os.tmpdir()) {
 				return 'Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.';
 			}
@@ -105,12 +104,10 @@ module.exports = function create(options, optionalLogger) {
 					return 'the timeout value provided must be less than or equal to 300';
 				}
 			}
-			if (options['set-env']) {
-				try {
-					envVars = parseKeyValueCSV(options['set-env']);
-				} catch (e) {
-					return 'Cannot read variables from set-env, ' + e;
-				}
+			try {
+				readEnvVarsFromOptions(options);
+			} catch (e) {
+				return e;
 			}
 		},
 		getPackageInfo = function () {
@@ -137,9 +134,7 @@ module.exports = function create(options, optionalLogger) {
 						Description: functionDesc,
 						MemorySize: options.memory,
 						Timeout: options.timeout,
-						Environment: options['set-env'] && {
-							Variables: parseKeyValueCSV(options['set-env'])
-						},
+						Environment: readEnvVarsFromOptions(options),
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',

@@ -932,7 +932,7 @@ describe('create', function () {
 				expect(Object.keys(JSON.parse(result.Payload)).sort()).toEqual(standardEnvKeys);
 			}).then(done, done.fail);
 		});
-		it('refuses to work when set-env is set but invalid', function (done) {
+		it('refuses to work when reading environment variables fails', function (done) {
 			config['set-env'] = 'XPATH,YPATH=/var/lib';
 			createFromDir('env-vars', logger).then(done.fail, function (message) {
 				expect(message).toEqual('Cannot read variables from set-env, Invalid CSV element XPATH');
@@ -943,6 +943,34 @@ describe('create', function () {
 		});
 		it('adds env variables specified in a key-value pair', function (done) {
 			config['set-env'] = 'XPATH=/var/www,YPATH=/var/lib';
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/var/www',
+						'YPATH': '/var/lib'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
+				expect(env.XPATH).toEqual('/var/www');
+				expect(env.YPATH).toEqual('/var/lib');
+			}).then(done, done.fail);
+		});
+		it('adds env variables specified in a JSON file', function (done) {
+			var envpath = path.join(workingdir, 'env.json');
+			shell.mkdir('-p', workingdir);
+			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/var/www', 'YPATH': '/var/lib'}), 'utf8');
+			config['set-env-from-json'] = envpath;
 			createFromDir('env-vars').then(function () {
 				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName
