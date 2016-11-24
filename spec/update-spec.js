@@ -466,7 +466,14 @@ describe('update', function () {
 			expect(logger.getStageLog(true).filter(function (entry) {
 					return entry !== 'rate-limited by AWS, waiting before retry';
 				})).toEqual([
-					'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'setting version alias', 'updating REST API'
+					'loading Lambda config',
+					'packaging files',
+					'validating package',
+					'updating configuration',
+					'zipping package',
+					'updating Lambda',
+					'setting version alias',
+					'updating REST API'
 				]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
 					'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
