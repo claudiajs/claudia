@@ -4,6 +4,8 @@ var aws = require('aws-sdk'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/retriable-wrap'),
 	loggingWrap = require('../util/logging-wrap'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	updateEnvVars = require('../tasks/update-env-vars'),
 	apiGWUrl = require('../util/apigw-url'),
 	NullLogger = require('../util/null-logger'),
 	markAlias = require('../tasks/mark-alias'),
@@ -30,6 +32,11 @@ module.exports = function setVersion(options, optionalLogger) {
 	if (!options.version) {
 		return Promise.reject('version misssing. please provide using --version');
 	}
+	try {
+		readEnvVarsFromOptions(options);
+	} catch (e) {
+		return Promise.reject(e);
+	}
 	logger.logStage('loading config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
@@ -43,6 +50,9 @@ module.exports = function setVersion(options, optionalLogger) {
 			function () {
 				logger.logStage('rate-limited by AWS, waiting before retry');
 			});
+	}).then(function () {
+		logger.logStage('updating configuration');
+		return updateEnvVars(options, lambda, lambdaConfig.name);
 	}).then(function () {
 		logger.logStage('updating versions');
 		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
@@ -74,6 +84,23 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };

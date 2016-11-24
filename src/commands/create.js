@@ -135,6 +135,7 @@ module.exports = function create(options, optionalLogger) {
 						MemorySize: options.memory,
 						Timeout: options.timeout,
 						Environment: readEnvVarsFromOptions(options),
+						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
@@ -278,9 +279,20 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
+		isRoleArn = function (string) {
+			return /^arn:aws:iam:/.test(string);
+		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
+				if (isRoleArn(options.role)) {
+					return Promise.resolve({
+						Role: {
+							RoleName: options.role,
+							Arn: options.role
+						}
+					});
+				}
 				return iam.getRole({RoleName: options.role}).promise();
 			} else {
 				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
@@ -347,7 +359,9 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function (result) {
 		roleMetadata = result;
 	}).then(function () {
-		return addPolicy('log-writer', roleMetadata.Role.RoleName);
+		if (!options.role) {
+			return addPolicy('log-writer', roleMetadata.Role.RoleName);
+		}
 	}).then(function () {
 		if (options.policies) {
 			return addExtraPolicies();
@@ -448,8 +462,9 @@ module.exports.doc = {
 		{
 			argument: 'role',
 			optional: true,
-			description: 'The name of an existing role to assign to the function. \n' +
-				'If not supplied, Claudia will create a new role'
+			description: 'The name or ARN of an existing role to assign to the function. \n' +
+				'If not supplied, Claudia will create a new role. Supply an ARN to create a function without any IAM access.',
+			example:  'arn:aws:iam::123456789012:role/FileConverter'
 		},
 		{
 			argument: 'runtime',
@@ -524,15 +539,18 @@ module.exports.doc = {
 			argument: 'set-env',
 			optional: true,
 			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
-			description: 'comma-separated list of VAR=VALUE environment variables to set',
-			default: 'empty'
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
 		},
 		{
 			argument: 'set-env-from-json',
 			optional: true,
 			example: 'production-env.json',
-			description: 'file path to a JSON file containing environment variables to set',
-			default: 'undefined'
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };

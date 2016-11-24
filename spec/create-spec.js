@@ -182,6 +182,8 @@ describe('create', function () {
 		});
 	});
 	describe('role management', function () {
+
+
 		it('creates the IAM role for the lambda', function (done) {
 			createFromDir('hello-world').then(function () {
 				return iam.getRole({RoleName: testRunName + '-executor'}).promise();
@@ -189,30 +191,68 @@ describe('create', function () {
 				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
 			}).then(done, done.fail);
 		});
-		it('does not create a role if the role option is provided, uses the provided one instead', function (done) {
-			var createdRole;
-
-			return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-			.then(function (lambdaRolePolicy) {
-				return iam.createRole({
-					RoleName: testRunName + '-manual',
-					AssumeRolePolicyDocument: lambdaRolePolicy
-				}).promise();
-			}).then(function (result) {
-				createdRole = result.Role;
+		describe('when a role is provided', function () {
+			var createdRole, roleName, logger,
+				invoke = function () {
+					return lambda.invoke({
+						FunctionName: testRunName,
+						InvocationType: 'RequestResponse'
+					}).promise();
+				};
+			beforeEach(function (done) {
+				roleName = testRunName + '-manual';
+				logger = new ArrayLogger();
+				fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+				.then(function (lambdaRolePolicy) {
+					return iam.createRole({
+						RoleName: roleName,
+						AssumeRolePolicyDocument: lambdaRolePolicy
+					}).promise();
+				}).then(function (result) {
+					createdRole = result.Role;
+				}).then(done, done.fail);
+			});
+			it('creates the function using the provided role by name', function (done) {
 				config.role = testRunName + '-manual';
-				return createFromDir('hello-world');
-			}).then(function (createResult) {
-				expect(createResult.lambda.role).toEqual(testRunName + '-manual');
-			}).then(getLambdaConfiguration)
-			.then(function (lambdaMetadata) {
-				expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
-			}).then(function () {
-				return iam.getRole({RoleName: testRunName + '-executor'}).promise();
-			}).then(function () {
+				createFromDir('hello-world', logger).then(function (createResult) {
+					expect(createResult.lambda.role).toEqual(testRunName + '-manual');
+				}).then(getLambdaConfiguration)
+				.then(function (lambdaMetadata) {
+					expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
+				}).then(invoke)
+				.then(function (result) {
+					expect(JSON.parse(result.Payload)).toEqual('hello world');
+				}).then(function () {
+					return iam.getRole({RoleName: testRunName + '-executor'}).promise();
+				}).then(function () {
 					done.fail('Executor role was created');
-				},
-				done);
+				}, done);
+			});
+			it('does not set up any additional cloudwatch policies if --role is provided', function (done) {
+				config.role = testRunName + '-manual';
+				createFromDir('hello-world', logger).then(function () {
+					return iam.listRolePolicies({RoleName: roleName}).promise();
+				}).then(function (result) {
+					expect(result.PolicyNames).toEqual([]);
+				}).then(done, done.fail);
+			});
+			it('creates the function using the provided role by ARN, without any IAM calls', function (done) {
+				config.role = createdRole.Arn;
+				createFromDir('hello-world', logger).then(function () {
+					newObjects.lambdaRole = false;
+					expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+				}).then(getLambdaConfiguration)
+				.then(function (lambdaMetadata) {
+					expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
+				}).then(invoke)
+				.then(function (result) {
+					expect(JSON.parse(result.Payload)).toEqual('hello world');
+				}).then(function () {
+					return iam.listRolePolicies({RoleName: roleName}).promise();
+				}).then(function (result) {
+					expect(result.PolicyNames).toEqual([]);
+				}).then(done, done.fail);
+			});
 		});
 		it('allows the function to log to cloudwatch', function (done) {
 			logs.createLogGroup({logGroupName: testRunName + '-group'}).promise().then(function () {
@@ -913,10 +953,13 @@ describe('create', function () {
 		beforeEach(function () {
 			logger = new ArrayLogger();
 			standardEnvKeys = [
-				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION', 'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME', 'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION', 'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
-				].sort();
+				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION',
+				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
+				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
+				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
+			].sort();
 		});
-		it('does not add any additional environment variables if env not provided', function (done) {
+		it('does not add any additional environment variables if set-env not provided', function (done) {
 			createFromDir('env-vars').then(function () {
 				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName
@@ -994,6 +1037,16 @@ describe('create', function () {
 				expect(env.YPATH).toEqual('/var/lib');
 			}).then(done, done.fail);
 		});
-
+		it('tries to set the KMS key ARN', function (done) {
+			// note, creating a KMS key costs $1 each time, so
+			// this is just testing that the code tries to set
+			// the key instead of actually using it
+			config['set-env'] = 'XPATH=/var/www,YPATH=/var/lib';
+			config['env-kms-key-arn'] = 'arn:a:b:c:d';
+			createFromDir('env-vars').then(done.fail, function (err) {
+				expect(err.code).toEqual('ValidationException');
+				expect(err.message).toMatch(/Value 'arn:a:b:c:d' at 'kMSKeyArn' failed to satisfy constraint/);
+			}).then(done, done.fail);
+		});
 	});
 });

@@ -15,7 +15,9 @@ var zipdir = require('../tasks/zipdir'),
 	apiGWUrl = require('../util/apigw-url'),
 	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	loggingWrap = require('../util/logging-wrap'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
+	updateEnvVars = require('../tasks/update-env-vars'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
@@ -108,6 +110,11 @@ module.exports = function update(options, optionalLogger) {
 	if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
 		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 	}
+	try {
+		readEnvVarsFromOptions(options);
+	} catch (e) {
+		return Promise.reject(e);
+	}
 
 
 	logger.logStage('loading Lambda config');
@@ -148,6 +155,9 @@ module.exports = function update(options, optionalLogger) {
 		if (requiresHandlerUpdate) {
 			return lambda.updateFunctionConfiguration({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler}).promise();
 		}
+	}).then(function () {
+		logger.logStage('updating configuration');
+		return updateEnvVars(options, lambda, lambdaConfig.name);
 	}).then(function () {
 		logger.logStage('zipping package');
 		return zipdir(packageDir);
@@ -225,6 +235,23 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };
