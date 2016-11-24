@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.1.6",
+  "version": "2.2.0",
   "dependencies": {
     "acorn": {
       "version": "3.3.0",
