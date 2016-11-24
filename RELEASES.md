@@ -1,5 +1,11 @@
 # Release history
 
+### 2.2.0, 24 November 2016
+
+- Set environment variables in create, update and set-version
+- Pass a role ARN with create --role to deploy without any IAM access
+- Remove claudia.json after destroying a function
+
 ### 2.1.6, 22 November 2016
 
 - Lambda now supports loading Node modules from subdirectories, so Claudia no longer warns about it
