@@ -217,7 +217,7 @@ describe('setVersion', function () {
 			expect(logger.getStageLog(true).filter(function (entry) {
 				return entry !== 'rate-limited by AWS, waiting before retry';
 			})).toEqual([
-				'loading config', 'updating versions'
+				'loading config', 'updating configuration', 'updating versions'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.publishVersion', 'lambda.updateAlias', 'lambda.createAlias']);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
