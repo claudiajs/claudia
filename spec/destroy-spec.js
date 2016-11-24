@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, jasmine */
+/*global describe, require, it, expect, beforeEach, jasmine, console */
 var underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -46,7 +46,6 @@ describe('destroy', function () {
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
-				shell.cp('-rf', 'spec/test-projects/hello-world/*', workingdir);
 			}).then(done, done.fail);
 		});
 		it('destroys the lambda function', function (done) {
@@ -72,6 +71,31 @@ describe('destroy', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('removing the config file', function () {
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+			}).then(done, done.fail);
+		});
+		it('removes claudia.json if --config is not provided', function (done) {
+			underTest({ source: workingdir }).then(function () {
+				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy();
+			}).then(done, done.fail);
+		});
+		it('removes specified config if --config is provided', function (done) {
+			var otherPath = tmppath();
+			shell.cp(path.join(workingdir, 'claudia.json'), otherPath);
+			underTest({ source: workingdir, config: otherPath}).then(function () {
+				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeTruthy();
+				expect(shell.test('-e', path.join(workingdir, otherPath))).toBeFalsy();
+			}).then(done, function (e) {
+				console.log(e.stack || e.message || e);
+				done.fail(e);
+			});
+		});
+	});
 	describe('when the lambda project contains a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
@@ -79,7 +103,6 @@ describe('destroy', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
-				shell.cp('-rf', 'spec/test-projects/api-gw-hello-world/*', workingdir);
 			}).then(done, done.fail);
 		});
 		it('destroys the lambda function', function (done) {
