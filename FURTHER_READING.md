@@ -3,6 +3,7 @@
 * [A single language for backend and frontend from AngularJS to cloud with Claudia.js](http://www.slideshare.net/wdalmut/a-single-language-for-backend-and-frontend-from-angularjs-to-cloud-with-claudiajs), Walter Dal Mut, November 10, 2016
 * [TNS Guide to Serverless Technologies: The Best Frameworks, Platforms and Tools](http://thenewstack.io/tns-guide-serverless-technologies-best-frameworks-platforms-tools/), 26 Oct 2016, by Lawrence Hecht
 * [Introduction to Claudia.js](https://blog.jayway.com/2016/11/06/introduction-to-claudia-js/), November 6, 2016 by Mattias Severson
+* [How To Develop A Chat Bot With Node.js](https://www.smashingmagazine.com/2016/10/how-to-develop-a-chat-bot-with-node-js/), October 17th, 2016, Slobodan Stojanovic
 * [Create and Deploy a Chat Bot to AWS Lambda in Five Minutes](https://aws.amazon.com/blogs/compute/create-and-deploy-a-chat-bot-to-aws-lambda-in-five-minutes/), AWS Compute Blog, June 28, 2016
 * [Using claudia.js and recaptcha to send emails with AWS Lambda](https://spinscale.de/posts/2016-06-16-using-claudia-js-and-recaptcha-to-send-emails-with-aws-lambda.html), by Alexander Reelsen, June 6, 2016
 * [Building a Slack command with Claudia bot builder](http://www.marcusoft.net/2016/06/claudia-bot-builder.html),  by Marcus Hammarberg, 17 June 2016
