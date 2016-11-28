@@ -34,8 +34,9 @@ claudia create {OPTIONS}
   which will automatically be included into the security role for the function
   * _For example_: policies/*.xml
 *  `--allow-recursion`:  _optional_ Set up IAM permissions so a function can call itself recursively
-*  `--role`:  _optional_ The name of an existing role to assign to the function. 
-  If not supplied, Claudia will create a new role
+*  `--role`:  _optional_ The name or ARN of an existing role to assign to the function. 
+  If not supplied, Claudia will create a new role. Supply an ARN to create a function without any IAM access.
+  * _For example_: arn:aws:iam::123456789012:role/FileConverter
 *  `--runtime`:  _optional_ Node.js runtime to use. For supported values, see
   http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html
   * _Defaults to_: node4.3
@@ -57,3 +58,14 @@ claudia create {OPTIONS}
   You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact
   after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda
   * _For example_: claudia-uploads
+*  `--aws-delay`:  _optional_ number of milliseconds betweeen retrying AWS operations if they fail
+  * _For example_: 3000
+  * _Defaults to_: 5000
+*  `--aws-retries`:  _optional_ number of times to retry AWS operations if they fail
+  * _For example_: 15
+  * _Defaults to_: 15
+*  `--set-env`:  _optional_ comma-separated list of VAR=VALUE environment variables to set
+  * _For example_: S3BUCKET=testbucket,SNSQUEUE=testqueue
+*  `--set-env-from-json`:  _optional_ file path to a JSON file containing environment variables to set
+  * _For example_: production-env.json
+*  `--env-kms-key-arn`:  _optional_ KMS Key ARN to encrypt/decrypt environment variables

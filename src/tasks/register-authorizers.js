@@ -1,28 +1,27 @@
-/*global module, require */
+/*global module, require, Promise */
 var aws = require('aws-sdk'),
-	Promise = require('bluebird'),
-	promiseWrap = require('../util/promise-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	NullLogger = require('../util/null-logger'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	getOwnerId = require('./get-owner-account-id');
 module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, functionVersion, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		ownerId,
 		apiGateway = retriableWrap(
-			promiseWrap(
+			loggingWrap(
 				new aws.APIGateway({region: awsRegion}),
-				{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
+				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			function () {
 				logger.logApiCall('rate-limited by AWS, waiting before retry');
-			},
-			/Async$/
+			}
 		),
-		lambda = promiseWrap(new aws.Lambda({region: awsRegion}), {log: logger.logApiCall, logName: 'lambda'}),
+		lambda = loggingWrap(new aws.Lambda({region: awsRegion}), {log: logger.logApiCall, logName: 'lambda'}),
 		removeAuthorizer = function (authConfig) {
-			return apiGateway.deleteAuthorizerAsync({
+			return apiGateway.deleteAuthorizerPromise({
 				authorizerId: authConfig.id,
 				restApiId: apiId
 			});
@@ -31,7 +30,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			if (authConfig.lambdaArn) {
 				return Promise.resolve(authConfig.lambdaArn);
 			} else {
-				return lambda.getFunctionConfigurationPromise({FunctionName: authConfig.lambdaName}).then(function (lambdaConfig) {
+				return lambda.getFunctionConfiguration({FunctionName: authConfig.lambdaName}).promise().then(function (lambdaConfig) {
 					var suffix = '';
 					if (authConfig.lambdaVersion === true) {
 						suffix = ':${stageVariables.lambdaVersion}';
@@ -81,7 +80,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			}).then(function () {
 				return allowInvocation(authConfig);
 			}).then(function () {
-				return apiGateway.createAuthorizerAsync(configureAuthorizer(authConfig, lambdaArn, authName));
+				return apiGateway.createAuthorizerPromise(configureAuthorizer(authConfig, lambdaArn, authName));
 			}).then(function (result) {
 				return result.id;
 			});
@@ -89,16 +88,16 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 		authorizerNames = Object.keys(authorizerMap);
 
 
-	return apiGateway.getAuthorizersAsync({
+	return apiGateway.getAuthorizersPromise({
 		restApiId: apiId
 	}).then(function (existingAuthorizers) {
-		return Promise.map(existingAuthorizers.items, removeAuthorizer, {concurrency: 1});
+		return sequentialPromiseMap(existingAuthorizers.items, removeAuthorizer);
 	}).then(function () {
 		return getOwnerId();
 	}).then(function (accountId) {
 		ownerId = accountId;
 	}).then(function () {
-		return Promise.map(authorizerNames, addAuthorizer, {concurrency: 1});
+		return sequentialPromiseMap(authorizerNames, addAuthorizer);
 	}).then(function (creationResults) {
 		var index,
 			result = {};

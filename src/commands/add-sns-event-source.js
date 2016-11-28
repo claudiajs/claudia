@@ -1,6 +1,5 @@
-/*global module, require */
+/*global module, require, Promise */
 var loadConfig = require('../util/loadconfig'),
-	Promise = require('bluebird'),
 	aws = require('aws-sdk');
 
 module.exports = function addSNSEventSource(options) {
@@ -9,11 +8,11 @@ module.exports = function addSNSEventSource(options) {
 		lambda,
 		sns,
 		initServices = function () {
-			lambda = Promise.promisifyAll(new aws.Lambda({region: lambdaConfig.region}), {suffix: 'Promise'});
-			sns = Promise.promisifyAll(new aws.SNS({region: lambdaConfig.region}));
+			lambda = new aws.Lambda({region: lambdaConfig.region});
+			sns = new aws.SNS({region: lambdaConfig.region});
 		},
 		getLambda = function () {
-			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
+			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
 		},
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})
@@ -27,21 +26,21 @@ module.exports = function addSNSEventSource(options) {
 				});
 		},
 		addInvokePermission = function () {
-			return lambda.addPermissionPromise({
+			return lambda.addPermission({
 				Action: 'lambda:InvokeFunction',
 				FunctionName: lambdaConfig.name,
 				Principal: 'sns.amazonaws.com',
 				SourceArn: options.topic,
 				Qualifier: options.version,
 				StatementId: options.topic.split(':').slice(3).join('-')  + '-' + Date.now()
-			});
+			}).promise();
 		},
 		addSubscription = function () {
-			return sns.subscribeAsync({
+			return sns.subscribe({
 				Protocol: 'lambda',
 				TopicArn: options.topic,
 				Endpoint: lambdaConfig.arn
-			});
+			}).promise();
 		};
 	if (!options.topic) {
 		return Promise.reject('SNS topic not specified. please provide it with --topic');

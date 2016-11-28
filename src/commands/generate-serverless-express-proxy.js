@@ -1,31 +1,19 @@
-/*global module, require */
+/*global module, require, Promise */
 var path = require('path'),
 	shell = require('shelljs'),
-	tmppath = require('../util/tmppath'),
-	Promise = require('bluebird'),
-	fs = Promise.promisifyAll(require('fs')),
-	NullLogger = require('../util/null-logger');
+	fs = require('../util/fs-promise'),
+	NullLogger = require('../util/null-logger'),
+	runNpm = require('../util/run-npm');
 module.exports = function generateServerlessExpressProxy(options, optionalLogger) {
 	'use strict';
-	var source = (options && options.source) || shell.pwd(),
+	var source = (options && options.source) || shell.pwd().toString(),
 		logger = optionalLogger || new NullLogger(),
 		serverlessModule = (options && options['aws-serverless-express-module']) || 'aws-serverless-express',
 		proxyModuleName = (options && options['proxy-module-name']) || 'lambda',
 		proxyModulePath = path.join(source, proxyModuleName + '.js'),
 		expressModule = options && options['express-module'],
 		installDependencies = function (targetDir) {
-			var cwd = shell.pwd(),
-				npmlog = tmppath();
-			logger.logApiCall('npm install ' + serverlessModule);
-			shell.cd(targetDir);
-			if (shell.exec('npm install ' + serverlessModule  + ' -S > ' + npmlog + ' 2>&1').code !== 0) {
-				shell.cd(cwd);
-				return Promise.reject('npm install failed. Check ' + npmlog);
-			} else {
-				shell.rm(npmlog);
-				shell.cd(cwd);
-			}
-			return Promise.resolve();
+			return runNpm(targetDir, 'install ' + serverlessModule + ' -S', logger);
 		};
 
 	if (!expressModule) {

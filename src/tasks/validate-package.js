@@ -16,7 +16,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 		apiModule = require(path.join(dir, apiModulePath));
 	} catch (e) {
 		console.error(e.stack || e);
-		throw 'cannot require ./' + apiModulePath + ' after npm install --production. Check your dependencies.';
+		throw 'cannot require ./' + apiModulePath + ' after clean installation. Check your dependencies.';
 	}
 	if (!apiModule[handlerMethod]) {
 		if (restApiModule) {

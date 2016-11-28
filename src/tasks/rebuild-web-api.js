@@ -1,29 +1,28 @@
-/*global module, require */
+/*global module, require, Promise */
 var aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	validAuthType = require('../util/valid-auth-type'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	validCredentials = require('../util/valid-credentials'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),
-	promiseWrap = require('../util/promise-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),
 	NullLogger = require('../util/null-logger'),
 	safeHash = require('../util/safe-hash'),
+	flattenRequestParameters = require('./flatten-request-parameters'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion, optionalLogger, configCacheStageVar) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
-						promiseWrap(
+						loggingWrap(
 							new aws.APIGateway({region: awsRegion}),
-							{log: logger.logApiCall, logName: 'apigateway', suffix: 'Async'}
+							{log: logger.logApiCall, logName: 'apigateway'}
 						),
 						function () {
 							logger.logApiCall('rate-limited by AWS, waiting before retry');
-						},
-						/Async$/
-						),
+						}),
 		configHash = safeHash(apiConfig),
 		existingResources,
 		ownerId,
@@ -39,7 +38,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return result;
 		},
 		getExistingResources = function () {
-			return apiGateway.getResourcesAsync({restApiId: restApiId, limit: 499});
+			return apiGateway.getResourcesPromise({restApiId: restApiId, limit: 499});
 		},
 		findRoot = function () {
 			var rootResource = findByPath(existingResources, '/');
@@ -50,7 +49,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return (apiConfig.corsHandlers !== false);
 		},
 		putMockIntegration = function (resourceId, httpMethod) {
-			return apiGateway.putIntegrationAsync({
+			return apiGateway.putIntegrationPromise({
 				restApiId: restApiId,
 				resourceId: resourceId,
 				httpMethod: httpMethod,
@@ -60,13 +59,14 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		},
-		putLambdaIntegration = function (resourceId, methodName, credentials) {
-			return apiGateway.putIntegrationAsync({
+		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters) {
+			return apiGateway.putIntegrationPromise({
 				restApiId: restApiId,
 				resourceId: resourceId,
 				httpMethod: methodName,
 				credentials: credentials,
 				type: 'AWS_PROXY',
+				cacheKeyParameters: cacheKeyParameters,
 				integrationHttpMethod: 'POST',
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 			});
@@ -78,8 +78,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 			return '\'' + val + '\'';
 		},
-		createMethod = function (methodName, resourceId, methodOptions) {
-			var apiKeyRequired = function () {
+		createMethod = function (methodName, resourceId, path) {
+			var methodOptions = apiConfig.routes[path][methodName],
+				apiKeyRequired = function () {
 					return methodOptions && methodOptions.apiKeyRequired;
 				},
 				authorizationType = function () {
@@ -104,13 +105,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					return null;
 				},
 				addMethodResponse = function () {
-					return apiGateway.putMethodResponseAsync({
+					return apiGateway.putMethodResponsePromise({
 						restApiId: restApiId,
 						resourceId: resourceId,
 						httpMethod: methodName,
 						statusCode: '200'
 					}).then(function () {
-						return apiGateway.putIntegrationResponseAsync({
+						return apiGateway.putIntegrationResponsePromise({
 							restApiId: restApiId,
 							resourceId: resourceId,
 							httpMethod: methodName,
@@ -123,22 +124,24 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				},
 				authorizerId = function () {
 					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
-				};
-			return apiGateway.putMethodAsync({
+				},
+				parameters = flattenRequestParameters(methodOptions.requestParameters, path);
+			return apiGateway.putMethodPromise({
 				authorizationType: authorizationType(),
 				authorizerId: authorizerId(),
 				httpMethod: methodName,
 				resourceId: resourceId,
 				restApiId: restApiId,
+				requestParameters: parameters,
 				apiKeyRequired: apiKeyRequired()
 			}).then(function () {
-				return putLambdaIntegration(resourceId, methodName, credentials());
+				return putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters));
 			}).then(function () {
 				return addMethodResponse();
 			});
 		},
 		createCorsHandler = function (resourceId) {
-			return apiGateway.putMethodAsync({
+			return apiGateway.putMethodPromise({
 				authorizationType: 'NONE',
 				httpMethod: 'OPTIONS',
 				resourceId: resourceId,
@@ -155,10 +158,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': false,
 						'method.response.header.Access-Control-Allow-Methods': false,
-						'method.response.header.Access-Control-Allow-Origin': false
+						'method.response.header.Access-Control-Allow-Origin': false,
+						'method.response.header.Access-Control-Allow-Credentials': false
 					};
 				}
-				return apiGateway.putMethodResponseAsync({
+				return apiGateway.putMethodResponsePromise({
 					restApiId: restApiId,
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
@@ -175,10 +179,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
 						'method.response.header.Access-Control-Allow-Methods': '\'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT\'',
-						'method.response.header.Access-Control-Allow-Origin': '\'*\''
+						'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+						'method.response.header.Access-Control-Allow-Credentials': '\'true\''
 					};
 				}
-				return apiGateway.putIntegrationResponseAsync({
+				return apiGateway.putIntegrationResponsePromise({
 					restApiId: restApiId,
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
@@ -197,7 +202,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			} else {
 				return findResourceByPath(pathComponents.parentPath)
 				.then(function (parentId) {
-					return apiGateway.createResourceAsync({
+					return apiGateway.createResourcePromise({
 						restApiId: restApiId,
 						parentId: parentId,
 						pathPart: pathComponents.pathPart
@@ -212,12 +217,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			var resourceId,
 				supportedMethods = Object.keys(apiConfig.routes[path]),
 				createMethodMapper = function (methodName) {
-					return createMethod(methodName, resourceId, apiConfig.routes[path][methodName]);
+					return createMethod(methodName, resourceId, path);
 				};
 			return findResourceByPath(path).then(function (r) {
 				resourceId = r;
 			}).then(function () {
-				return Promise.map(supportedMethods, createMethodMapper, {concurrency: 1});
+				return sequentialPromiseMap(supportedMethods, createMethodMapper);
 			}).then(function () {
 				if (supportsCors()) {
 					return createCorsHandler(resourceId);
@@ -226,21 +231,21 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		dropMethods = function (resource) {
 			var dropMethodMapper = function (method) {
-				return apiGateway.deleteMethodAsync({
+				return apiGateway.deleteMethodPromise({
 					resourceId: resource.id,
 					restApiId: restApiId,
 					httpMethod: method
 				});
 			};
 			if (resource.resourceMethods) {
-				return Promise.map(Object.keys(resource.resourceMethods), dropMethodMapper, {concurrency: 1});
+				return sequentialPromiseMap(Object.keys(resource.resourceMethods), dropMethodMapper);
 			} else {
 				return Promise.resolve();
 			}
 		},
 		removeResource = function (resource) {
 			if (resource.path !== '/') {
-				return apiGateway.deleteResourceAsync({
+				return apiGateway.deleteResourcePromise({
 					resourceId: resource.id,
 					restApiId: restApiId
 				});
@@ -281,7 +286,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
 			.then(function () {
-				return Promise.map(Object.keys(apiConfig.routes), configurePath, {concurrency: 1});
+				return sequentialPromiseMap(Object.keys(apiConfig.routes), configurePath);
 			});
 		},
 		deployApi = function () {
@@ -292,7 +297,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				stageVars[configCacheStageVar] = configHash;
 			}
 
-			return apiGateway.createDeploymentAsync({
+			return apiGateway.createDeploymentPromise({
 				restApiId: restApiId,
 				stageName: functionVersion,
 				variables: stageVars
@@ -311,13 +316,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return removeExistingResources()
 				.then(configureAuthorizers)
 				.then(rebuildApi)
-				.then(deployApi);
+				.then(deployApi)
+				.then(function () {
+					return { cacheReused: false };
+				});
 		},
 		getExistingConfigHash = function () {
 			if (!configCacheStageVar) {
 				return false;
 			}
-			return apiGateway.getStageAsync({
+			return apiGateway.getStagePromise({
 				restApiId: restApiId,
 				stageName: functionVersion
 			}).then(function (stage) {
@@ -334,6 +342,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		.then(function (existingHash) {
 			if (existingHash && existingHash === configHash) {
 				logger.logStage('Reusing cached API configuration');
+				return { cacheReused: true };
 			} else {
 				return uploadApiConfig();
 			}

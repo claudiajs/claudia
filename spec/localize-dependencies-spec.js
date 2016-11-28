@@ -5,19 +5,18 @@ var os = require('os'),
 	shell = require('shelljs'),
 	readjson = require('../src/util/readjson'),
 	fs = require('fs'),
-	Promise = require('bluebird'),
-	writeFile = Promise.promisify(fs.writeFile),
 	localizeDependencies = require('../src/tasks/localize-dependencies');
 describe('localizeDependencies', function () {
 	'use strict';
 	var workdir, referencedir;
 	beforeEach(function () {
 		workdir = path.join(os.tmpdir(), uuid.v4());
-		referencedir = '/abc/def';
+		referencedir = path.join(os.tmpdir(), uuid.v4());
 		shell.mkdir(workdir);
+		shell.mkdir(referencedir);
 	});
 	afterEach(function () {
-		shell.rm('-rf', workdir);
+		shell.rm('-rf', workdir, referencedir);
 	});
 	it('does not modify package properties that have nothing to do with dependencies', function (done) {
 		var referenceJSON;
@@ -42,7 +41,7 @@ describe('localizeDependencies', function () {
 		var writeTemplate = function (overrideKey, value) {
 			return readjson(path.join(__dirname, '..', 'package.json')).then(function (content) {
 				content[overrideKey] = value;
-				return writeFile(path.join(workdir, 'package.json'), JSON.stringify(content), {encoding: 'utf8'});
+				return fs.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), {encoding: 'utf8'});
 			});
 		};
 		it('does not modify remote dependencies in ' + depType, function (done) {
@@ -111,6 +110,21 @@ describe('localizeDependencies', function () {
 				});
 			}).then(done, done.fail);
 		});
+	});
+	it('does not create .npmrc if the original directory does not have one', function (done) {
+		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
+		localizeDependencies(workdir, referencedir).then(function () {
+			expect(shell.test('-e', path.join(workdir, '.npmrc'))).toBeFalsy();
+		}).then(done, done.fail);
+	});
+	it('copies .npmrc if the original directory contains it', function (done) {
+		fs.writeFileSync(path.join(referencedir, '.npmrc'), 'optional = false', 'utf8');
+		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
+		localizeDependencies(workdir, referencedir).then(function () {
+			var npmRcPath = path.join(workdir, '.npmrc');
+			expect(shell.test('-e', npmRcPath)).toBeTruthy();
+			expect(fs.readFileSync(npmRcPath, 'utf8')).toEqual('optional = false');
+		}).then(done, done.fail);
 	});
 
 });

@@ -1,9 +1,8 @@
 /*global require, beforeEach, afterEach*/
-var cwd,
-	shell = require('shelljs');
+var shell = require('shelljs'),
+	cwd = shell.pwd();
 beforeEach(function () {
 	'use strict';
-	cwd = shell.pwd();
 });
 afterEach(function () {
 	'use strict';

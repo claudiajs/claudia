@@ -4,11 +4,10 @@ var create = require('../src/commands/create'),
 	setVersion = require('../src/commands/set-version'),
 	destroy = require('../src/commands/destroy'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../src/util/fs-promise'),
 	awsRegion = 'us-east-1';
 describe('customAuthorizers', function () {
 	'use strict';
@@ -87,7 +86,7 @@ describe('customAuthorizers', function () {
 			return destroy({source: workingdir, config: 'claudia-api.json'});
 		}).catch(function (err) {
 			console.log('error cleaning up', err);
-		}).finally(done);
+		}).then(done);
 	});
 
 	describe('create wires up authorizers intially', function () {

@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, setTimeout, Promise */
 var underTest = require('../src/commands/add-s3-event-source'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -7,23 +7,28 @@ var underTest = require('../src/commands/add-s3-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('addS3EventSource', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, s3;
+	var workingdir, testRunName, newObjects, s3,
+		promiseDelay = function (delay) {
+			return new Promise(function (resolve) {
+				setTimeout(function () {
+					resolve();
+				}, delay);
+			});
+		};
+
 	beforeEach(function () {
 		workingdir = tmppath();
-		s3 = Promise.promisifyAll(new aws.S3());
+		s3 = new aws.S3();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
+		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the bucket is not defined in options', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -61,13 +66,14 @@ describe('addS3EventSource', function () {
 
 
 	describe('when params are valid', function () {
+		var bucketSuffix = '.bucket';
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/s3-remover/*', workingdir);
-			s3.createBucketAsync({
-				Bucket: testRunName + '-bucket',
+			s3.createBucket({
+				Bucket: testRunName + bucketSuffix,
 				ACL: 'private'
-			}).then(function () {
-				newObjects.s3Bucket = testRunName + '-bucket';
+			}).promise().then(function () {
+				newObjects.s3Bucket = testRunName + bucketSuffix;
 			}).then(done);
 		});
 		it('sets up privileges and s3 notifications for any created files in the s3 bucket', function (done) {
@@ -75,23 +81,23 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix});
 			}).then(function () {
 				// needs better...
 				console.log('waiting for IAM propagation');
-				return Promise.delay(5000);
+				return promiseDelay(5000);
 			}).then(function () {
-				return s3.putObjectAsync({
-					Bucket: testRunName + '-bucket',
+				return s3.putObject({
+					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt',
 					Body: 'file contents',
 					ACL: 'private'
-				});
+				}).promise();
 			}).then(function () {
-				return s3.waitForAsync('objectNotExists', {
-					Bucket: testRunName + '-bucket',
+				return s3.waitFor('objectNotExists', {
+					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt'
-				});
+				}).promise();
 			}).then(done, done.fail);
 		});
 		it('adds a prefix if requested', function (done) {
@@ -99,11 +105,11 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket', prefix: '/in/'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: '/in/'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
-					Bucket: testRunName + '-bucket'
-				});
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
 			}).then(function (config) {
 				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
 					Name: 'Prefix',
@@ -116,11 +122,11 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'special'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
-					Bucket: testRunName + '-bucket'
-				});
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
 			}).then(function (config) {
 				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
 			}).then(done, done.fail);
@@ -130,23 +136,23 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'special'});
 			}).then(function () {
 				// needs better...
 				console.log('waiting for IAM propagation');
-				return Promise.delay(5000);
+				return promiseDelay(5000);
 			}).then(function () {
-				return s3.putObjectAsync({
-					Bucket: testRunName + '-bucket',
+				return s3.putObject({
+					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt',
 					Body: 'file contents',
 					ACL: 'private'
-				});
+				}).promise();
 			}).then(function () {
-				return s3.waitForAsync('objectNotExists', {
-					Bucket: testRunName + '-bucket',
+				return s3.waitFor('objectNotExists', {
+					Bucket: testRunName + bucketSuffix,
 					Key: testRunName  + '.txt'
-				});
+				}).promise();
 			}).then(done, done.fail);
 		});
 		it('does not change any existing notification configurations', function (done) {
@@ -154,16 +160,16 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'special',  prefix: '/special/'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'special',  prefix: '/special/'});
 			}).then(function () {
 				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
 				return update({source: workingdir, version: 'crazy'});
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + '-bucket', version: 'crazy',  prefix: '/crazy/'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, version: 'crazy',  prefix: '/crazy/'});
 			}).then(function () {
-				return s3.getBucketNotificationConfigurationAsync({
-					Bucket: testRunName + '-bucket'
-				});
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
 			}).then(function (config) {
 				expect(config.LambdaFunctionConfigurations.length).toEqual(2);
 				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();

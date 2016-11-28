@@ -24,7 +24,10 @@ exports.postDeploy = function (options, lambdaDetails, utils) {
 		}
 	};
 	return utils.apiGatewayPromise.createDeploymentPromise(deployment).then(function () {
-		return options.postresult;
+		return {
+			result: options.postresult,
+			wasApiCacheUsed: !!lambdaDetails.apiCacheReused
+		};
 	});
 };
 exports.proxyRouter = function (event, context) {

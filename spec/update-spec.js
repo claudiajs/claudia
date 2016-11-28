@@ -5,8 +5,7 @@ var underTest = require('../src/commands/update'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
-	Promise = require('bluebird'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../src/util/fs-promise'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
@@ -24,15 +23,13 @@ describe('update', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		lambda = new aws.Lambda({region: awsRegion});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -64,7 +61,7 @@ describe('update', function () {
 	});
 	it('fails if local dependencies and optional dependencies are mixed', function (done) {
 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-		underTest({source: workingdir, 'use-local-dependencies': true, 'no-optional-dependencies': true}).then(done.fail, function (message) {
+		underTest({source: workingdir, 'use-local-dependencies': true, 'optional-dependencies': false}).then(done.fail, function (message) {
 			expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 			done();
 		});
@@ -98,9 +95,9 @@ describe('update', function () {
 			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', workingdir);
 			underTest({source: workingdir})
 			.then(done.fail, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 			}).then(done, done.fail);
@@ -109,7 +106,7 @@ describe('update', function () {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(3);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -119,7 +116,7 @@ describe('update', function () {
 		});
 		it('updates the lambda with a new version', function (done) {
 			underTest({source: workingdir}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
@@ -141,7 +138,7 @@ describe('update', function () {
 			shell.cp('-r', path.join(workingdir, 'local_modules', '*'),  path.join(workingdir, 'node_modules'));
 
 			underTest({source: workingdir, 'use-local-dependencies': true}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello local"');
@@ -149,8 +146,8 @@ describe('update', function () {
 		});
 		it('removes optional dependencies after validation if requested', function (done) {
 			shell.cp('-rf', path.join(__dirname, '/test-projects/optional-dependencies/*'), workingdir);
-			underTest({source: workingdir, 'no-optional-dependencies': true}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+			underTest({source: workingdir, 'optional-dependencies': false}).then(function () {
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
@@ -160,7 +157,7 @@ describe('update', function () {
 			shell.cp('-r', path.join(__dirname, 'test-projects/relative-dependencies/*'), workingdir);
 			shell.cp('-r', path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
 			underTest({source: path.join(workingdir, 'lambda')}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello relative"');
@@ -168,13 +165,13 @@ describe('update', function () {
 		});
 
 		it('uses a s3 bucket if provided', function (done) {
-			var s3 = Promise.promisifyAll(new aws.S3()),
+			var s3 = new aws.S3(),
 				logger = new ArrayLogger(),
 				bucketName = testRunName + '-bucket',
 				archivePath;
-			s3.createBucketAsync({
+			s3.createBucket({
 				Bucket: bucketName
-			}).then(function () {
+			}).promise().then(function () {
 				newObjects.s3bucket = bucketName;
 			}).then(function () {
 				return underTest({keep: true, 'use-s3-bucket': bucketName, source: workingdir}, logger);
@@ -182,16 +179,16 @@ describe('update', function () {
 				var expectedKey = path.basename(result.archive);
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
-				return s3.headObjectAsync({
+				return s3.headObject({
 					Bucket: bucketName,
 					Key: expectedKey
-				});
+				}).promise();
 			}).then(function (fileResult) {
 				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
 			}).then(function () {
 				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
 			}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
@@ -200,7 +197,7 @@ describe('update', function () {
 
 		it('adds the version alias if supplied', function (done) {
 			underTest({source: workingdir, version: 'great'}).then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'great'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('2');
 			}).then(done, done.fail);
@@ -211,7 +208,7 @@ describe('update', function () {
 			underTest().then(function (lambdaFunc) {
 				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
-				return lambda.invokePromise({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})});
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(done, done.fail);
 		});
 	});
@@ -271,7 +268,7 @@ describe('update', function () {
 			}).then(done.fail, function (reason) {
 				expect(reason.code).toEqual('NotFoundException');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -281,9 +278,9 @@ describe('update', function () {
 		it('validates the package before creating a new lambda version', function (done) {
 			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', updateddir);
 			underTest({source: updateddir}).then(done.fail, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -308,10 +305,10 @@ describe('update', function () {
 			}).then(done, done.fail);
 		});
 		it('upgrades the function handler from 1.x', function (done) {
-			lambda.updateFunctionConfigurationPromise({
+			lambda.updateFunctionConfiguration({
 				FunctionName: testRunName,
 				Handler: 'main.router'
-			}).then(function () {
+			}).promise().then(function () {
 				return underTest({source: updateddir});
 			}).then(function (result) {
 				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
@@ -411,7 +408,10 @@ describe('update', function () {
 				postcheck: 'option-123',
 				postresult: 'option-result-post'
 			}).then(function (updateResult) {
-				expect(updateResult.deploy).toEqual('option-result-post');
+				expect(updateResult.deploy).toEqual({
+					result: 'option-result-post',
+					wasApiCacheUsed: false
+				});
 			}).then(function () {
 				return invoke('postdeploy/hello');
 			}).then(function (contents) {
@@ -431,11 +431,31 @@ describe('update', function () {
 				done.fail();
 			});
 		});
-
+		it('passes cache check results to the post-deploy step', function (done) {
+			shell.cp('-rf', 'spec/test-projects/api-gw-postdeploy/*', updateddir);
+			underTest({
+				source: updateddir,
+				version: 'development',
+				postcheck: 'option-123',
+				'cache-api-config': 'claudiaConfig',
+				postresult: 'option-result-post'
+			}).then(function (updateResult) {
+				expect(updateResult.deploy.wasApiCacheUsed).toBeFalsy();
+				return underTest({
+					source: updateddir,
+					version: 'development',
+					postcheck: 'option-123',
+					'cache-api-config': 'claudiaConfig',
+					postresult: 'option-result-post'
+				});
+			}).then(function (updateResult) {
+				expect(updateResult.deploy.wasApiCacheUsed).toBeTruthy();
+			}).then(done, done.fail);
+		});
 	});
 	it('logs call execution', function (done) {
 		var logger = new ArrayLogger();
-		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/', workingdir);
+		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
 		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.restApi = result.api && result.api.id;
@@ -446,7 +466,14 @@ describe('update', function () {
 			expect(logger.getStageLog(true).filter(function (entry) {
 					return entry !== 'rate-limited by AWS, waiting before retry';
 				})).toEqual([
-					'loading Lambda config', 'packaging files', 'validating package', 'zipping package', 'updating Lambda', 'setting version alias', 'updating REST API'
+					'loading Lambda config',
+					'packaging files',
+					'validating package',
+					'updating configuration',
+					'zipping package',
+					'updating Lambda',
+					'setting version alias',
+					'updating REST API'
 				]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
 					'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
@@ -455,6 +482,8 @@ describe('update', function () {
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.getRestApi',
+				'apigateway.setupRequestListeners',
+				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
 				'apigateway.deleteResource',
 				'apigateway.createResource',
@@ -465,5 +494,123 @@ describe('update', function () {
 				'apigateway.createDeployment'
 			]);
 		}).then(done, done.fail);
+	});
+	describe('environment variables', function () {
+		var standardEnvKeys,
+			logger,
+			nonStandard = function (key) {
+				return standardEnvKeys.indexOf(key) < 0;
+			};
+		beforeEach(function (done) {
+			logger = new ArrayLogger();
+			standardEnvKeys = [
+				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION',
+				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
+				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
+				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
+				].sort();
+			shell.cp('-r', 'spec/test-projects/env-vars/*', workingdir);
+			create({
+				name: testRunName,
+				version: 'original',
+				region: awsRegion,
+				source: workingdir,
+				'handler': 'main.handler',
+				'set-env': 'XPATH=/var/www,YPATH=/var/lib'
+			}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		it('does not change environment variables if set-env not provided', function (done) {
+			return underTest({source: workingdir, version: 'new'}, logger).then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: 'new'
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/var/www',
+						'YPATH': '/var/lib'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					Qualifier: 'new',
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
+				expect(env.XPATH).toEqual('/var/www');
+				expect(env.YPATH).toEqual('/var/lib');
+			}).then(done, done.fail);
+		});
+		it('changes environment variables if set-env is provided', function (done) {
+			return underTest({source: workingdir, version: 'new', 'set-env': 'XPATH=/opt,ZPATH=/usr'}, logger).then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: 'new'
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/opt',
+						'ZPATH': '/usr'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					Qualifier: 'new',
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'ZPATH']);
+				expect(env.XPATH).toEqual('/opt');
+				expect(env.YPATH).toBeFalsy();
+				expect(env.ZPATH).toEqual('/usr');
+			}).then(done, done.fail);
+		});
+		it('changes env variables specified in a JSON file', function (done) {
+			var envpath = path.join(workingdir, 'env.json');
+			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
+			return underTest({source: workingdir, version: 'new', 'set-env-from-json': envpath}, logger).then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: 'new'
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/opt',
+						'ZPATH': '/usr'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					Qualifier: 'new',
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'ZPATH']);
+				expect(env.XPATH).toEqual('/opt');
+				expect(env.YPATH).toBeFalsy();
+				expect(env.ZPATH).toEqual('/usr');
+			}).then(done, done.fail);
+		});
+		it('refuses to work if reading the variables fails', function (done) {
+			return underTest({source: workingdir, version: 'new', 'set-env': 'XPATH,ZPATH=/usr'}, logger).then(done.fail, function (message) {
+				expect(message).toEqual('Cannot read variables from set-env, Invalid CSV element XPATH');
+				expect(logger.getApiCallLogForService('lambda', true)).toEqual([]);
+				expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+				done();
+			});
+		});
 	});
 });

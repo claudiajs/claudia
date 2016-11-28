@@ -2,7 +2,6 @@
 var underTest = require('../src/tasks/register-authorizers'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
@@ -13,7 +12,7 @@ describe('registerAuthorizers', function () {
 	'use strict';
 	var authorizerLambdaName, workingdir, testRunName, newObjects, apiId,
 		authorizerArn,
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
+		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion})),
 		lambda = new aws.Lambda({region: awsRegion}),
 		ownerId,
 		iam = new aws.IAM({region: awsRegion}),
@@ -42,7 +41,7 @@ describe('registerAuthorizers', function () {
 		create({name: testRunName, version: 'original', role: genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 		}).then(function () {
-			return apiGateway.createRestApiAsync({name: testRunName});
+			return apiGateway.createRestApiPromise({name: testRunName});
 		}).then(function (result) {
 			apiId = result.id;
 			newObjects.restApi = result.id;
@@ -77,7 +76,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				expect(createResult).toEqual({});
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -92,7 +91,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -115,7 +114,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -133,7 +132,7 @@ describe('registerAuthorizers', function () {
 				};
 				return underTest(authorizerConfig, apiId, awsRegion);
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -149,7 +148,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -168,7 +167,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -191,7 +190,7 @@ describe('registerAuthorizers', function () {
 			.then(function (creationResult) {
 				result = creationResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -217,14 +216,14 @@ describe('registerAuthorizers', function () {
 				first: { lambdaName: authorizerLambdaName, headerName: 'NewFirst' },
 				third: { lambdaName: authorizerLambdaName, headerName: 'NewThird' }
 			};
-		apiGateway.createAuthorizerAsync({
+		apiGateway.createAuthorizerPromise({
 			identitySource: 'method.request.header.OldFirst',
 			name: 'first',
 			restApiId: apiId,
 			type: 'TOKEN',
 			authorizerUri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + authorizerArn + '/invocations'
 		}).then(function () {
-			return apiGateway.createAuthorizerAsync({
+			return apiGateway.createAuthorizerPromise({
 				identitySource: 'method.request.header.OldSecond',
 				name: 'second',
 				restApiId: apiId,
@@ -236,7 +235,7 @@ describe('registerAuthorizers', function () {
 		}).then(function (creationResult) {
 			result = creationResult;
 		}).then(function () {
-			return apiGateway.getAuthorizersAsync({
+			return apiGateway.getAuthorizersPromise({
 				restApiId: apiId
 			});
 		}).then(function (authorizers) {
@@ -264,7 +263,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -285,7 +284,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
@@ -306,7 +305,7 @@ describe('registerAuthorizers', function () {
 			.then(function (createResult) {
 				result = createResult;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {

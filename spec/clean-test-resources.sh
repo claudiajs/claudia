@@ -1,3 +1,9 @@
+SCRIPT_DIR=`dirname $BASH_SOURCE[0]` 
+PROJECT_DIR=`dirname $SCRIPT_DIR`
+[[ -e $PROJECT_DIR/.env ]] && source $PROJECT_DIR/.env
+
+echo using $AWS_PROFILE
+
 functions=`aws lambda list-functions --query 'Functions[?starts_with(FunctionName,\`test\`)].FunctionName' --output text`
 for fun in $functions; do
   echo deleting function $fun
@@ -12,6 +18,18 @@ for api in $apis; do
 done
 
 roles=`aws iam list-roles --query 'Roles[?starts_with(RoleName, \`test\`)].RoleName' --output text`
+
+for role in $roles; do
+  echo deleting policies for role $role
+  policies=`aws iam list-role-policies --role-name=$role --query PolicyNames --output text`
+  for policy in $policies; do 
+    echo deleting policy $policy for role $role
+    aws iam delete-role-policy --policy-name $policy --role-name $role;
+  done
+  echo deleting role $role
+  aws iam delete-role --role-name $role
+done
+
 
 
 lambdaLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`/aws/lambda/test\`)].logGroupName' --output text`

@@ -1,10 +1,11 @@
-/*global module, require*/
-var Promise = require('bluebird'),
-	aws = require('aws-sdk'),
+/*global module, require, Promise*/
+var aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/retriable-wrap'),
-	promiseWrap = require('../util/promise-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	updateEnvVars = require('../tasks/update-env-vars'),
 	apiGWUrl = require('../util/apigw-url'),
 	NullLogger = require('../util/null-logger'),
 	markAlias = require('../tasks/mark-alias'),
@@ -31,13 +32,18 @@ module.exports = function setVersion(options, optionalLogger) {
 	if (!options.version) {
 		return Promise.reject('version misssing. please provide using --version');
 	}
+	try {
+		readEnvVarsFromOptions(options);
+	} catch (e) {
+		return Promise.reject(e);
+	}
 	logger.logStage('loading config');
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
-			promiseWrap(
+			loggingWrap(
 				new aws.APIGateway({region:  lambdaConfig.region}),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
@@ -45,8 +51,11 @@ module.exports = function setVersion(options, optionalLogger) {
 				logger.logStage('rate-limited by AWS, waiting before retry');
 			});
 	}).then(function () {
+		logger.logStage('updating configuration');
+		return updateEnvVars(options, lambda, lambdaConfig.name);
+	}).then(function () {
 		logger.logStage('updating versions');
-		return lambda.publishVersionPromise({FunctionName: lambdaConfig.name});
+		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
 	}).then(function (versionResult) {
 		return markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version);
 	}).then(function () {
@@ -75,6 +84,23 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };

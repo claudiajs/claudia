@@ -1,92 +1,76 @@
-/*global beforeEach, require*/
+/*global beforeEach, require, Promise, console*/
 
 beforeEach(function () {
 	'use strict';
 	var aws = require('aws-sdk'),
-		Promise = require('bluebird'),
+		destroyRole = require('../../src/util/destroy-role'),
 		shell = require('shelljs'),
 		retriableWrap = require('../../src/util/retriable-wrap'),
-		awsRegion = 'us-east-1';
+		awsRegion = 'us-east-1',
+		cwd = shell.pwd();
 
 	this.destroyObjects = function (newObjects) {
 		var lambda = new aws.Lambda({region: awsRegion}),
 			logs = new aws.CloudWatchLogs({region: awsRegion}),
-			apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion}), {suffix: 'Promise'})),
-			iam = Promise.promisifyAll(new aws.IAM()),
-			deleteFunction = Promise.promisify(lambda.deleteFunction.bind(lambda)),
-			deleteLogGroup = Promise.promisify(logs.deleteLogGroup.bind(logs)),
-			s3 = Promise.promisifyAll(new aws.S3()),
-			sns = Promise.promisifyAll(new aws.SNS({region: awsRegion})),
-			events = Promise.promisifyAll(new aws.CloudWatchEvents({region: awsRegion})),
-			destroyRole = function (roleName) {
-				var deleteSinglePolicy = function (policyName) {
-					return iam.deleteRolePolicyAsync({
-						PolicyName: policyName,
-						RoleName: roleName
-					});
-				};
-				return iam.listRolePoliciesAsync({RoleName: roleName}).then(function (result) {
-					return Promise.map(result.PolicyNames, deleteSinglePolicy);
-				}).then(function () {
-					return iam.deleteRoleAsync({RoleName: roleName});
-				});
-			},
+			apiGatewayPromise = retriableWrap(new aws.APIGateway({region: awsRegion})),
+			s3 = new aws.S3(),
+			sns = new aws.SNS({region: awsRegion}),
+			events = new aws.CloudWatchEvents({region: awsRegion}),
 			destroyRule = function (ruleName) {
-				return events.listTargetsByRuleAsync({Rule: ruleName}).then(function (config) {
+				return events.listTargetsByRule({Rule: ruleName}).promise().then(function (config) {
 					var ids = config.Targets.map(function (target) {
 						return target.Id;
 					});
 					if (ids.length) {
-						return events.removeTargetsAsync({Rule: ruleName, Ids: ids });
+						return events.removeTargets({Rule: ruleName, Ids: ids }).promise();
 					}
 				}).then(function () {
-					return events.deleteRuleAsync({Name: ruleName});
+					return events.deleteRule({Name: ruleName}).promise();
 				});
 			},
 			destroyBucket = function (bucketName) {
 				var deleteSingleObject = function (ob) {
-					return s3.deleteObjectAsync({
+					return s3.deleteObject({
 						Bucket: bucketName,
 						Key: ob.Key
-					});
+					}).promise();
 				};
-				return s3.listObjectsAsync({Bucket: bucketName}).then(function (result) {
-					return Promise.map(result.Contents, deleteSingleObject);
+				return s3.listObjects({Bucket: bucketName}).promise().then(function (result) {
+					return Promise.all(result.Contents.map(deleteSingleObject));
 				}).then(function () {
-					return s3.deleteBucketAsync({Bucket: bucketName});
+					return s3.deleteBucket({Bucket: bucketName}).promise();
 				});
 			};
-
 
 		if (!newObjects) {
 			return Promise.resolve();
 		}
-
+		shell.cd(cwd);
 		if (newObjects.workingdir && shell.test('-e', newObjects.workingdir)) {
 			shell.rm('-rf', newObjects.workingdir);
 		}
 
 		return Promise.resolve().then(function () {
 			if (newObjects.restApi) {
-				return apiGateway.deleteRestApiPromise({
+				return apiGatewayPromise.deleteRestApiPromise({
 					restApiId: newObjects.restApi
 				});
 			}
 		}).then(function () {
 			if (newObjects.lambdaFunction) {
-				return deleteFunction({FunctionName: newObjects.lambdaFunction});
+				return lambda.deleteFunction({FunctionName: newObjects.lambdaFunction}).promise();
 			}
 		}).then(function () {
 			if (newObjects.lambdaFunction) {
-				return deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).catch(function () {
+				return logs.deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).promise().catch(function () {
 					return true;
 				});
 			}
 		}).then(function () {
 			if (newObjects.snsTopic) {
-				return sns.deleteTopicAsync({
+				return sns.deleteTopic({
 					TopicArn: newObjects.snsTopic
-				});
+				}).promise();
 			}
 		}).then(function () {
 			if (newObjects.eventRule) {
@@ -98,12 +82,14 @@ beforeEach(function () {
 			}
 		}).then(function () {
 			if (newObjects.logGroup) {
-				return deleteLogGroup({logGroupName: newObjects.logGroup});
+				return logs.deleteLogGroup({logGroupName: newObjects.logGroup}).promise();
 			}
 		}).then(function () {
 			if (newObjects.s3Bucket) {
 				return destroyBucket(newObjects.s3Bucket);
 			}
+		}).catch(function (e) {
+			console.log('error cleaning up', e.stack || e.message || e);
 		});
 	};
 });

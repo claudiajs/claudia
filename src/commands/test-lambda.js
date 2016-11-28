@@ -1,8 +1,7 @@
-/*global module, require*/
-var Promise = require('bluebird'),
-	aws = require('aws-sdk'),
+/*global module, require, Promise*/
+var aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
-	fs = Promise.promisifyAll(require('fs'));
+	fs = require('../util/fs-promise');
 module.exports = function testLambda(options) {
 	'use strict';
 	var getPayload = function () {
@@ -18,9 +17,8 @@ module.exports = function testLambda(options) {
 		lambdaConfig = config.lambda;
 	}).then(getPayload)
 	.then(function (payload) {
-		var lambda = new aws.Lambda({region: lambdaConfig.region}),
-			invokeLambda = Promise.promisify(lambda.invoke.bind(lambda));
-		return invokeLambda({FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version});
+		var lambda = new aws.Lambda({region: lambdaConfig.region});
+		return lambda.invoke({FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version}).promise();
 	});
 };
 module.exports.doc = {

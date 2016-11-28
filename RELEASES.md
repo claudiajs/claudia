@@ -1,5 +1,41 @@
 # Release history
 
+### 2.2.0, 24 November 2016
+
+- Set environment variables in create, update and set-version
+- Pass a role ARN with create --role to deploy without any IAM access
+- Remove claudia.json after destroying a function
+
+### 2.1.6, 22 November 2016
+
+- Lambda now supports loading Node modules from subdirectories, so Claudia no longer warns about it
+- API Gateway post-deploy steps now get `apiCacheReused` in Lambda properties, set to `true` if API definition was reused from cache
+- Claudia now uses native promises and promise support in AWS SDK instead of Bluebird
+- Dependencies are shrinkwrapped to prevent problems with sub-dependencies breaking backwards compatibility
+
+### 2.1.5, 11 November 2016
+
+- downgrade shelljs to avoid bug that would silently cause some files not to be copied when using --local-dependencies
+- bugfix for deployment from directories containing a space (https://github.com/claudiajs/claudia/issues/84)
+
+### 2.1.4, 2.1.3, 9 November 2016
+
+- force V4 signing for S3, to support european S3 operations
+- bugfix for using scoped packages @company/name (https://github.com/claudiajs/claudia/issues/80), thanks to Nicolas Cochard
+- bugfix for using local .npmrc files inside project folders (https://github.com/claudiajs/claudia/issues/81)
+- prevent ambiguous definitions when handler specified without . or api module specified with function/extension
+
+### 2.1.2, 4 November 2016
+
+- bugfix for setting cache params and method params with API gateway.
+
+### 2.1.1, 25 October 2016
+
+- bugfix for setting Access-Control-Allow-Credentials header for CORS
+- bugfix for `--no-optional-dependencies`, thanks to [jveres](https://github.com/jveres)
+- bugfix for wildcards including files in package.json
+- Claudia is now using NPM to package files, instead of directly copying individual files, so all NPM tricks and workflow events for packaging are directly supported
+
 ### 2.1.0, 5 October 2016
 
 - support for `--generate-serverless-express-proxy`, helping users create aws-serverless-express wrappers.

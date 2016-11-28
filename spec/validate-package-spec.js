@@ -10,7 +10,7 @@ describe('validatePackage', function () {
 		it('fails if router require fails', function () {
 			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/echo-dependency-problem'), 'main.handler');
-			}).toThrow('cannot require ./main after npm install --production. Check your dependencies.');
+			}).toThrow('cannot require ./main after clean installation. Check your dependencies.');
 		});
 		it('fails if the main module does not export the handler method', function () {
 			expect(function () {
@@ -27,7 +27,7 @@ describe('validatePackage', function () {
 		it('fails if router require fails', function () {
 			expect(function () {
 				underTest(path.join(__dirname, 'test-projects/echo-dependency-problem'), 'main.handler', 'main');
-			}).toThrow('cannot require ./main after npm install --production. Check your dependencies.');
+			}).toThrow('cannot require ./main after clean installation. Check your dependencies.');
 		});
 		it('fails if the main module does not export the router method', function () {
 			expect(function () {

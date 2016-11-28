@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Deploy Node.js projects to AWS Lambda and API Gateway easily.",
   "license": "MIT",
   "repository": {
@@ -35,7 +35,7 @@
     "docs"
   ],
   "scripts": {
-    "prepublish": "node src/util/doc-md.js",
+    "prepublish": "npm shrinkwrap && node src/util/doc-md.js",
     "pretest": "jshint src spec && jscs src spec/*.js",
     "test": "node spec/support/jasmine-runner.js",
     "debug": "node debug spec/support/jasmine-runner.js"
@@ -43,12 +43,13 @@
   "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
   "dependencies": {
     "archiver": "^0.21.0",
-    "aws-sdk": "^2.5.3",
-    "bluebird": "^3.2.1",
+    "aws-sdk": "^2.7.7",
+    "gunzip-maybe": "^1.3.1",
     "minimal-request-promise": "^1.1.0",
     "minimist": "^1.2.0",
-    "oh-no-i-insist": "^1.0.0",
+    "oh-no-i-insist": "^1.1.1",
     "shelljs": "^0.5.3",
+    "tar-fs": "^1.14.0",
     "uuid": "^2.0.1"
   },
   "devDependencies": {

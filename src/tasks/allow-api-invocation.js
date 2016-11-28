@@ -1,10 +1,8 @@
-/*global require, module*/
-var Promise = require('bluebird'),
-	aws = require('aws-sdk'),
-	find = require('../util/find');
+/*global require, module, Promise*/
+var aws = require('aws-sdk');
 module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion, path) {
 	'use strict';
-	var lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'}),
+	var lambda = new aws.Lambda({region: awsRegion}),
 		activePath = path || '*/*/*',
 		policy = {
 			Action: 'lambda:InvokeFunction',
@@ -21,19 +19,20 @@ module.exports = function allowApiInvocation(functionName, functionVersion, rest
 				statement.Condition.ArnLike['AWS:SourceArn'] === policy.SourceArn &&
 				statement.Effect === 'Allow';
 		};
-	return lambda.getPolicyPromise({
+	return lambda.getPolicy({
 		FunctionName: functionName,
 		Qualifier: functionVersion
-	}).then(function (policyResponse) {
+	}).promise()
+	.then(function (policyResponse) {
 		return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 	}).then(function (currentPolicy) {
 		var statements = (currentPolicy && currentPolicy.Statement) || [];
-		if (!find(statements, matchesPolicy)) {
-			return lambda.addPermissionPromise(policy);
+		if (!statements.find(matchesPolicy)) {
+			return lambda.addPermission(policy).promise();
 		}
 	}, function (e) {
 		if (e && e.code === 'ResourceNotFoundException') {
-			return lambda.addPermissionPromise(policy);
+			return lambda.addPermission(policy).promise();
 		} else {
 			return Promise.reject(e);
 		}

@@ -5,8 +5,7 @@ var underTest = require('../src/commands/create'),
 	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../src/util/fs-promise'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
 	os = require('os'),
@@ -15,33 +14,43 @@ var underTest = require('../src/commands/create'),
 describe('create', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
+		apiGatewayPromise,
 		createFromDir = function (dir, logger) {
 			if (!shell.test('-e', workingdir)) {
 				shell.mkdir('-p', workingdir);
 			}
-			shell.cp('-r', path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*', workingdir);
+			shell.cp('-r',
+				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*',
+				workingdir);
+			if (shell.test('-e', path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'))) {
+				shell.cp(
+					path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'),
+					workingdir
+				);
+			}
 			return underTest(config, logger).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = (result.api && result.api.id) || (result.proxyApi && result.proxyApi.id);
 				return result;
 			});
+		},
+		getLambdaConfiguration = function () {
+			return lambda.getFunctionConfiguration({FunctionName: testRunName}).promise();
 		};
-
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = Promise.promisifyAll(new aws.IAM());
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		iam = new aws.IAM();
+		lambda = new aws.Lambda({region: awsRegion});
+		apiGatewayPromise = retriableWrap(new aws.APIGateway({region: awsRegion}));
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	describe('config validation', function () {
 		it('fails if the source folder is same as os tmp folder', function (done) {
@@ -75,10 +84,10 @@ describe('create', function () {
 				done();
 			});
 		});
-		it('fails if the handler contains a folder', function (done) {
-			config.handler = 'api/main.router';
+		it('fails if the handler does not contain a dot', function (done) {
+			config.handler = 'api';
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('Lambda handler module has to be in the main project directory');
+				expect(message).toEqual('Lambda handler function not specified. Please specify with --handler module.function');
 			}).then(done);
 		});
 		it('fails if both handler and api module are provided', function (done) {
@@ -96,11 +105,11 @@ describe('create', function () {
 				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
 			}).then(done);
 		});
-		it('fails if the api module contains a folder', function (done) {
+		it('fails if the api module contains an extension', function (done) {
 			config.handler = undefined;
-			config['api-module'] = 'api/main';
+			config['api-module'] = 'api.js';
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('API module has to be in the main project directory');
+				expect(message).toEqual('API module must be a module name, without the file extension or function name');
 			}).then(done);
 		});
 
@@ -151,7 +160,7 @@ describe('create', function () {
 		});
 		it('fails if local dependencies and optional dependencies are mixed', function (done) {
 			config['use-local-dependencies'] = true;
-			config['no-optional-dependencies'] = true;
+			config['optional-dependencies'] = false;
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 				done();
@@ -161,64 +170,98 @@ describe('create', function () {
 			createFromDir('echo-dependency-problem').then(function () {
 				done.fail('create succeeded');
 			}, function (reason) {
-				expect(reason).toEqual('cannot require ./main after npm install --production. Check your dependencies.');
+				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(function () {
-				return iam.getRoleAsync({RoleName: testRunName + '-executor'}).then(function () {
+				return iam.getRole({RoleName: testRunName + '-executor'}).promise().then(function () {
 					done.fail('iam role was created');
 				}, function () {});
-			}).then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName}).then(function () {
-					done.fail('function was created');
-				}, function () {});
-			}).
-			then(done);
+			}).then(getLambdaConfiguration)
+			.then(function () {
+				done.fail('function was created');
+			}, done);
 		});
 	});
 	describe('role management', function () {
+
+
 		it('creates the IAM role for the lambda', function (done) {
 			createFromDir('hello-world').then(function () {
-				return iam.getRoleAsync({RoleName: testRunName + '-executor'});
+				return iam.getRole({RoleName: testRunName + '-executor'}).promise();
 			}).then(function (role) {
 				expect(role.Role.RoleName).toEqual(testRunName + '-executor');
 			}).then(done, done.fail);
 		});
-		it('does not create a role if the role option is provided, uses the provided one instead', function (done) {
-			var createdRole;
-
-			return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-			.then(function (lambdaRolePolicy) {
-				return iam.createRoleAsync({
-					RoleName: testRunName + '-manual',
-					AssumeRolePolicyDocument: lambdaRolePolicy
-				});
-			}).then(function (result) {
-				createdRole = result.Role;
+		describe('when a role is provided', function () {
+			var createdRole, roleName, logger,
+				invoke = function () {
+					return lambda.invoke({
+						FunctionName: testRunName,
+						InvocationType: 'RequestResponse'
+					}).promise();
+				};
+			beforeEach(function (done) {
+				roleName = testRunName + '-manual';
+				logger = new ArrayLogger();
+				fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+				.then(function (lambdaRolePolicy) {
+					return iam.createRole({
+						RoleName: roleName,
+						AssumeRolePolicyDocument: lambdaRolePolicy
+					}).promise();
+				}).then(function (result) {
+					createdRole = result.Role;
+				}).then(done, done.fail);
+			});
+			it('creates the function using the provided role by name', function (done) {
 				config.role = testRunName + '-manual';
-				return createFromDir('hello-world');
-			}).then(function (createResult) {
-				expect(createResult.lambda.role).toEqual(testRunName + '-manual');
-			}).then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaMetadata) {
-				expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
-			}).then(function () {
-				return iam.getRoleAsync({RoleName: testRunName + '-executor'});
-			}).then(function () {
+				createFromDir('hello-world', logger).then(function (createResult) {
+					expect(createResult.lambda.role).toEqual(testRunName + '-manual');
+				}).then(getLambdaConfiguration)
+				.then(function (lambdaMetadata) {
+					expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
+				}).then(invoke)
+				.then(function (result) {
+					expect(JSON.parse(result.Payload)).toEqual('hello world');
+				}).then(function () {
+					return iam.getRole({RoleName: testRunName + '-executor'}).promise();
+				}).then(function () {
 					done.fail('Executor role was created');
-				},
-				done);
+				}, done);
+			});
+			it('does not set up any additional cloudwatch policies if --role is provided', function (done) {
+				config.role = testRunName + '-manual';
+				createFromDir('hello-world', logger).then(function () {
+					return iam.listRolePolicies({RoleName: roleName}).promise();
+				}).then(function (result) {
+					expect(result.PolicyNames).toEqual([]);
+				}).then(done, done.fail);
+			});
+			it('creates the function using the provided role by ARN, without any IAM calls', function (done) {
+				config.role = createdRole.Arn;
+				createFromDir('hello-world', logger).then(function () {
+					newObjects.lambdaRole = false;
+					expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+				}).then(getLambdaConfiguration)
+				.then(function (lambdaMetadata) {
+					expect(lambdaMetadata.Role).toEqual(createdRole.Arn);
+				}).then(invoke)
+				.then(function (result) {
+					expect(JSON.parse(result.Payload)).toEqual('hello world');
+				}).then(function () {
+					return iam.listRolePolicies({RoleName: roleName}).promise();
+				}).then(function (result) {
+					expect(result.PolicyNames).toEqual([]);
+				}).then(done, done.fail);
+			});
 		});
 		it('allows the function to log to cloudwatch', function (done) {
-			var createLogGroup = Promise.promisify(logs.createLogGroup.bind(logs)),
-				createLogStream = Promise.promisify(logs.createLogStream.bind(logs)),
-				getLogEvents = Promise.promisify(logs.getLogEvents.bind(logs));
-			createLogGroup({logGroupName: testRunName + '-group'}).then(function () {
+			logs.createLogGroup({logGroupName: testRunName + '-group'}).promise().then(function () {
 				newObjects.logGroup = testRunName + '-group';
-				return createLogStream({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+				return logs.createLogStream({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'}).promise();
 			}).then(function () {
 				return createFromDir('cloudwatch-log');
 			}).then(function () {
-				return lambda.invokePromise({
+				return lambda.invoke({
 					FunctionName: testRunName,
 					Payload: JSON.stringify({
 						region: awsRegion,
@@ -226,9 +269,9 @@ describe('create', function () {
 						group: testRunName + '-group',
 						message: 'hello ' + testRunName
 					})
-				});
+				}).promise();
 			}).then(function () {
-				return getLogEvents({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'});
+				return logs.getLogEvents({logGroupName: testRunName + '-group', logStreamName: testRunName + '-stream'}).promise();
 			}).then(function (logEvents) {
 				expect(logEvents.events.length).toEqual(1);
 				expect(logEvents.events[0].message).toEqual('hello ' + testRunName);
@@ -237,11 +280,11 @@ describe('create', function () {
 		it('allows function to call itself if --allow-recursion is specified', function (done) {
 			config['allow-recursion'] = true;
 			createFromDir('hello-world').then(function () {
-				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+				return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
 			}).then(function () {
-				return iam.getRolePolicyAsync({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'});
+				return iam.getRolePolicy({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
 						{
@@ -277,11 +320,11 @@ describe('create', function () {
 			fs.writeFileSync(path.join(workingdir, 'policies', 'subdir', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
 			config.policies = policiesDir;
 			createFromDir('hello-world').then(function () {
-				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+				return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
 			}).then(function () {
-				return iam.getRolePolicyAsync({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'});
+				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
 			}).then(done, done.fail);
@@ -302,11 +345,11 @@ describe('create', function () {
 			fs.writeFileSync(path.join(workingdir, 'policies', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
 			config.policies = path.join(policiesDir, '*.json');
 			createFromDir('hello-world').then(function () {
-				return iam.listRolePoliciesAsync({RoleName: testRunName + '-executor'});
+				return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
 			}).then(function () {
-				return iam.getRolePolicyAsync({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'});
+				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
 			}).then(done, done.fail);
@@ -316,29 +359,28 @@ describe('create', function () {
 			createFromDir('hello-world').then(done.fail, function (error) {
 				expect(error).toEqual('no files match additional policies (*.NOT)');
 			}).then(function () {
-				return iam.getRoleAsync({RoleName: testRunName + '-executor'}).then(function () {
+				return iam.getRole({RoleName: testRunName + '-executor'}).promise().then(function () {
 					done.fail('iam role was created');
 				}, function () {});
-			}).then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName}).then(function () {
-					done.fail('function was created');
-				}, function () {});
-			}).then(done);
+			}).then(getLambdaConfiguration)
+			.then(function () {
+				done.fail('function was created');
+			}, done);
 		});
 	});
 	describe('runtime support', function () {
 		it('creates node 4.3 deployments by default', function (done) {
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
 		});
 		it('can create legacy 0.10 deployments using the --runtime argument', function (done) {
 			config.runtime = 'nodejs';
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Runtime).toEqual('nodejs');
 			}).then(done, done.fail);
 		});
@@ -369,17 +411,17 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('creates memory size of 128 MB by default', function (done) {
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.MemorySize).toEqual(128);
 			}).then(done, done.fail);
 		});
 		it('can specify memory size using the --memory argument', function (done) {
 			config.memory = 1536;
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.MemorySize).toEqual(1536);
 			}).then(done, done.fail);
 		});
@@ -398,22 +440,54 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('creates timeout of 3 seconds by default', function (done) {
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Timeout).toEqual(3);
 			}).then(done, done.fail);
 		});
 		it('can specify timeout using the --timeout argument', function (done) {
 			config.timeout = 300;
-			createFromDir('hello-world').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Timeout).toEqual(300);
 			}).then(done, done.fail);
 		});
 	});
 	describe('creating the function', function () {
+		it('wires up the handler so the function is executable', function (done) {
+			createFromDir('echo').then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse',
+					Payload: JSON.stringify({
+						message: 'hello ' + testRunName
+					})
+				}).promise();
+			}).then(function (result) {
+				expect(JSON.parse(result.Payload)).toEqual({message: 'hello ' + testRunName});
+			}).then(done, done.fail);
+		});
+		it('wires up handlers from subfolders', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config.handler = 'subdir/mainfromsub.handler';
+			shell.cd(workingdir);
+			underTest(config).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse',
+					Payload: JSON.stringify({
+						message: 'hello ' + testRunName
+					})
+				}).promise();
+			}).then(function (result) {
+				expect(JSON.parse(result.Payload)).toEqual({message: 'hello ' + testRunName});
+			}).then(done, done.fail);
+		});
+
 		it('returns an object containing the new claudia configuration', function (done) {
 			createFromDir('hello-world').then(function (creationResult) {
 				expect(creationResult.lambda).toEqual({
@@ -432,23 +506,37 @@ describe('create', function () {
 					name: 'hello-world'
 				});
 			}).then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: 'hello-world'});
+				return lambda.getFunctionConfiguration({FunctionName: 'hello-world'}).promise();
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
+			}).then(done, done.fail);
+		});
+		it('renames scoped NPM packages to a sanitized Lambda name', function (done) {
+			config.name = undefined;
+			createFromDir('hello-world-scoped').then(function (creationResult) {
+				expect(creationResult.lambda).toEqual({
+					role: 'test_hello-world-executor',
+					region: awsRegion,
+					name: 'test_hello-world'
+				});
+			}).then(function () {
+				return lambda.getFunctionConfiguration({FunctionName: 'test_hello-world'}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
 		});
 		it('uses the package.json description field if --description is not provided', function (done) {
-			createFromDir('package-description').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('package-description')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Description).toEqual('This is the package description');
 			}).then(done, done.fail);
 		});
 		it('uses --description as the lambda description even if the package.json description field is provided', function (done) {
 			config.description = 'description from config';
-			createFromDir('package-description').then(function () {
-				return lambda.getFunctionConfigurationPromise({FunctionName: testRunName});
-			}).then(function (lambdaResult) {
+			createFromDir('package-description')
+			.then(getLambdaConfiguration)
+			.then(function (lambdaResult) {
 				expect(lambdaResult.Description).toEqual('description from config');
 			}).then(done, done.fail);
 		});
@@ -466,7 +554,7 @@ describe('create', function () {
 		});
 		it('configures the function in AWS so it can be invoked', function (done) {
 			createFromDir('hello-world').then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello world"');
@@ -474,7 +562,7 @@ describe('create', function () {
 		});
 		it('configures the function so it will be versioned', function (done) {
 			createFromDir('hello-world').then(function () {
-				return lambda.listVersionsByFunctionPromise({FunctionName: testRunName});
+				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
 				expect(result.Versions.length).toEqual(2);
 				expect(result.Versions[0].Version).toEqual('$LATEST');
@@ -484,7 +572,7 @@ describe('create', function () {
 		it('adds the latest alias', function (done) {
 			config.version = 'great';
 			createFromDir('hello-world').then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'latest'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'latest'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('$LATEST');
 			}).then(done, done.fail);
@@ -492,7 +580,7 @@ describe('create', function () {
 		it('adds the version alias if supplied', function (done) {
 			config.version = 'great';
 			createFromDir('hello-world').then(function () {
-				return lambda.getAliasPromise({FunctionName: testRunName, Name: 'great'});
+				return lambda.getAlias({FunctionName: testRunName, Name: 'great'}).promise();
 			}).then(function (result) {
 				expect(result.FunctionVersion).toEqual('1');
 			}).then(done, done.fail);
@@ -504,13 +592,14 @@ describe('create', function () {
 			shell.mkdir(path.join(projectDir, 'node_modules'));
 			shell.cp('-r', path.join(projectDir, 'local_modules', '*'),  path.join(projectDir, 'node_modules'));
 			createFromDir('local-dependencies').then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello local"');
 			}).then(done, done.fail);
 		});
 		it('rewires relative local dependencies to reference original location after copy', function (done) {
+			shell.mkdir('-p', workingdir);
 			shell.cp('-r', path.join(__dirname, 'test-projects',  'relative-dependencies/*'), workingdir);
 			config.source = path.join(workingdir, 'lambda');
 			underTest(config).then(function (result) {
@@ -519,19 +608,27 @@ describe('create', function () {
 				newObjects.restApi = result.api && result.api.id;
 				return result;
 			}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello relative"');
 			}).then(done, done.fail);
 		});
 		it('removes optional dependencies after validation if requested', function (done) {
-			config['no-optional-dependencies'] = true;
+			config['optional-dependencies'] = false;
 			createFromDir('optional-dependencies').then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
+			}).then(done, done.fail);
+		});
+		it('removes .npmrc from the package', function (done) {
+			createFromDir('ls-dir').then(function () {
+				return lambda.invoke({FunctionName: testRunName}).promise();
+			}).then(function (lambdaResult) {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"files":["main.js","node_modules","package.json"]}');
 			}).then(done, done.fail);
 		});
 		it('keeps the archive on the disk if --keep is specified', function (done) {
@@ -542,15 +639,15 @@ describe('create', function () {
 			}).then(done, done.fail);
 		});
 		it('uses a s3 bucket if provided', function (done) {
-			var s3 = Promise.promisifyAll(new aws.S3()),
+			var s3 = new aws.S3(),
 				logger = new ArrayLogger(),
 				bucketName = testRunName + '-bucket',
 				archivePath;
 			config.keep = true;
 			config['use-s3-bucket'] = bucketName;
-			s3.createBucketAsync({
+			s3.createBucket({
 				Bucket: bucketName
-			}).then(function () {
+			}).promise().then(function () {
 				newObjects.s3bucket = bucketName;
 			}).then(function () {
 				return createFromDir('hello-world', logger);
@@ -558,16 +655,16 @@ describe('create', function () {
 				var expectedKey = path.basename(result.archive);
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
-				return s3.headObjectAsync({
+				return s3.headObject({
 					Bucket: bucketName,
 					Key: expectedKey
-				});
+				}).promise();
 			}).then(function (fileResult) {
 				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
 			}).then(function () {
 				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
 			}).then(function () {
-				return lambda.invokePromise({FunctionName: testRunName});
+				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
 				expect(lambdaResult.Payload).toEqual('"hello world"');
@@ -575,7 +672,6 @@ describe('create', function () {
 		});
 	});
 	describe('deploying a proxy api', function () {
-		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/);
 		beforeEach(function () {
 			config['deploy-proxy-api'] = true;
 		});
@@ -586,9 +682,27 @@ describe('create', function () {
 				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
 				return apiId;
 			}).then(function (apiId) {
-				return apiGateway.getRestApiAsync({restApiId: apiId});
+				return apiGatewayPromise.getRestApiPromise({restApiId: apiId});
 			}).then(function (restApi) {
 				expect(restApi.name).toEqual(testRunName);
+			}).then(done, done.fail);
+		});
+		it('creates a proxy web API using a handler from a subfolder', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config.handler = 'subdir/mainfromsub.handler';
+			shell.cd(workingdir);
+			underTest(config).then(function (creationResult) {
+				return creationResult.api.id;
+			}).then(function (apiId) {
+				return callApi(apiId, awsRegion, 'latest?abc=xkcd&dd=yy');
+			}).then(function (contents) {
+				var params = JSON.parse(contents.body);
+				expect(params.queryStringParameters).toEqual({abc: 'xkcd', dd: 'yy'});
+				expect(params.requestContext.httpMethod).toEqual('GET');
+				expect(params.path).toEqual('/');
+				expect(params.requestContext.stage).toEqual('latest');
 			}).then(done, done.fail);
 		});
 		it('saves the api ID without module into claudia.json', function (done) {
@@ -640,8 +754,7 @@ describe('create', function () {
 		});
 	});
 	describe('creating the web api', function () {
-		var apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
-			apiId;
+		var apiId;
 		beforeEach(function () {
 			config.handler = undefined;
 			config['api-module'] = 'main';
@@ -654,7 +767,7 @@ describe('create', function () {
 				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
 				return apiId;
 			}).then(function (apiId) {
-				return apiGateway.getRestApiAsync({restApiId: apiId});
+				return apiGatewayPromise.getRestApiPromise({restApiId: apiId});
 			}).then(function (restApi) {
 				expect(restApi.name).toEqual(testRunName);
 			}).then(done, done.fail);
@@ -682,7 +795,7 @@ describe('create', function () {
 				newObjects.restApi = apiId;
 				return apiId;
 			}).then(function (apiId) {
-				return apiGateway.getRestApiAsync({restApiId: apiId});
+				return apiGatewayPromise.getRestApiPromise({restApiId: apiId});
 			}).then(function (restApi) {
 				expect(restApi.name).toEqual('api-gw-hello-world');
 			}).then(done, done.fail);
@@ -697,6 +810,22 @@ describe('create', function () {
 				expect(contents.body).toEqual('"hello world"');
 			}).then(done, done.fail);
 		});
+		it('wires up the api module from a subfolder', function (done) {
+			shell.mkdir('-p', path.join(workingdir, 'subdir'));
+			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
+			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			config['api-module'] = 'subdir/mainfromsub';
+			shell.cd(workingdir);
+
+			underTest(config).then(function (creationResult) {
+				apiId = creationResult.api && creationResult.api.id;
+			}).then(function () {
+				return callApi(apiId, awsRegion, 'latest/hello');
+			}).then(function (contents) {
+				expect(contents.body).toEqual('"hello world"');
+			}).then(done, done.fail);
+		});
+
 		it('when the version is provided, creates the deployment with that name', function (done) {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
@@ -728,7 +857,7 @@ describe('create', function () {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
-				return apiGateway.createDeploymentAsync({
+				return apiGatewayPromise.createDeploymentPromise({
 					restApiId: apiId,
 					stageName: 'fromtest',
 					variables: {
@@ -750,7 +879,10 @@ describe('create', function () {
 			config.postresult = 'option-result-post';
 			createFromDir('api-gw-postdeploy').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
-				expect(creationResult.api.deploy).toEqual('option-result-post');
+				expect(creationResult.api.deploy).toEqual({
+					result: 'option-result-post',
+					wasApiCacheUsed: false
+				});
 			}).then(function () {
 				return callApi(apiId, awsRegion, 'postdeploy/hello', {retry: 403});
 			}).then(function (contents) {
@@ -800,6 +932,8 @@ describe('create', function () {
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',
+				'apigateway.setupRequestListeners',
+				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
 				'apigateway.createResource',
 				'apigateway.putMethod',
@@ -809,5 +943,110 @@ describe('create', function () {
 				'apigateway.createDeployment'
 			]);
 		}).then(done, done.fail);
+	});
+	describe('environment variables', function () {
+		var standardEnvKeys,
+			logger,
+			nonStandard = function (key) {
+				return standardEnvKeys.indexOf(key) < 0;
+			};
+		beforeEach(function () {
+			logger = new ArrayLogger();
+			standardEnvKeys = [
+				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION',
+				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
+				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
+				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
+			].sort();
+		});
+		it('does not add any additional environment variables if set-env not provided', function (done) {
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toBeUndefined();
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				expect(Object.keys(JSON.parse(result.Payload)).sort()).toEqual(standardEnvKeys);
+			}).then(done, done.fail);
+		});
+		it('refuses to work when reading environment variables fails', function (done) {
+			config['set-env'] = 'XPATH,YPATH=/var/lib';
+			createFromDir('env-vars', logger).then(done.fail, function (message) {
+				expect(message).toEqual('Cannot read variables from set-env, Invalid CSV element XPATH');
+				expect(logger.getApiCallLogForService('lambda', true)).toEqual([]);
+				expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
+				done();
+			});
+		});
+		it('adds env variables specified in a key-value pair', function (done) {
+			config['set-env'] = 'XPATH=/var/www,YPATH=/var/lib';
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/var/www',
+						'YPATH': '/var/lib'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
+				expect(env.XPATH).toEqual('/var/www');
+				expect(env.YPATH).toEqual('/var/lib');
+			}).then(done, done.fail);
+		});
+		it('adds env variables specified in a JSON file', function (done) {
+			var envpath = path.join(workingdir, 'env.json');
+			shell.mkdir('-p', workingdir);
+			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/var/www', 'YPATH': '/var/lib'}), 'utf8');
+			config['set-env-from-json'] = envpath;
+			createFromDir('env-vars').then(function () {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName
+				}).promise();
+			}).then(function (configuration) {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/var/www',
+						'YPATH': '/var/lib'
+					}
+				});
+			}).then(function () {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(function (result) {
+				var env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
+				expect(env.XPATH).toEqual('/var/www');
+				expect(env.YPATH).toEqual('/var/lib');
+			}).then(done, done.fail);
+		});
+		it('tries to set the KMS key ARN', function (done) {
+			// note, creating a KMS key costs $1 each time, so
+			// this is just testing that the code tries to set
+			// the key instead of actually using it
+			config['set-env'] = 'XPATH=/var/www,YPATH=/var/lib';
+			config['env-kms-key-arn'] = 'arn:a:b:c:d';
+			createFromDir('env-vars').then(done.fail, function (err) {
+				expect(err.code).toEqual('ValidationException');
+				expect(err.message).toMatch(/Value 'arn:a:b:c:d' at 'kMSKeyArn' failed to satisfy constraint/);
+			}).then(done, done.fail);
+		});
 	});
 });

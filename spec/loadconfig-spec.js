@@ -6,13 +6,15 @@ var underTest = require('../src/util/loadconfig'),
 	path = require('path');
 describe('loadConfig', function () {
 	'use strict';
-	var workingdir, exampleConfig;
+	var workingdir, exampleConfig, cwd;
 	beforeEach(function () {
 		exampleConfig = {name: 'config'};
 		workingdir = tmppath();
 		shell.mkdir(workingdir);
+		cwd = shell.pwd().toString();
 	});
 	afterEach(function () {
+		shell.cd(cwd);
 		shell.rm('-rf', workingdir);
 	});
 	it('loads config from the current directory if no directory provided', function (done) {

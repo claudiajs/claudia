@@ -6,17 +6,15 @@ var underTest = require('../src/commands/add-scheduled-event'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	Promise = require('bluebird'),
 	awsRegion = 'us-east-1';
 describe('addScheduledEvent', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, s3, config, events, lambda, eventConfig;
+	var workingdir, testRunName, newObjects, config, events, lambda, eventConfig;
 	beforeEach(function () {
 		var eventFile;
 		workingdir = tmppath();
-		s3 = Promise.promisifyAll(new aws.S3());
-		events = Promise.promisifyAll(new aws.CloudWatchEvents({region: awsRegion}));
-		lambda = Promise.promisifyAll(new aws.Lambda({region: awsRegion}), {suffix: 'Promise'});
+		events = new aws.CloudWatchEvents({region: awsRegion});
+		lambda = new aws.Lambda({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
@@ -35,9 +33,7 @@ describe('addScheduledEvent', function () {
 
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	it('fails when the event file is not defined in options', function (done) {
 		config.event = '';
@@ -99,9 +95,9 @@ describe('addScheduledEvent', function () {
 			.then(function () {
 				return underTest(config);
 			}).then(function () {
-				return events.describeRuleAsync({
+				return events.describeRule({
 					Name: newObjects.eventRule
-				});
+				}).promise();
 			}).then(function (eventConfig) {
 				expect(eventConfig.State).toEqual('ENABLED');
 				expect(eventConfig.ScheduleExpression).toEqual('rate(5 minutes)');
@@ -114,9 +110,9 @@ describe('addScheduledEvent', function () {
 			.then(function () {
 				return underTest(config);
 			}).then(function () {
-				return events.describeRuleAsync({
+				return events.describeRule({
 					Name: newObjects.eventRule
-				});
+				}).promise();
 			}).then(function (eventConfig) {
 				expect(eventConfig.State).toEqual('ENABLED');
 				expect(eventConfig.ScheduleExpression).toEqual('rate(10 minutes)');
@@ -129,9 +125,9 @@ describe('addScheduledEvent', function () {
 			.then(function () {
 				return underTest(config);
 			}).then(function () {
-				return events.describeRuleAsync({
+				return events.describeRule({
 					Name: newObjects.eventRule
-				});
+				}).promise();
 			}).then(function (eventConfig) {
 				expect(eventConfig.State).toEqual('ENABLED');
 				expect(eventConfig.ScheduleExpression).toEqual('cron(0 8 1 * ? *)');
@@ -142,15 +138,15 @@ describe('addScheduledEvent', function () {
 
 			createLambda()
 			.then(function () {
-				return lambda.getFunctionConfigurationPromise({
+				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName
-				});
+				}).promise();
 			}).then(function (lambdaResult) {
 				functionArn = lambdaResult.FunctionArn;
 			}).then(function () {
 				return underTest(config);
 			}).then(function () {
-				return events.listTargetsByRuleAsync({Rule: config.name});
+				return events.listTargetsByRule({Rule: config.name}).promise();
 			}).then(function (config) {
 				expect(config.Targets.length).toBe(1);
 				expect(config.Targets[0].Arn).toEqual(functionArn);
@@ -164,17 +160,17 @@ describe('addScheduledEvent', function () {
 
 			createLambda()
 			.then(function () {
-				return lambda.getFunctionConfigurationPromise({
+				return lambda.getFunctionConfiguration({
 					FunctionName: testRunName,
 					Qualifier: 'special'
-				});
+				}).promise();
 			}).then(function (lambdaResult) {
 				functionArn = lambdaResult.FunctionArn;
 				console.log(functionArn);
 			}).then(function () {
 				return underTest(config);
 			}).then(function () {
-				return events.listTargetsByRuleAsync({Rule: config.name});
+				return events.listTargetsByRule({Rule: config.name}).promise();
 			}).then(function (config) {
 				expect(config.Targets.length).toBe(1);
 				expect(config.Targets[0].Arn).toEqual(functionArn);

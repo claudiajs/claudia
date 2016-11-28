@@ -1,17 +1,17 @@
-/*global module, require, __dirname */
+/*global module, require, __dirname, Promise */
 var loadConfig = require('../util/loadconfig'),
 	readJSON = require('../util/readjson'),
-	Promise = require('bluebird'),
 	path = require('path'),
+	iamNameSanitize = require('../util/iam-name-sanitize'),
 	aws = require('aws-sdk');
 module.exports = function addS3EventSource(options) {
 	'use strict';
 	var lambdaConfig,
 		lambda,
 		getLambda = function (config) {
-			lambda = Promise.promisifyAll(new aws.Lambda({region: config.lambda.region}), {suffix: 'Promise'});
+			lambda = new aws.Lambda({region: config.lambda.region});
 			lambdaConfig = config.lambda;
-			return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Qualifier: options.version});
+			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
 		},
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true, role: true}})
@@ -30,28 +30,27 @@ module.exports = function addS3EventSource(options) {
 					policy.Statement[0].Resource[0] = policy.Statement[0].Resource[0].replace(/BUCKET_NAME/g, options.bucket);
 					return JSON.stringify(policy);
 				}).then(function (policyContents) {
-					var iam = new aws.IAM(),
-					putRolePolicy = Promise.promisify(iam.putRolePolicy.bind(iam));
-					return putRolePolicy({
+					var iam = new aws.IAM();
+					return iam.putRolePolicy({
 						RoleName: lambdaConfig.role,
-						PolicyName: 's3-' + options.bucket + '-access',
+						PolicyName: iamNameSanitize('s3-' + options.bucket + '-access'),
 						PolicyDocument: policyContents
-					});
+					}).promise();
 				});
 		},
 
 		addInvokePermission = function () {
-			return lambda.addPermissionPromise({
+			return lambda.addPermission({
 				Action: 'lambda:InvokeFunction',
 				FunctionName: lambdaConfig.name,
 				Principal: 's3.amazonaws.com',
 				SourceArn: 'arn:aws:s3:::' + options.bucket,
 				Qualifier: options.version,
-				StatementId:  options.bucket  + '-access'
-			});
+				StatementId:  iamNameSanitize(options.bucket  + '-access')
+			}).promise();
 		},
 		addBucketNotificationConfig = function () {
-			var s3 = Promise.promisifyAll(new aws.S3()),
+			var s3 = new aws.S3({signatureVersion: 'v4'}),
 				eventConfig = {
 					LambdaFunctionArn: lambdaConfig.arn,
 					Events: ['s3:ObjectCreated:*']
@@ -66,18 +65,18 @@ module.exports = function addS3EventSource(options) {
 					}
 				};
 			}
-			return s3.getBucketNotificationConfigurationAsync({
+			return s3.getBucketNotificationConfiguration({
 					Bucket: options.bucket
-				}).then(function (currentConfig) {
+				}).promise().then(function (currentConfig) {
 					var merged = currentConfig || {};
 					if (!merged.LambdaFunctionConfigurations) {
 						merged.LambdaFunctionConfigurations = [];
 					}
 					merged.LambdaFunctionConfigurations.push(eventConfig);
-					return s3.putBucketNotificationConfigurationAsync({
+					return s3.putBucketNotificationConfiguration({
 						Bucket: options.bucket,
 						NotificationConfiguration: merged
-					});
+					}).promise();
 				});
 		};
 

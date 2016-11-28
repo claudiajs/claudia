@@ -27,3 +27,8 @@ claudia update {OPTIONS}
   You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact
   after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda
   * _For example_: claudia-uploads
+*  `--set-env`:  _optional_ comma-separated list of VAR=VALUE environment variables to set
+  * _For example_: S3BUCKET=testbucket,SNSQUEUE=testqueue
+*  `--set-env-from-json`:  _optional_ file path to a JSON file containing environment variables to set
+  * _For example_: production-env.json
+*  `--env-kms-key-arn`:  _optional_ KMS Key ARN to encrypt/decrypt environment variables

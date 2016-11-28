@@ -1,32 +1,41 @@
-/*global module, require, console */
-var Promise = require('bluebird'),
-	path = require('path'),
+/*global module, require, console, Promise */
+var path = require('path'),
 	shell = require('shelljs'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
+	cleanUpPackage = require('../tasks/clean-up-package'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
 	templateFile = require('../util/template-file'),
 	validatePackage = require('../tasks/validate-package'),
 	retriableWrap = require('../util/retriable-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
-	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
-	promiseWrap = require('../util/promise-wrap'),
+	lambdaNameSanitize = require('../util/lambda-name-sanitize'),
 	retry = require('oh-no-i-insist'),
-	fs = Promise.promisifyAll(require('fs')),
+	fs = require('../util/fs-promise'),
 	os = require('os'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
 	var logger = optionalLogger || new NullLogger(),
-		source = (options && options.source) || shell.pwd(),
+		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay']) || 5000,
+		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries']) || 15,
+		source = (options && options.source) || shell.pwd().toString(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = promiseWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
-		lambda = promiseWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
+		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
+		apiGatewayPromise = retriableWrap(
+						loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
+						function () {
+							logger.logStage('rate-limited by AWS, waiting before retry');
+						}),
 		roleMetadata,
 		policyFiles = function () {
 			var files = shell.ls('-R', options.policies);
@@ -46,7 +55,7 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.region) {
 				return 'AWS region is missing. please specify with --region';
 			}
-			if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
+			if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
 				return 'incompatible arguments --use-local-dependencies and --no-optional-dependencies';
 			}
 			if (!options.handler && !options['api-module']) {
@@ -58,11 +67,11 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && options['deploy-proxy-api']) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
-			if (options.handler && options.handler.indexOf('/') >= 0) {
-				return 'Lambda handler module has to be in the main project directory';
+			if (options.handler && options.handler.indexOf('.') < 0) {
+				return 'Lambda handler function not specified. Please specify with --handler module.function';
 			}
-			if (options['api-module'] && options['api-module'].indexOf('/') >= 0) {
-				return 'API module has to be in the main project directory';
+			if (options['api-module'] && options['api-module'].indexOf('.') >= 0) {
+				return 'API module must be a module name, without the file extension or function name';
 			}
 			if (shell.test('-e', configFile)) {
 				if (options && options.config) {
@@ -95,11 +104,16 @@ module.exports = function create(options, optionalLogger) {
 					return 'the timeout value provided must be less than or equal to 300';
 				}
 			}
+			try {
+				readEnvVarsFromOptions(options);
+			} catch (e) {
+				return e;
+			}
 		},
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
 			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
-				var name = options.name || (jsonConfig.name && jsonConfig.name.trim()),
+				var name = options.name || lambdaNameSanitize(jsonConfig.name),
 					description = options.description || (jsonConfig.description && jsonConfig.description.trim());
 				if (!name) {
 					return Promise.reject('project name is missing. please specify with --name or in package.json');
@@ -114,21 +128,25 @@ module.exports = function create(options, optionalLogger) {
 			return retry(
 				function () {
 					logger.logStage('creating Lambda');
-					return lambda.createFunctionPromise({
+					return lambda.createFunction({
 						Code: functionCode,
 						FunctionName: functionName,
 						Description: functionDesc,
 						MemorySize: options.memory,
 						Timeout: options.timeout,
+						Environment: readEnvVarsFromOptions(options),
+						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true
-					});
+					}).promise();
 				},
-				3000, 10,
+				awsDelay, awsRetries,
 				function (error) {
-					return error && error.cause && error.cause.message == 'The role defined for the function cannot be assumed by Lambda.';
+					return error &&
+						error.code === 'InvalidParameterValueException' &&
+						error.message == 'The role defined for the function cannot be assumed by Lambda.';
 				},
 				function () {
 					logger.logStage('waiting for IAM role propagation');
@@ -149,15 +167,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			var apiModule, apiConfig, apiModulePath,
-				alias = options.version || 'latest',
-				apiGateway = retriableWrap(promiseWrap(
-									new aws.APIGateway({region: options.region}),
-									{log: logger.logApiCall, logName: 'apigateway'}
-								),
-								function () {
-									logger.logStage('rate-limited by AWS, waiting before retry');
-								}
-							);
+				alias = options.version || 'latest';
 			logger.logStage('creating REST API');
 			try {
 				apiModulePath = path.join(packageDir, options['api-module']);
@@ -172,7 +182,7 @@ module.exports = function create(options, optionalLogger) {
 			if (!apiConfig) {
 				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
 			}
-			return apiGateway.createRestApiPromise({
+			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
 
@@ -184,6 +194,7 @@ module.exports = function create(options, optionalLogger) {
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
 			}).then(function () {
 				if (apiModule.postDeploy) {
+					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
 						options,
 						{
@@ -194,7 +205,7 @@ module.exports = function create(options, optionalLogger) {
 							region: options.region
 						},
 						{
-							apiGatewayPromise: apiGateway,
+							apiGatewayPromise: apiGatewayPromise,
 							aws: aws,
 							Promise: Promise
 						}
@@ -216,17 +227,10 @@ module.exports = function create(options, optionalLogger) {
 						'': { ANY: {}}
 					}
 				},
-				alias = options.version || 'latest',
-				apiGateway = retriableWrap(promiseWrap(
-					new aws.APIGateway({region: options.region}),
-					{log: logger.logApiCall, logName: 'apigateway'}
-				),
-				function () {
-					logger.logStage('rate-limited by AWS, waiting before retry');
-				});
+				alias = options.version || 'latest';
 			logger.logStage('creating REST API');
 
-			return apiGateway.createRestApiPromise({
+			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then(function (result) {
 				lambdaMetadata.api = {
@@ -275,25 +279,36 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
+		isRoleArn = function (string) {
+			return /^arn:aws:iam:/.test(string);
+		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
-				return iam.getRolePromise({RoleName: options.role});
+				if (isRoleArn(options.role)) {
+					return Promise.resolve({
+						Role: {
+							RoleName: options.role,
+							Arn: options.role
+						}
+					});
+				}
+				return iam.getRole({RoleName: options.role}).promise();
 			} else {
 				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 					.then(function (lambdaRolePolicy) {
-						return iam.createRolePromise({
+						return iam.createRole({
 							RoleName: functionName + '-executor',
 							AssumeRolePolicyDocument: lambdaRolePolicy
-						});
+						}).promise();
 					});
 			}
 		},
 		addExtraPolicies = function () {
-			return Promise.map(policyFiles(), function (fileName) {
+			return Promise.all(policyFiles().map(function (fileName) {
 				var policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
-			});
+			}));
 		},
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
@@ -333,11 +348,7 @@ module.exports = function create(options, optionalLogger) {
 		return validatePackage(dir, options.handler, options['api-module']);
 	}).then(function (dir) {
 		packageFileDir = dir;
-		if (options['no-optional-dependencies']) {
-			return cleanOptionalDependencies(dir, logger);
-		} else {
-			return dir;
-		}
+		return cleanUpPackage(dir, options, logger);
 	}).then(function (dir) {
 		logger.logStage('zipping package');
 		return zipdir(dir);
@@ -348,18 +359,20 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function (result) {
 		roleMetadata = result;
 	}).then(function () {
-		return addPolicy('log-writer', roleMetadata.Role.RoleName);
+		if (!options.role) {
+			return addPolicy('log-writer', roleMetadata.Role.RoleName);
+		}
 	}).then(function () {
 		if (options.policies) {
 			return addExtraPolicies();
 		}
 	}).then(function () {
 		if (options['allow-recursion']) {
-			return iam.putRolePolicyPromise({
+			return iam.putRolePolicy({
 				RoleName:  roleMetadata.Role.RoleName,
 				PolicyName: 'recursive-execution',
 				PolicyDocument: recursivePolicy(functionName)
-			});
+			}).promise();
 		}
 	}).then(function () {
 		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
@@ -449,8 +462,9 @@ module.exports.doc = {
 		{
 			argument: 'role',
 			optional: true,
-			description: 'The name of an existing role to assign to the function. \n' +
-				'If not supplied, Claudia will create a new role'
+			description: 'The name or ARN of an existing role to assign to the function. \n' +
+				'If not supplied, Claudia will create a new role. Supply an ARN to create a function without any IAM access.',
+			example:  'arn:aws:iam::123456789012:role/FileConverter'
 		},
 		{
 			argument: 'runtime',
@@ -506,6 +520,37 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 'aws-delay',
+			optional: true,
+			example: '3000',
+			description: 'number of milliseconds betweeen retrying AWS operations if they fail',
+			default: '5000'
+		},
+		{
+			argument: 'aws-retries',
+			optional: true,
+			example: '15',
+			description: 'number of times to retry AWS operations if they fail',
+			default: '15'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };

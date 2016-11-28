@@ -1,6 +1,5 @@
-/*global require, module */
-var Promise = require('bluebird'),
-	retry = require('oh-no-i-insist'),
+/*global require, module, Promise */
+var retry = require('oh-no-i-insist'),
 	executeCall = require('minimal-request-promise');
 
 module.exports = function callApi(apiId, region, path, options) {

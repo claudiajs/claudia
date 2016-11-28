@@ -1,8 +1,7 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, describe*/
+/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, describe */
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
-	Promise = require('bluebird'),
 	querystring = require('querystring'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
@@ -14,7 +13,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = retriableWrap(Promise.promisifyAll(new aws.APIGateway({region: awsRegion})), function () {}, /Async$/),
+		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion})),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -31,9 +30,7 @@ describe('rebuildWebApi', function () {
 		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(function (done) {
-		this.destroyObjects(newObjects).catch(function (err) {
-			console.log('error cleaning up', err);
-		}).finally(done);
+		this.destroyObjects(newObjects).then(done);
 	});
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
@@ -41,7 +38,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -134,7 +131,7 @@ describe('rebuildWebApi', function () {
 			it('captures stage variables', function (done) {
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(function () {
-					return apiGateway.createDeploymentAsync({
+					return apiGateway.createDeploymentPromise({
 						restApiId: apiId,
 						stageName: 'fromtest',
 						variables: {
@@ -349,7 +346,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {apiKeyRequired: true};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -360,7 +357,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -368,7 +365,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (methodConfig) {
 				expect(methodConfig.apiKeyRequired).toBeFalsy();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -382,7 +379,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -393,7 +390,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -401,7 +398,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (methodConfig) {
 				expect(methodConfig.authorizationType).toEqual('NONE');
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -417,7 +414,7 @@ describe('rebuildWebApi', function () {
 			};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -428,7 +425,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -436,7 +433,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -446,17 +443,17 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
-			var iam = retriableWrap(Promise.promisifyAll(new aws.IAM({region: awsRegion})), function () {}, /Async$/),
+			var iam = new aws.IAM({region: awsRegion}),
 				echoResourceId,
 				testCredentials;
-			iam.getUserAsync().then(function (data) {
+			iam.getUser().promise().then(function (data) {
 				testCredentials = data.User.Arn;
 				apiRouteConfig.routes.echo.POST = {
 					invokeWithCredentials: testCredentials
 				};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -467,7 +464,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -475,7 +472,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -491,7 +488,7 @@ describe('rebuildWebApi', function () {
 			};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -502,7 +499,7 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getIntegrationAsync({
+				return apiGateway.getIntegrationPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -510,7 +507,7 @@ describe('rebuildWebApi', function () {
 			}).then(function (integrationConfig) {
 				expect(integrationConfig.credentials).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -555,11 +552,13 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('custom authorizers', function () {
-		var authorizerLambdaName, lambda;
+		var authorizerLambdaName;
 		beforeEach(function (done) {
 			var authorizerLambdaDir = path.join(workingdir, 'authorizer'),
 				genericRole = this.genericRole;
-			lambda = new aws.Lambda({region: awsRegion});
+
+			shell.mkdir('-p', workingdir);
+			shell.mkdir('-p', authorizerLambdaDir);
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
 			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
 
@@ -567,7 +566,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({name: testRunName});
+				return apiGateway.createRestApiPromise({name: testRunName});
 			}).then(function (result) {
 				apiId = result.id;
 				newObjects.restApi = result.id;
@@ -578,6 +577,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		afterEach(function (done) {
+			var lambda = new aws.Lambda({region: awsRegion});
 			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
 		});
 		it('assigns authorizers by name', function (done) {
@@ -589,7 +589,7 @@ describe('rebuildWebApi', function () {
 			apiRouteConfig.routes.echo.POST = {customAuthorizer: 'second'};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
-				return apiGateway.getResourcesAsync({
+				return apiGateway.getResourcesPromise({
 					restApiId: apiId
 				});
 			}).then(function (resources) {
@@ -600,14 +600,14 @@ describe('rebuildWebApi', function () {
 				});
 				return echoResourceId;
 			}).then(function () {
-				return apiGateway.getAuthorizersAsync({
+				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
 			}).then(function (authorizers) {
 				authorizerIds[authorizers.items[0].name] = authorizers.items[0].id;
 				authorizerIds[authorizers.items[1].name] = authorizers.items[1].id;
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'GET',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -616,7 +616,7 @@ describe('rebuildWebApi', function () {
 				expect(methodConfig.authorizationType).toEqual('NONE');
 				expect(methodConfig.authorizerId).toBeUndefined();
 			}).then(function () {
-				return apiGateway.getMethodAsync({
+				return apiGateway.getMethodPromise({
 					httpMethod: 'POST',
 					resourceId: echoResourceId,
 					restApiId: apiId
@@ -634,7 +634,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -654,12 +654,14 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(function () {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
 		});
@@ -674,6 +676,7 @@ describe('rebuildWebApi', function () {
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
 		});
@@ -690,6 +693,8 @@ describe('rebuildWebApi', function () {
 					expect(response.headers['access-control-allow-methods']).toBeFalsy();
 					expect(response.headers['access-control-allow-headers']).toBeFalsy();
 					expect(response.headers['access-control-allow-origin']).toBeFalsy();
+					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
+
 				}).then(done, done.fail);
 			});
 		});
@@ -707,13 +712,15 @@ describe('rebuildWebApi', function () {
 						body: JSON.stringify({
 							'Access-Control-Allow-Methods': 'GET,OPTIONS',
 							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
-							'Access-Control-Allow-Origin': 'custom-origin'
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
 						})
 					});
 				}).then(function (contents) {
 					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
 					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
 					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
 				}).then(done, function (e) {
 					console.log(e);
 					done.fail();
@@ -728,7 +735,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -795,7 +802,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('preserves old stage variables', function (done) {
-			apiGateway.createDeploymentAsync({
+			apiGateway.createDeploymentPromise({
 				restApiId: apiId,
 				stageName: 'original',
 				variables: {
@@ -817,6 +824,119 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('setting request parameters for caching', function () {
+		var testMethodConfig = function (methodConfig, resourcePath, method) {
+			var echoResourceId;
+			apiRouteConfig.routes = methodConfig;
+			return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(function () {
+				return apiGateway.getResourcesPromise({
+					restApiId: apiId
+				});
+			}).then(function (resources) {
+				resources.items.forEach(function (resource) {
+					if (resource.path === resourcePath) {
+						echoResourceId = resource.id;
+					}
+				});
+				return echoResourceId;
+			}).then(function () {
+				return apiGateway.getMethodPromise({
+					httpMethod: method,
+					resourceId: echoResourceId,
+					restApiId: apiId
+				});
+			});
+		};
+		beforeEach(function (done) {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return apiGateway.createRestApiPromise({
+					name: testRunName
+				});
+			}).then(function (result) {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+		});
+		it('sets no request parameters if path params are not present', function (done) {
+			testMethodConfig({ '/echo': {GET: {}}}, '/echo', 'GET').then(function (result) {
+				expect(result.requestParameters).toBeFalsy();
+				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
+			}).then(done, done.fail);
+		});
+		it('allows setting request parameters with config', function (done) {
+			testMethodConfig({
+				'/echo': {
+					GET: {
+						requestParameters: {
+							querystring: {
+								name: true,
+								title: false
+							},
+							header: {
+								'x-bz': true
+							}
+						}
+					}
+				}
+			}, '/echo', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.querystring.name': true,
+					'method.request.querystring.title': false,
+					'method.request.header.x-bz': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters.sort()).toEqual(['method.request.querystring.name', 'method.request.querystring.title', 'method.request.header.x-bz'].sort());
+			}).then(done, done.fail);
+		});
+		it('sets request parameters for paths automatically', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {}
+				}
+			}, '/echo/{name}', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.path.name': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters).toEqual(['method.request.path.name']);
+			}).then(done, done.fail);
+		});
+		it('appends additional parameters to path params', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {
+						requestParameters: {
+							querystring: {
+								title: true
+							}
+						}
+					}
+				}
+			}, '/echo/{name}', 'GET').then(function (result) {
+				expect(result.requestParameters).toEqual({
+					'method.request.path.name': true,
+					'method.request.querystring.title': true
+				});
+				expect(result.methodIntegration.cacheKeyParameters.sort()).toEqual(['method.request.path.name', 'method.request.querystring.title'].sort());
+			}).then(done, done.fail);
+		});
+		it('does not sets parameters on options', function (done) {
+			testMethodConfig({
+				'/echo/{name}': {
+					GET: {
+						querystring: {
+							title: true
+						}
+					}
+				}
+			}, '/echo/{name}', 'OPTIONS').then(function (result) {
+				expect(result.requestParameters).toBeFalsy();
+				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
+			}).then(done, done.fail);
+		});
+	});
 	describe('logging', function () {
 		var logger;
 		beforeEach(function (done) {
@@ -825,7 +945,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -837,6 +957,8 @@ describe('rebuildWebApi', function () {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger).then(function () {
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 					'apigateway.getResources',
+					'apigateway.setupRequestListeners',
+					'apigateway.setAcceptHeader',
 					'apigateway.createResource',
 					'apigateway.putMethod',
 					'apigateway.putIntegration',
@@ -856,7 +978,7 @@ describe('rebuildWebApi', function () {
 			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return apiGateway.createRestApiAsync({
+				return apiGateway.createRestApiPromise({
 					name: testRunName
 				});
 			}).then(function (result) {
@@ -878,7 +1000,8 @@ describe('rebuildWebApi', function () {
 		it('runs through the whole deployment if there was no previous stage by this name', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				return underTest(newObjects.lambdaFunction, 'latest', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -886,7 +1009,8 @@ describe('rebuildWebApi', function () {
 		it('runs throough the whole deployment if there was no config hash in the previous stage with the same name', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined).then(function () {
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -895,7 +1019,8 @@ describe('rebuildWebApi', function () {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				apiRouteConfig.routes.echo.POST = {};
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeFalsy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toContain('apigateway.createResource');
 				expect(logger.getStageLog()).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
@@ -903,13 +1028,15 @@ describe('rebuildWebApi', function () {
 		it('skips deleting and creating resources if there was a previous stage with the same name and config hash', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined, 'configHash').then(function () {
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
-			}).then(function () {
+			}).then(function (result) {
+				expect(result.cacheReused).toBeTruthy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
-					'apigateway.getStage'
+					'apigateway.getStage',
+					'apigateway.setupRequestListeners',
+					'apigateway.setAcceptHeader'
 				]);
 				expect(logger.getStageLog(true)).toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
-
 		});
 	});
 });

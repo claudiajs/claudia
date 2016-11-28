@@ -1,9 +1,7 @@
 /*global module, require */
-var Promise = require('bluebird'),
-	fs = require('fs'),
+var fs = require('../util/fs-promise'),
 	path = require('path'),
-	Promise = require('bluebird'),
-	writeFile = Promise.promisify(fs.writeFile),
+	shell = require('shelljs'),
 	readjson = require('../util/readjson');
 
 module.exports = function (workdir, referencedir) {
@@ -29,6 +27,11 @@ module.exports = function (workdir, referencedir) {
 		});
 		return content;
 	}).then(function (content) {
-		return writeFile(packagePath, JSON.stringify(content), {encoding: 'utf8'});
+		return fs.writeFileAsync(packagePath, JSON.stringify(content), {encoding: 'utf8'});
+	}).then(function () {
+		var npmRcPath = path.join(referencedir, '.npmrc');
+		if (shell.test('-e', npmRcPath)) {
+			shell.cp(npmRcPath, workdir);
+		}
 	});
 };

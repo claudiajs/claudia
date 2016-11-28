@@ -1,8 +1,6 @@
-/*global module, require*/
+/*global module, require, Promise*/
 var shell = require('shelljs'),
-	fs = require('fs'),
-	Promise = require('bluebird'),
-	readFile = Promise.promisify(fs.readFile);
+	fs = require('./fs-promise');
 module.exports = function readJSON(fileName) {
 	'use strict';
 	if (!fileName) {
@@ -11,7 +9,7 @@ module.exports = function readJSON(fileName) {
 	if (!shell.test('-e', fileName)) {
 		return Promise.reject(fileName + ' is missing');
 	}
-	return readFile(fileName, {encoding: 'utf8'}).then(function (content) {
+	return fs.readFileAsync(fileName, {encoding: 'utf8'}).then(function (content) {
 		try {
 			return JSON.parse(content);
 		} catch (e) {

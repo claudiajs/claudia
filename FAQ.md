@@ -20,7 +20,7 @@ So, as a summary, if you want to build simple services and run them with AWS Lam
 
 ## How to test locally?
 
-Check out [Testing Locally](https://github.com/claudiajs/claudia/issues/4)
+Check out [Testing Locally](https://claudiajs.com/tutorials/testing-locally.html)
 
 ## What's new since...?
 

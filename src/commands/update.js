@@ -1,10 +1,9 @@
-/*global module, require, console*/
-var Promise = require('bluebird'),
-	zipdir = require('../tasks/zipdir'),
+/*global module, require, console, Promise*/
+var zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
-	cleanOptionalDependencies = require('../tasks/clean-optional-dependencies'),
+	cleanUpPackage = require('../tasks/clean-up-package'),
 	aws = require('aws-sdk'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	lambdaCode = require('../tasks/lambda-code'),
@@ -14,8 +13,11 @@ var Promise = require('bluebird'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
-	promiseWrap = require('../util/promise-wrap'),
+	sequentialPromiseMap = require('../util/sequential-promise-map'),
+	loggingWrap = require('../util/logging-wrap'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
+	updateEnvVars = require('../tasks/update-env-vars'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
@@ -61,8 +63,9 @@ module.exports = function update(options, optionalLogger) {
 			}
 
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
-				.then(function () {
+				.then(function (rebuildResult) {
 					if (apiModule.postDeploy) {
+						Promise.map = sequentialPromiseMap;
 						return apiModule.postDeploy(
 							options,
 							{
@@ -70,7 +73,8 @@ module.exports = function update(options, optionalLogger) {
 								alias: alias,
 								apiId: apiConfig.id,
 								apiUrl: updateResult.url,
-								region: lambdaConfig.region
+								region: lambdaConfig.region,
+								apiCacheReused: rebuildResult.cacheReused
 							},
 							{
 								apiGatewayPromise: apiGateway,
@@ -98,13 +102,18 @@ module.exports = function update(options, optionalLogger) {
 		s3Key;
 	options = options || {};
 	if (!options.source) {
-		options.source = shell.pwd();
+		options.source = shell.pwd().toString();
 	}
 	if (options.source === os.tmpdir()) {
 		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
 	}
-	if (options['no-optional-dependencies'] && options['use-local-dependencies']) {
+	if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
 		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+	}
+	try {
+		readEnvVarsFromOptions(options);
+	} catch (e) {
+		return Promise.reject(e);
 	}
 
 
@@ -112,9 +121,9 @@ module.exports = function update(options, optionalLogger) {
 	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = promiseWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
-				promiseWrap(
+				loggingWrap(
 					new aws.APIGateway({region: lambdaConfig.region}),
 					{log: logger.logApiCall, logName: 'apigateway'}
 				),
@@ -123,7 +132,7 @@ module.exports = function update(options, optionalLogger) {
 				}
 		);
 	}).then(function () {
-		return lambda.getFunctionConfigurationPromise({FunctionName: lambdaConfig.name});
+		return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise();
 	}).then(function (result) {
 		functionConfig = result;
 		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
@@ -141,13 +150,14 @@ module.exports = function update(options, optionalLogger) {
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
 	}).then(function (dir) {
 		packageDir = dir;
-		if (options['no-optional-dependencies']) {
-			return cleanOptionalDependencies(dir, logger);
-		}
+		return cleanUpPackage(dir, options, logger);
 	}).then(function () {
 		if (requiresHandlerUpdate) {
-			return lambda.updateFunctionConfigurationPromise({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler});
+			return lambda.updateFunctionConfiguration({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler}).promise();
 		}
+	}).then(function () {
+		logger.logStage('updating configuration');
+		return updateEnvVars(options, lambda, lambdaConfig.name);
 	}).then(function () {
 		logger.logStage('zipping package');
 		return zipdir(packageDir);
@@ -159,7 +169,7 @@ module.exports = function update(options, optionalLogger) {
 		s3Key = functionCode.S3Key;
 		functionCode.FunctionName = lambdaConfig.name;
 		functionCode.Publish = true;
-		return lambda.updateFunctionCodePromise(functionCode);
+		return lambda.updateFunctionCode(functionCode).promise();
 	}).then(function (result) {
 		updateResult = result;
 		if (s3Key) {
@@ -225,6 +235,23 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 'set-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set'
+		},
+		{
+			argument: 'set-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set'
+		},
+		{
+			argument: 'env-kms-key-arn',
+			optional: true,
+			description: 'KMS Key ARN to encrypt/decrypt environment variables'
 		}
 	]
 };

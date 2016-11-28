@@ -1,5 +1,6 @@
 {
   "name": "package-description",
+  "version": "1.0.0",
   "description": "This is the package description",
   "private": true,
   "files": ["main.js"]
