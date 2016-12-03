@@ -655,6 +655,7 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-allow-control-max-age']).toEqual(undefined);
 				}).then(function () {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(function (contents) {
@@ -662,6 +663,7 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-allow-control-max-age']).toEqual(undefined);
 				}).then(done, done.fail);
 			});
 		});
@@ -725,6 +727,21 @@ describe('rebuildWebApi', function () {
 					console.log(e);
 					done.fail();
 				});
+			});
+		});
+		describe('when corsMaxAge is set', function () {
+			beforeEach(function () {
+				apiRouteConfig.corsMaxAge = 10;
+			});
+			it('uses the headers for OPTIONS handlers', function (done) {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+					.then(function () {
+						return invoke('original/echo', {method: 'OPTIONS'});
+					}).then(function (contents) {
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-allow-control-max-age']).toEqual('10');
+				}).then(done, done.fail);
 			});
 		});
 	});

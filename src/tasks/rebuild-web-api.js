@@ -161,6 +161,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						'method.response.header.Access-Control-Allow-Origin': false,
 						'method.response.header.Access-Control-Allow-Credentials': false
 					};
+					if (apiConfig.corsMaxAge) {
+						responseParams['method.response.header.Access-Control-Max-Age'] = false;
+					}
 				}
 				return apiGateway.putMethodResponsePromise({
 					restApiId: restApiId,
@@ -182,6 +185,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						'method.response.header.Access-Control-Allow-Origin': '\'*\'',
 						'method.response.header.Access-Control-Allow-Credentials': '\'true\''
 					};
+					if (apiConfig.corsMaxAge) {
+						responseParams['method.response.header.Access-Control-Max-Age'] = '\'' + apiConfig.corsMaxAge + '\'';
+					}
 				}
 				return apiGateway.putIntegrationResponsePromise({
 					restApiId: restApiId,
