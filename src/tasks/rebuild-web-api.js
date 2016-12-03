@@ -159,11 +159,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						'method.response.header.Access-Control-Allow-Headers': false,
 						'method.response.header.Access-Control-Allow-Methods': false,
 						'method.response.header.Access-Control-Allow-Origin': false,
-						'method.response.header.Access-Control-Allow-Credentials': false
+						'method.response.header.Access-Control-Allow-Credentials': false,
+						'method.response.header.Access-Control-Max-Age': false
 					};
-					if (apiConfig.corsMaxAge) {
-						responseParams['method.response.header.Access-Control-Max-Age'] = false;
-					}
 				}
 				return apiGateway.putMethodResponsePromise({
 					restApiId: restApiId,
