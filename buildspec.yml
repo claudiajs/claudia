@@ -8,3 +8,7 @@ phases:
     commands:
       - npm test -- ci > buildresult.txt 
 
+artifactis:
+  files:
+    - buildresult.txt
+  discard-paths: yes
