@@ -6,5 +6,5 @@ phases:
       - npm install 
   build:
     commands:
-      - npm test -- ci 
+      - npm test -- ci > buildresult.txt 
 
