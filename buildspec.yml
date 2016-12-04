@@ -6,9 +6,9 @@ phases:
       - npm install 
   build:
     commands:
-      - npm test -- ci > buildresult.txt 
+      - npm test -- ci filter='addS3EventSource' | tee buildresult.txt 
 
-artifactis:
+artifacts:
   files:
     - buildresult.txt
   discard-paths: yes
