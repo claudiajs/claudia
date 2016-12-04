@@ -1,5 +1,9 @@
 # Release history
 
+### 2.3.0, 4 December 2016
+
+- Allow CORS max-age to be set using API builder
+
 ### 2.2.0, 24 November 2016
 
 - Set environment variables in create, update and set-version
