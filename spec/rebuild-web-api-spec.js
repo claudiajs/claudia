@@ -655,7 +655,7 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
-					expect(contents.headers['access-control-allow-control-max-age']).toEqual(undefined);
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
 				}).then(function () {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(function (contents) {
@@ -663,7 +663,7 @@ describe('rebuildWebApi', function () {
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
-					expect(contents.headers['access-control-allow-control-max-age']).toEqual(undefined);
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
 				}).then(done, done.fail);
 			});
 		});
@@ -740,7 +740,7 @@ describe('rebuildWebApi', function () {
 					}).then(function (contents) {
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
-					expect(contents.headers['access-control-allow-control-max-age']).toEqual('10');
+					expect(contents.headers['access-control-max-age']).toEqual('10');
 				}).then(done, done.fail);
 			});
 		});
