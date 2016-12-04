@@ -6,7 +6,7 @@ var underTest = require('../src/tasks/register-authorizers'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
 	retriableWrap = require('../src/util/retriable-wrap'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 
 describe('registerAuthorizers', function () {
 	'use strict';
@@ -17,11 +17,11 @@ describe('registerAuthorizers', function () {
 		ownerId,
 		iam = new aws.IAM({region: awsRegion}),
 		checkAuthUri = function (uri) {
-			expect(uri).toMatch(/^arn:aws:apigateway:us-east-1:lambda:path\/2015-03-31\/functions\/arn:aws:lambda:us-east-1:[0-9]+:function:test[0-9]+auth\/invocations$/);
+			expect(uri).toMatch(/^arn:aws:apigateway:[a-z0-9-]+:lambda:path\/2015-03-31\/functions\/arn:aws:lambda:[a-z0-9-]+:[0-9]+:function:test[0-9]+auth\/invocations$/);
 			expect(uri.split(':')[11]).toEqual(testRunName + 'auth/invocations');
 		},
 		checkAuthUriWithVersion = function (uri, version) {
-			expect(uri).toEqual('arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/' + authorizerArn + ':' + version + '/invocations');
+			expect(uri).toEqual('arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + authorizerArn + ':' + version + '/invocations');
 		};
 
 
@@ -330,7 +330,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});
@@ -348,7 +348,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});
@@ -365,7 +365,7 @@ describe('registerAuthorizers', function () {
 			}).then(function (policyResponse) {
 				return policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy);
 			}).then(function (currentPolicy) {
-				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:us-east-1:' + ownerId + ':' + apiId + '/authorizers/*');
+				expect(currentPolicy.Statement[0].Condition.ArnLike['AWS:SourceArn']).toMatch('arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + apiId + '/authorizers/*');
 				expect(currentPolicy.Statement[0].Effect).toEqual('Allow');
 			}).then(done, done.fail);
 	});

@@ -6,7 +6,7 @@ beforeEach(function () {
 		destroyRole = require('../../src/util/destroy-role'),
 		shell = require('shelljs'),
 		retriableWrap = require('../../src/util/retriable-wrap'),
-		awsRegion = 'us-east-1',
+		awsRegion = require('./test-aws-region'),
 		cwd = shell.pwd();
 
 	this.destroyObjects = function (newObjects) {

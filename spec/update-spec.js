@@ -9,7 +9,7 @@ var underTest = require('../src/commands/update'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('update', function () {
 	'use strict';
 	var workingdir, testRunName,  lambda, newObjects,
@@ -104,7 +104,7 @@ describe('update', function () {
 		});
 		it('creates a new version of the lambda function', function (done) {
 			underTest({source: workingdir}).then(function (lambdaFunc) {
-				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+				expect(new RegExp('^arn:aws:lambda:' + awsRegion + ':[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 			}).then(function () {
 				return lambda.listVersionsByFunction({FunctionName: testRunName}).promise();
 			}).then(function (result) {
@@ -206,7 +206,7 @@ describe('update', function () {
 		it('checks the current dir if the source is not provided', function (done) {
 			shell.cd(workingdir);
 			underTest().then(function (lambdaFunc) {
-				expect(new RegExp('^arn:aws:lambda:us-east-1:[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
+				expect(new RegExp('^arn:aws:lambda:' + awsRegion + ':[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
 				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(done, done.fail);
@@ -420,7 +420,7 @@ describe('update', function () {
 					'postinstallalias': 'development',
 					'postinstallapiid': newObjects.restApi,
 					'hasPromise': 'true',
-					'postinstallapiUrl': 'https://' + newObjects.restApi + '.execute-api.us-east-1.amazonaws.com/development',
+					'postinstallapiUrl': 'https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development',
 					'hasAWS': 'true',
 					'postinstallregion': awsRegion,
 					'postinstalloption': 'option-123',

@@ -7,7 +7,7 @@ var underTest = require('../src/commands/add-sns-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('addSNSEventSource', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, s3, config, logs, lambda, sns;

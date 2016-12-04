@@ -10,7 +10,7 @@ var underTest = require('../src/commands/create'),
 	path = require('path'),
 	os = require('os'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('create', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
@@ -295,7 +295,7 @@ describe('create', function () {
 								'Action': [
 									'lambda:InvokeFunction'
 								],
-								'Resource': 'arn:aws:lambda:us-east-1:*:function:' + testRunName
+								'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
 							}]
 						});
 			}).then(done, function (e) {
@@ -679,7 +679,7 @@ describe('create', function () {
 			createFromDir('apigw-proxy-echo').then(function (creationResult) {
 				var apiId = creationResult.api && creationResult.api.id;
 				expect(apiId).toBeTruthy();
-				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
 				return apiId;
 			}).then(function (apiId) {
 				return apiGatewayPromise.getRestApiPromise({restApiId: apiId});
@@ -764,7 +764,7 @@ describe('create', function () {
 				var apiId = creationResult.api && creationResult.api.id;
 				expect(apiId).toBeTruthy();
 				expect(creationResult.api.module).toEqual('main');
-				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/latest');
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
 				return apiId;
 			}).then(function (apiId) {
 				return apiGatewayPromise.getRestApiPromise({restApiId: apiId});
@@ -830,7 +830,7 @@ describe('create', function () {
 			config.version = 'development';
 			createFromDir('api-gw-hello-world').then(function (creationResult) {
 				apiId = creationResult.api && creationResult.api.id;
-				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.us-east-1.amazonaws.com/development');
+				expect(creationResult.api.url).toEqual('https://' + apiId + '.execute-api.' + awsRegion + '.amazonaws.com/development');
 			}).then(function () {
 				return callApi(apiId, awsRegion, 'development/hello');
 			}).then(function (contents) {
@@ -892,7 +892,7 @@ describe('create', function () {
 					'postinstallapiid': apiId,
 					'postinstallregion': awsRegion,
 					'hasPromise': 'true',
-					'postinstallapiUrl': 'https://' + apiId + '.execute-api.us-east-1.amazonaws.com/development',
+					'postinstallapiUrl': 'https://' + apiId + '.execute-api.' + awsRegion + '.amazonaws.com/development',
 					'hasAWS': 'true',
 					'postinstalloption': 'option-123',
 					'lambdaVersion': 'development'

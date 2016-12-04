@@ -7,7 +7,7 @@ var underTest = require('../src/commands/destroy'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('destroy', function () {
 	'use strict';
 	var workingdir, testRunName, config, newObjects, iam;

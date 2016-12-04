@@ -6,7 +6,7 @@ var underTest = require('../src/commands/add-scheduled-event'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('addScheduledEvent', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, config, events, lambda, eventConfig;

@@ -5,7 +5,7 @@ var underTest = require('../src/tasks/mark-alias'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('markAlias', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects;

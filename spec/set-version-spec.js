@@ -10,7 +10,7 @@ var underTest = require('../src/commands/set-version'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
 	aws = require('aws-sdk'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('setVersion', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, apiGateway,

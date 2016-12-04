@@ -9,7 +9,7 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	ArrayLogger = require('../src/util/array-logger'),
-	awsRegion = 'us-east-1';
+	awsRegion = require('./helpers/test-aws-region');
 describe('rebuildWebApi', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
