@@ -83,6 +83,7 @@ module.exports.index = function (commands) {
 	lines.push('  --version     print out the current version');
 	lines.push('  --quiet       suppress output when executing commands');
 	lines.push('  --profile     set AWS credentials profile');
+	lines.push('  --aws-client-timeout The number of milliseconds to wait before connection time out on AWS SDK Client. Defaults to two minutes (120000)');
 	lines.push('');
 	lines.push('Re-run with a command name to see options of a specific command');
 	lines.push('For example: claudia create --help');
