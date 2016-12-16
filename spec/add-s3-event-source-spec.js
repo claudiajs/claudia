@@ -105,7 +105,7 @@ describe('addS3EventSource', function () {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
-				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: '/in/'});
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: 'in/'});
 			}).then(function () {
 				return s3.getBucketNotificationConfiguration({
 					Bucket: testRunName + bucketSuffix
@@ -113,11 +113,11 @@ describe('addS3EventSource', function () {
 			}).then(function (config) {
 				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
 					Name: 'Prefix',
-					Value: '/in/'
+					Value: 'in/'
 				});
 			}).then(done, done.fail);
 		});
-		it('adds default events', function (done) {
+		it('adds default event if no events requested', function (done) {
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -128,7 +128,7 @@ describe('addS3EventSource', function () {
 					Bucket: testRunName + bucketSuffix
 				}).promise();
 			}).then(function (config) {
-				expect(config.LambdaFunctionConfigurations[0].Events[0]).toEqual('s3:ObjectCreated:*');
+				expect(config.LambdaFunctionConfigurations[0].Events).toEqual(['s3:ObjectCreated:*']);
 			}).then(done, done.fail);
 		});
 		it('adds events if requested', function (done) {
@@ -142,9 +142,7 @@ describe('addS3EventSource', function () {
 					Bucket: testRunName + bucketSuffix
 				}).promise();
 			}).then(function (config) {
-				var events = config.LambdaFunctionConfigurations[0].Events,
-					result = (events[0] === 's3:ObjectCreated:*' && events[1] === 's3:ObjectRemoved:*') || (events[0] === 's3:ObjectRemoved:*' && events[1] === 's3:ObjectCreated:*');
-				expect(result).toEqual(true);
+				expect(config.LambdaFunctionConfigurations[0].Events.sort()).toEqual(['s3:ObjectCreated:*', 's3:ObjectRemoved:*']);
 			}).then(done, done.fail);
 		});
 		it('binds to an alias, if the version is provided', function (done) {
