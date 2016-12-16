@@ -25,6 +25,7 @@ claudia [command] {OPTIONS}
  * --version        print out the current version
  * --quiet          suppress output when executing commands
  * --profile        set AWS credentials profile
+ * --aws-client-timeout The number of milliseconds to wait before connection time out on AWS SDK Client. Defaults to two minutes (120000)
 
 Run with a command name to see options of a specific command, for example:
 ```bash
