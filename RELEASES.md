@@ -1,5 +1,10 @@
 # Release history
 
+### 2.4.0, 16 December 2016
+
+- added --events option for customizing S3 event types (thanks to [Harry Gu](https://github.com/harrygu))
+- allow setting AWS http client timeout with --aws-client-timeout (thanks to [Leonardo Nicolas](https://github.com/leonicolas))
+
 ### 2.3.0, 4 December 2016
 
 - Allow CORS max-age to be set using API builder
