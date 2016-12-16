@@ -32,3 +32,4 @@ claudia update {OPTIONS}
 *  `--set-env-from-json`:  _optional_ file path to a JSON file containing environment variables to set
   * _For example_: production-env.json
 *  `--env-kms-key-arn`:  _optional_ KMS Key ARN to encrypt/decrypt environment variables
+*  `--aws-client-timeout`: _optional_ The number of milliseconds to wait before connection time out on AWS SDK Client. Defaults to two minutes (120000)

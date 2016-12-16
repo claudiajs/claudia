@@ -47,6 +47,9 @@ var minimist = require('minimist'),
 		if (args.profile) {
 			AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: args.profile});
 		}
+		if (args['aws-client-timeout']) {
+			AWS.config.httpOptions = { timeout: args['aws-client-timeout'] };
+		}
 		commands[command](args, logger).then(function (result) {
 			if (result) {
 				console.log(JSON.stringify(result, null, 2));
