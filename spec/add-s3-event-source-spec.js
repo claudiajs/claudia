@@ -117,6 +117,36 @@ describe('addS3EventSource', function () {
 				});
 			}).then(done, done.fail);
 		});
+		it('adds default events', function (done) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix});
+			}).then(function () {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			}).then(function (config) {
+				expect(config.LambdaFunctionConfigurations[0].Events[0]).toEqual('s3:ObjectCreated:*');
+			}).then(done, done.fail);
+		});
+		it('adds events if requested', function (done) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(function () {
+				return underTest({source: workingdir, bucket: testRunName + bucketSuffix, events: 's3:ObjectCreated:*,s3:ObjectRemoved:*'});
+			}).then(function () {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			}).then(function (config) {
+				var events = config.LambdaFunctionConfigurations[0].Events,
+					result = (events[0] === 's3:ObjectCreated:*' && events[1] === 's3:ObjectRemoved:*') || (events[0] === 's3:ObjectRemoved:*' && events[1] === 's3:ObjectCreated:*');
+				expect(result).toEqual(true);
+			}).then(done, done.fail);
+		});
 		it('binds to an alias, if the version is provided', function (done) {
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'special'}).then(function (result) {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
