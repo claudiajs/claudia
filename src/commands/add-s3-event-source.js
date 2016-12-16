@@ -41,20 +41,22 @@ module.exports = function addS3EventSource(options) {
 
 		addInvokePermission = function () {
 			return lambda.addPermission({
-				Action: 'lambda:InvokeFunction',
-				FunctionName: lambdaConfig.name,
-				Principal: 's3.amazonaws.com',
-				SourceArn: 'arn:aws:s3:::' + options.bucket,
-				Qualifier: options.version,
-				StatementId:  iamNameSanitize(options.bucket  + '-access')
-			}).promise();
+					Action: 'lambda:InvokeFunction',
+					FunctionName: lambdaConfig.name,
+					Principal: 's3.amazonaws.com',
+					SourceArn: 'arn:aws:s3:::' + options.bucket,
+					Qualifier: options.version,
+					StatementId: iamNameSanitize(options.bucket + '-access')
+				}).promise();
 		},
 		addBucketNotificationConfig = function () {
 			var s3 = new aws.S3({signatureVersion: 'v4'}),
 				eventConfig = {
-					LambdaFunctionArn: lambdaConfig.arn,
-					Events: ['s3:ObjectCreated:*']
+					LambdaFunctionArn: lambdaConfig.arn
 				};
+
+			eventConfig.Events = options.events ? options.events.split(/\s*,\s*/) : ['s3:ObjectCreated:*'];
+
 			if (options.prefix) {
 				eventConfig.Filter = {
 					Key: {
@@ -122,6 +124,13 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'events',
+			optional: true,
+			description: 'Event types that trigger the function',
+			example: 's3:ObjectCreated:*,s3:ObjectRemoved:*',
+			default: 's3:ObjectCreated:*'
 		}
 	]
 };
