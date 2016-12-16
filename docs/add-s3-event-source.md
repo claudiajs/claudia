@@ -20,6 +20,6 @@ claudia add-s3-event-source {OPTIONS}
   * _Defaults to_: current directory
 *  `--config`:  _optional_ Config file containing the resource names
   * _Defaults to_: claudia.json
-*  `--events`:  _optional_ Event types that trigger the function
+*  `--events`:  _optional_ Comma separated list of event types that trigger the function
   * _For example_: s3:ObjectCreated:*,s3:ObjectRemoved:*
   * _Defaults to_: s3:ObjectCreated:*
