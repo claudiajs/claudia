@@ -327,6 +327,9 @@ module.exports = function create(options, optionalLogger) {
           'Sid': 'VPCAccessExecutionPermission',
           'Effect': 'Allow',
           'Action': [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
             'ec2:CreateNetworkInterface',
             'ec2:DeleteNetworkInterface',
             'ec2:DescribeNetworkInterfaces'
@@ -395,7 +398,7 @@ module.exports = function create(options, optionalLogger) {
     if (options['securityGroupIds']) {
       return iam.putRolePolicy({
         RoleName:  roleMetadata.Role.RoleName,
-        PolicyName: 'recursive-execution',
+        PolicyName: 'vpc-access-execution',
         PolicyDocument: vpcPolicy(functionName)
       }).promise();
     }
