@@ -317,6 +317,60 @@ describe('create', function () {
 				done.fail();
 			});
 		});
+		describe('when VPC access is desired', function () {
+      var vpc, subnet, securityGroup,
+          securityGroupName = testRunName+'SecurityGroup',
+          CidrBlock = "10.0.0.0/16",
+          ec2 = new aws.EC2();
+		  beforeEach(function(done){
+		    ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function(vpcData){
+		      vpc = vpcData;
+		      return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
+        }).then(function(subnetData){
+          subnet = subnetData;
+          return ec2.createSecurityGroup({GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId}).promise();
+        }).then(function(securityGroupData){
+          securityGroup = securityGroupData;
+        }).then(done, done.fail);
+      });
+		  afterEach(function(done){
+		    ec2.deleteVpc({VpcId: vpc.VpcId}).promise().then(function(){
+		      return ec2.deleteSecurityGroup({GroupId: securityGroup.GroupId}).promise();
+        }).then(function(){
+          return ec2.deleteSubnet({SubnetId:subnet.SubnetId}).promise();
+        }).then(function(){
+          done();
+        }).catch(done.fail);
+      });
+      it('allows VPC access if both a security group and subnet are specified', function (done) {
+        config['security-group-ids'] = '';
+        config['subnet-ids'] = '';
+        createFromDir('hello-world').then(function () {
+          return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
+        }).then(function (result) {
+          expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
+        }).then(function () {
+          return iam.getRolePolicy({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'}).promise();
+        }).then(function (policy) {
+          expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+            {
+              'Version': '2012-10-17',
+              'Statement': [{
+                'Sid': 'InvokePermission',
+                'Effect': 'Allow',
+                'Action': [
+                  'lambda:InvokeFunction'
+                ],
+                'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
+              }]
+            });
+        }).then(done, function (e) {
+          console.log(e);
+          done.fail();
+        });
+      });
+    });
+
 
 		it('loads additional policies from a policies directory recursively, if provided', function (done) {
 			var sesPolicy = {
