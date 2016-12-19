@@ -67,6 +67,12 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && options['deploy-proxy-api']) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
+			if (!options['security-group-ids'] && options['subnet-ids']) {
+				return 'VPC access requires at lease one security group id *and* one subnet id';
+			}
+      if (options['security-group-ids'] && !options['subnet-ids']) {
+        return 'VPC access requires at lease one security group id *and* one subnet id';
+      }
 			if (options.handler && options.handler.indexOf('.') < 0) {
 				return 'Lambda handler function not specified. Please specify with --handler module.function';
 			}

@@ -105,6 +105,20 @@ describe('create', function () {
 				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
 			}).then(done);
 		});
+    it('fails if subnetIds is specified without securityGroupIds', function (done) {
+      config['subnet-ids'] = 'subnet-abcdef12';
+      config['security-group-ids'] = null;
+      createFromDir('hello-world').then(done.fail, function (message) {
+        expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
+      }).then(done);
+    });
+    it('fails if securityGroupIds is specified without subnetIds', function (done) {
+      config['subnet-ids'] = null;
+      config['security-group-ids'] = 'sg-12341234';
+      createFromDir('hello-world').then(done.fail, function (message) {
+        expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
+      }).then(done);
+    });
 		it('fails if the api module contains an extension', function (done) {
 			config.handler = undefined;
 			config['api-module'] = 'api.js';
