@@ -563,6 +563,23 @@ module.exports.doc = {
 			default: '15'
 		},
 		{
+			argument: 'security-group-ids',
+			optional: true,
+			example: 'sg-1234abcd',
+			description: 'A comma-delimited list of AWS security group ids belonging to the VPC this function should access.\n' +
+				'Note: these security groups need to be part of the same VPC as the subnets you provide.',
+			default: '15'
+		},
+    {
+      argument: 'subnet-ids',
+      optional: true,
+      example: 'subnet-1234abcd,subnet-abcd4567',
+      description: 'A comma-delimited list of AWS subnet ids belonging to the VPC this function should access.\n' +
+        'At least one subnet is required if you are using VPC access.\n' +
+        'Note: these subnets need to be part of the same VPC as the security groups you provide.',
+      default: '15'
+    },
+		{
 			argument: 'set-env',
 			optional: true,
 			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
