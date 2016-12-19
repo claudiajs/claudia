@@ -322,7 +322,7 @@ describe('create', function () {
           securityGroupName = testRunName+'SecurityGroup',
           CidrBlock = "10.0.0.0/16",
           ec2 = new aws.EC2();
-		  beforeEach(function(done){
+		  before(function(done){
 		    ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function(vpcData){
 		      vpc = vpcData;
 		      return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
@@ -333,7 +333,7 @@ describe('create', function () {
           securityGroup = securityGroupData;
         }).then(done, done.fail);
       });
-		  afterEach(function(done){
+		  after(function(done){
 		    ec2.deleteVpc({VpcId: vpc.VpcId}).promise().then(function(){
 		      return ec2.deleteSecurityGroup({GroupId: securityGroup.GroupId}).promise();
         }).then(function(){
@@ -342,24 +342,42 @@ describe('create', function () {
           done();
         }).catch(done.fail);
       });
-      it('allows VPC access if both a security group and subnet are specified', function (done) {
-        config['security-group-ids'] = '';
-        config['subnet-ids'] = '';
+      it('adds subnet and security group membership to the function', function (done) {
+        config['security-group-ids'] = securityGroup.GroupId;
+        config['subnet-ids'] = subnet.SubnetId;
+        createFromDir('hello-world').then(function () {
+          return getLambdaConfiguration();
+        }).then(function (result) {
+          expect(result.VpcConfig.SecurityGroupIds[0]).toEqual(securityGroup.GroupId);
+          expect(result.VpcConfig.SubnetIds[0]).toEqual(subnet.subnetId);
+        }).then(done, function (e) {
+          console.log(e);
+          done.fail();
+        });
+      });
+      it('adds VPC Access IAM role', function (done) {
+        config['security-group-ids'] = securityGroup.GroupId;
+        config['subnet-ids'] = subnet.SubnetId;
         createFromDir('hello-world').then(function () {
           return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
         }).then(function (result) {
-          expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
+          expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']);
         }).then(function () {
-          return iam.getRolePolicy({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'}).promise();
+          return iam.getRolePolicy({PolicyName: 'vpc-access-execution', RoleName:  testRunName + '-executor'}).promise();
         }).then(function (policy) {
           expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
             {
               'Version': '2012-10-17',
               'Statement': [{
-                'Sid': 'InvokePermission',
+                'Sid': 'VPCAccessExecutionPermission',
                 'Effect': 'Allow',
                 'Action': [
-                  'lambda:InvokeFunction'
+                  'logs:CreateLogGroup',
+                  'logs:CreateLogStream',
+                  'logs:PutLogEvents',
+                  'ec2:CreateNetworkInterface',
+                  'ec2:DeleteNetworkInterface',
+                  'ec2:DescribeNetworkInterfaces'
                 ],
                 'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
               }]
