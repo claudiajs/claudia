@@ -139,7 +139,11 @@ module.exports = function create(options, optionalLogger) {
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
-						Publish: true
+						Publish: true,
+            VpcConfig: {
+							SecurityGroupIds: (options.securityGroupIds && options.securityGroupIds.split(","))  || [],
+             	SubnetIds: (options.subnetIds && options.subnetIds.split(",")) || []
+						}
 					}).promise();
 				},
 				awsDelay, awsRetries,
@@ -310,6 +314,21 @@ module.exports = function create(options, optionalLogger) {
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
 		},
+		vpcPolicy = function (functionName) {
+      return JSON.stringify({
+        'Version': '2012-10-17',
+        'Statement': [{
+          'Sid': 'VPCAccessExecutionPermission',
+          'Effect': 'Allow',
+          'Action': [
+            'ec2:CreateNetworkInterface',
+            'ec2:DeleteNetworkInterface',
+            'ec2:DescribeNetworkInterfaces'
+          ],
+          'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
+        }]
+      });
+    },
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
 				'Version': '2012-10-17',
@@ -367,6 +386,14 @@ module.exports = function create(options, optionalLogger) {
 			return addExtraPolicies();
 		}
 	}).then(function () {
+    if (options['securityGroupIds']) {
+      return iam.putRolePolicy({
+        RoleName:  roleMetadata.Role.RoleName,
+        PolicyName: 'recursive-execution',
+        PolicyDocument: vpcPolicy(functionName)
+      }).promise();
+    }
+  }).then(function () {
 		if (options['allow-recursion']) {
 			return iam.putRolePolicy({
 				RoleName:  roleMetadata.Role.RoleName,
