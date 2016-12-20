@@ -147,8 +147,8 @@ module.exports = function create(options, optionalLogger) {
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true,
 						VpcConfig: {
-							SecurityGroupIds: (options.securityGroupIds && options.securityGroupIds.split(','))  || [],
-							SubnetIds: (options.subnetIds && options.subnetIds.split(',')) || []
+							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(','))  || [],
+							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(',')) || []
 						}
 					}).promise();
 				},
