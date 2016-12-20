@@ -320,7 +320,7 @@ module.exports = function create(options, optionalLogger) {
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
 		},
-		vpcPolicy = function (functionName) {
+		vpcPolicy = function () {
 			return JSON.stringify({
 				'Version': '2012-10-17',
 				'Statement': [{
@@ -334,7 +334,7 @@ module.exports = function create(options, optionalLogger) {
 						'ec2:DeleteNetworkInterface',
 						'ec2:DescribeNetworkInterfaces'
 					],
-					'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
+					'Resource': '*'
 				}]
 			});
 		},
@@ -399,7 +399,7 @@ module.exports = function create(options, optionalLogger) {
 			return iam.putRolePolicy({
 				RoleName:  roleMetadata.Role.RoleName,
 				PolicyName: 'vpc-access-execution',
-				PolicyDocument: vpcPolicy(functionName)
+				PolicyDocument: vpcPolicy()
 			}).promise();
 		}
 	}).then(function () {
