@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, before, afterEach, after, console, jasmine, __dirname, global */
+/*global describe, require, it, expect, beforeAll, beforeEach, afterAll, afterEach, console, jasmine, __dirname, global */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
