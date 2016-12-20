@@ -109,14 +109,14 @@ describe('create', function () {
 			config['subnet-ids'] = 'subnet-abcdef12';
 			config['security-group-ids'] = null;
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
+				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
 			}).then(done);
 		});
 		it('fails if securityGroupIds is specified without subnetIds', function (done) {
 			config['subnet-ids'] = null;
 			config['security-group-ids'] = 'sg-12341234';
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
+				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
 			}).then(done);
 		});
 		it('fails if the api module contains an extension', function (done) {
@@ -322,7 +322,7 @@ describe('create', function () {
 					securityGroupName = testRunName + 'SecurityGroup',
 					CidrBlock = '10.0.0.0/16',
 					ec2 = new aws.EC2();
-			before(function (done) {
+			beforeAll(function (done) {
 				ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function (vpcData) {
 					vpc = vpcData;
 					return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
@@ -333,7 +333,7 @@ describe('create', function () {
 					securityGroup = securityGroupData;
 				}).then(done, done.fail);
 			});
-			after(function (done) {
+			afterAll(function (done) {
 				ec2.deleteVpc({VpcId: vpc.VpcId}).promise().then(function () {
 					return ec2.deleteSecurityGroup({GroupId: securityGroup.GroupId}).promise();
 				}).then(function () {
