@@ -334,10 +334,10 @@ describe('create', function () {
 				}).then(done, done.fail);
 			});
 			afterAll(function (done) {
-				ec2.deleteVpc({VpcId: vpc.VpcId}).promise().then(function () {
+				ec2.deleteSubnet({SubnetId: subnet.SubnetId}).promise().then(function () {
 					return ec2.deleteSecurityGroup({GroupId: securityGroup.GroupId}).promise();
 				}).then(function () {
-					return ec2.deleteSubnet({SubnetId: subnet.SubnetId}).promise();
+					return ec2.deleteVpc({VpcId: vpc.VpcId}).promise();
 				}).then(function () {
 					done();
 				}).catch(done.fail);
@@ -349,7 +349,7 @@ describe('create', function () {
 					return getLambdaConfiguration();
 				}).then(function (result) {
 					expect(result.VpcConfig.SecurityGroupIds[0]).toEqual(securityGroup.GroupId);
-					expect(result.VpcConfig.SubnetIds[0]).toEqual(subnet.subnetId);
+					expect(result.VpcConfig.SubnetIds[0]).toEqual(subnet.SubnetId);
 				}).then(done, function (e) {
 					console.log(e);
 					done.fail();
@@ -379,7 +379,7 @@ describe('create', function () {
 									'ec2:DeleteNetworkInterface',
 									'ec2:DescribeNetworkInterfaces'
 								],
-								'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
+								'Resource': '*'
 							}]
 						});
 				}).then(done, function (e) {
