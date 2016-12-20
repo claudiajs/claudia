@@ -321,13 +321,13 @@ describe('create', function () {
 			var vpc, subnet, securityGroup,
 					securityGroupName = testRunName + 'SecurityGroup',
 					CidrBlock = '10.0.0.0/16',
-					ec2 = new aws.EC2();
+					ec2 = new aws.EC2({region: awsRegion});
 			beforeAll(function (done) {
 				ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function (vpcData) {
-					vpc = vpcData;
+					vpc = vpcData.Vpc;
 					return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
 				}).then(function (subnetData) {
-					subnet = subnetData;
+					subnet = subnetData.Subnet;
 					return ec2.createSecurityGroup({GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId}).promise();
 				}).then(function (securityGroupData) {
 					securityGroup = securityGroupData;
