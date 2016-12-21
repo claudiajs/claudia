@@ -68,10 +68,10 @@ module.exports = function create(options, optionalLogger) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
 			if (!options['security-group-ids'] && options['subnet-ids']) {
-				return 'VPC access requires at lease one security group id *and* one subnet id';
+				return 'VPC access requires at least one security group id *and* one subnet id';
 			}
 			if (options['security-group-ids'] && !options['subnet-ids']) {
-				return 'VPC access requires at lease one security group id *and* one subnet id';
+				return 'VPC access requires at least one security group id *and* one subnet id';
 			}
 			if (options.handler && options.handler.indexOf('.') < 0) {
 				return 'Lambda handler function not specified. Please specify with --handler module.function';
@@ -146,9 +146,9 @@ module.exports = function create(options, optionalLogger) {
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
 						Publish: true,
-						VpcConfig: {
-							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(','))  || [],
-							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(',')) || []
+						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
+							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),
+							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(','))
 						}
 					}).promise();
 				},
@@ -575,18 +575,16 @@ module.exports.doc = {
 			argument: 'security-group-ids',
 			optional: true,
 			example: 'sg-1234abcd',
-			description: 'A comma-delimited list of AWS security group ids belonging to the VPC this function should access.\n' +
-				'Note: these security groups need to be part of the same VPC as the subnets you provide.',
-			default: '15'
+			description: 'A comma-delimited list of AWS VPC Security Group IDs, which the function will be able to access.\n' +
+				'Note: these security groups need to be part of the same VPC as the subnets provided with --subnet-ids.'
 		},
 		{
 			argument: 'subnet-ids',
 			optional: true,
 			example: 'subnet-1234abcd,subnet-abcd4567',
-			description: 'A comma-delimited list of AWS subnet ids belonging to the VPC this function should access.\n' +
+			description: 'A comma-delimited list of AWS VPC Subnet IDs, which this function should be able to access.\n' +
 				'At least one subnet is required if you are using VPC access.\n' +
-				'Note: these subnets need to be part of the same VPC as the security groups you provide.',
-			default: '15'
+				'Note: these subnets need to be part of the same VPC as the security groups provided with --security-group-ids.'
 		},
 		{
 			argument: 'set-env',

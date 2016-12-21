@@ -64,9 +64,12 @@ claudia create {OPTIONS}
 *  `--aws-retries`:  _optional_ number of times to retry AWS operations if they fail
   * _For example_: 15
   * _Defaults to_: 15
-*  `--security-group-ids`:  _optional_ comma-separated list of security group ids if you would like the function to have VPC access.   If you would like VPC access at least one security group and one subnet belonging to the same VPC must be submitted.
+*  `--security-group-ids`:  _optional_ A comma-delimited list of AWS VPC Security Group IDs, which the function will be able to access.
+  Note: these security groups need to be part of the same VPC as the subnets provided with --subnet-ids.
   * _For example_: sg-1234abcd
-*  `--subnet-ids`:  _optional_ comma-separated list of subnet ids if you would like the function to have VPC access.  If you would like VPC access at least one security group and one subnet belonging to the same VPC must be submitted.
+*  `--subnet-ids`:  _optional_ A comma-delimited list of AWS VPC Subnet IDs, which this function should be able to access.
+  At least one subnet is required if you are using VPC access.
+  Note: these subnets need to be part of the same VPC as the security groups provided with --security-group-ids.
   * _For example_: subnet-1234abcd,subnet-abcd4567
 *  `--set-env`:  _optional_ comma-separated list of VAR=VALUE environment variables to set
   * _For example_: S3BUCKET=testbucket,SNSQUEUE=testqueue
