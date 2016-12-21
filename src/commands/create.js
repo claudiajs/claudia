@@ -67,6 +67,12 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && options['deploy-proxy-api']) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
+			if (!options['security-group-ids'] && options['subnet-ids']) {
+				return 'VPC access requires at lease one security group id *and* one subnet id';
+			}
+			if (options['security-group-ids'] && !options['subnet-ids']) {
+				return 'VPC access requires at lease one security group id *and* one subnet id';
+			}
 			if (options.handler && options.handler.indexOf('.') < 0) {
 				return 'Lambda handler function not specified. Please specify with --handler module.function';
 			}
@@ -139,7 +145,11 @@ module.exports = function create(options, optionalLogger) {
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs4.3',
-						Publish: true
+						Publish: true,
+						VpcConfig: {
+							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(','))  || [],
+							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(',')) || []
+						}
 					}).promise();
 				},
 				awsDelay, awsRetries,
@@ -310,6 +320,24 @@ module.exports = function create(options, optionalLogger) {
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
 		},
+		vpcPolicy = function () {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Sid': 'VPCAccessExecutionPermission',
+					'Effect': 'Allow',
+					'Action': [
+						'logs:CreateLogGroup',
+						'logs:CreateLogStream',
+						'logs:PutLogEvents',
+						'ec2:CreateNetworkInterface',
+						'ec2:DeleteNetworkInterface',
+						'ec2:DescribeNetworkInterfaces'
+					],
+					'Resource': '*'
+				}]
+			});
+		},
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
 				'Version': '2012-10-17',
@@ -365,6 +393,14 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options.policies) {
 			return addExtraPolicies();
+		}
+	}).then(function () {
+		if (options['security-group-ids']) {
+			return iam.putRolePolicy({
+				RoleName:  roleMetadata.Role.RoleName,
+				PolicyName: 'vpc-access-execution',
+				PolicyDocument: vpcPolicy()
+			}).promise();
 		}
 	}).then(function () {
 		if (options['allow-recursion']) {
@@ -533,6 +569,23 @@ module.exports.doc = {
 			optional: true,
 			example: '15',
 			description: 'number of times to retry AWS operations if they fail',
+			default: '15'
+		},
+		{
+			argument: 'security-group-ids',
+			optional: true,
+			example: 'sg-1234abcd',
+			description: 'A comma-delimited list of AWS security group ids belonging to the VPC this function should access.\n' +
+				'Note: these security groups need to be part of the same VPC as the subnets you provide.',
+			default: '15'
+		},
+		{
+			argument: 'subnet-ids',
+			optional: true,
+			example: 'subnet-1234abcd,subnet-abcd4567',
+			description: 'A comma-delimited list of AWS subnet ids belonging to the VPC this function should access.\n' +
+				'At least one subnet is required if you are using VPC access.\n' +
+				'Note: these subnets need to be part of the same VPC as the security groups you provide.',
 			default: '15'
 		},
 		{

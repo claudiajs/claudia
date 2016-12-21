@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, __dirname, global */
+/*global describe, require, it, expect, beforeAll, beforeEach, afterAll, afterEach, console, jasmine, __dirname, global */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
@@ -103,6 +103,20 @@ describe('create', function () {
 			config['api-module'] = 'abc';
 			createFromDir('hello-world').then(done.fail, function (message) {
 				expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler');
+			}).then(done);
+		});
+		it('fails if subnetIds is specified without securityGroupIds', function (done) {
+			config['subnet-ids'] = 'subnet-abcdef12';
+			config['security-group-ids'] = null;
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
+			}).then(done);
+		});
+		it('fails if securityGroupIds is specified without subnetIds', function (done) {
+			config['subnet-ids'] = null;
+			config['security-group-ids'] = 'sg-12341234';
+			createFromDir('hello-world').then(done.fail, function (message) {
+				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
 			}).then(done);
 		});
 		it('fails if the api module contains an extension', function (done) {
@@ -303,6 +317,78 @@ describe('create', function () {
 				done.fail();
 			});
 		});
+		describe('when VPC access is desired', function () {
+			var vpc, subnet, securityGroup,
+					securityGroupName = testRunName + 'SecurityGroup',
+					CidrBlock = '10.0.0.0/16',
+					ec2 = new aws.EC2({region: awsRegion});
+			beforeAll(function (done) {
+				ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function (vpcData) {
+					vpc = vpcData.Vpc;
+					return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
+				}).then(function (subnetData) {
+					subnet = subnetData.Subnet;
+					return ec2.createSecurityGroup({GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId}).promise();
+				}).then(function (securityGroupData) {
+					securityGroup = securityGroupData;
+				}).then(done, done.fail);
+			});
+			afterAll(function (done) {
+				ec2.deleteSubnet({SubnetId: subnet.SubnetId}).promise().then(function () {
+					return ec2.deleteSecurityGroup({GroupId: securityGroup.GroupId}).promise();
+				}).then(function () {
+					return ec2.deleteVpc({VpcId: vpc.VpcId}).promise();
+				}).then(function () {
+					done();
+				}).catch(done.fail);
+			});
+			it('adds subnet and security group membership to the function', function (done) {
+				config['security-group-ids'] = securityGroup.GroupId;
+				config['subnet-ids'] = subnet.SubnetId;
+				createFromDir('hello-world').then(function () {
+					return getLambdaConfiguration();
+				}).then(function (result) {
+					expect(result.VpcConfig.SecurityGroupIds[0]).toEqual(securityGroup.GroupId);
+					expect(result.VpcConfig.SubnetIds[0]).toEqual(subnet.SubnetId);
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+			});
+			it('adds VPC Access IAM role', function (done) {
+				config['security-group-ids'] = securityGroup.GroupId;
+				config['subnet-ids'] = subnet.SubnetId;
+				createFromDir('hello-world').then(function () {
+					return iam.listRolePolicies({RoleName: testRunName + '-executor'}).promise();
+				}).then(function (result) {
+					expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']);
+				}).then(function () {
+					return iam.getRolePolicy({PolicyName: 'vpc-access-execution', RoleName:  testRunName + '-executor'}).promise();
+				}).then(function (policy) {
+					expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+						{
+							'Version': '2012-10-17',
+							'Statement': [{
+								'Sid': 'VPCAccessExecutionPermission',
+								'Effect': 'Allow',
+								'Action': [
+									'logs:CreateLogGroup',
+									'logs:CreateLogStream',
+									'logs:PutLogEvents',
+									'ec2:CreateNetworkInterface',
+									'ec2:DeleteNetworkInterface',
+									'ec2:DescribeNetworkInterfaces'
+								],
+								'Resource': '*'
+							}]
+						});
+				}).then(done, function (e) {
+					console.log(e);
+					done.fail();
+				});
+			});
+		});
+
 
 		it('loads additional policies from a policies directory recursively, if provided', function (done) {
 			var sesPolicy = {
