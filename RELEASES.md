@@ -1,5 +1,9 @@
 # Release history
 
+### 2.5.0, 21 December 2016
+
+- support for configuring VPC access using `--subnet-ids` and `--security-group-ids` (thanks to [Roy Reiss](https://github.com/royreiss))
+
 ### 2.4.0, 16 December 2016
 
 - added --events option for customizing S3 event types (thanks to [Harry Gu](https://github.com/harrygu))
