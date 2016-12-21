@@ -109,14 +109,14 @@ describe('create', function () {
 			config['subnet-ids'] = 'subnet-abcdef12';
 			config['security-group-ids'] = null;
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
+				expect(message).toEqual('VPC access requires at least one security group id *and* one subnet id');
 			}).then(done);
 		});
 		it('fails if securityGroupIds is specified without subnetIds', function (done) {
 			config['subnet-ids'] = null;
 			config['security-group-ids'] = 'sg-12341234';
 			createFromDir('hello-world').then(done.fail, function (message) {
-				expect(message).toEqual('VPC access requires at lease one security group id *and* one subnet id');
+				expect(message).toEqual('VPC access requires at least one security group id *and* one subnet id');
 			}).then(done);
 		});
 		it('fails if the api module contains an extension', function (done) {
