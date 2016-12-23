@@ -11,7 +11,7 @@ Claudia makes it easy to deploy Node.js projects to AWS Lambda and API Gateway. 
 With the help of Claudia builder projects, you can also [use API Gateway as if it were a lightweight javascript web server](https://github.com/claudiajs/claudia-api-builder), or create and deploy [chat bots for various platforms](https://github.com/claudiajs/claudia-bot-builder) easily. 
 
 * [Why use Claudia and not just deploy manually?](https://github.com/claudiajs/claudia/blob/master/FAQ.md#why-use-claudia-and-not-just-deploy-manually)
-* [How does Claudia compare to Apex/Swagger/Seneca/...?](https://github.com/claudiajs/claudia/blob/master/FAQ.md#how-does-it-compare-to-)
+* [Claudia vs Serverless/Apex/Swagger/Seneca/...?](https://github.com/claudiajs/claudia/blob/master/FAQ.md#how-does-it-compare-to-)
 
 ## Examples, please!
 
