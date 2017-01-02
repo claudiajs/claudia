@@ -1,7 +1,7 @@
 /*global require, __dirname */
 var fs = require('fs'),
 	path = require('path'),
-	shell = require('shelljs'),
+	fsUtil = require('./fs-util'),
 	readCommands = require('./read-commands'),
 	commandDoc = function (command) {
 		'use strict';
@@ -106,8 +106,7 @@ var fs = require('fs'),
 		'use strict';
 		var docsDir = path.join(__dirname, '../../docs'),
 			commands = readCommands();
-		shell.rm('-rf', docsDir);
-		shell.mkdir(docsDir);
+		fsUtil.ensureCleanDir(docsDir);
 		fs.writeFileSync(path.join(docsDir, 'README.md'), index(commands), 'utf8');
 		Object.keys(commands).map(function (key) {
 			var command = commands[key];

@@ -34,4 +34,13 @@ describe('fs-promise', function () {
 			}).then(done, done.fail);
 		});
 	});
+	describe('unlinkAsync', function () {
+		it('removes a file', function (done) {
+			fs.writeFileAsync(filePath, 'fileContents-123', 'utf8').then(function () {
+				return fs.unlinkAsync(filePath);
+			}).then(function () {
+				fs.accessSync(filePath);
+			}).then(done.fail, done);
+		});
+	});
 });

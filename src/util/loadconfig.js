@@ -1,11 +1,11 @@
-/*global require, module, Promise */
+/*global require, module, Promise, process */
 var	path = require('path'),
-	readjson = require('../util/readjson'),
-	shell = require('shelljs');
+	readjson = require('./readjson'),
+	fsUtil = require('./fs-util');
 
 module.exports = function loadConfig(options, validate) {
 	'use strict';
-	var sourceDir = shell.pwd().toString(),
+	var sourceDir = process.cwd(),
 		fileName,
 		configMissingError = function () {
 			if (options && options.config) {
@@ -23,7 +23,7 @@ module.exports = function loadConfig(options, validate) {
 	fileName = (options && options.config) ||
 		path.join(sourceDir, 'claudia.json');
 
-	if (!shell.test('-e', fileName)) {
+	if (!fsUtil.fileExists(fileName)) {
 		return Promise.reject(configMissingError());
 	}
 	return readjson(fileName).then(function (config) {

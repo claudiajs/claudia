@@ -1,25 +1,27 @@
-/*global module, require, Promise */
-var shell = require('shelljs'),
-	removeKeysWithPrefix = require('./remove-keys-with-prefix'),
+/*global module, require, Promise, process */
+var removeKeysWithPrefix = require('./remove-keys-with-prefix'),
 	execPromise = require('./exec-promise'),
+	fsUtil = require('./fs-util'),
+	fs = require('./fs-promise'),
 	tmppath = require('./tmppath');
 module.exports = function runNpm(dir, options, logger) {
 	'use strict';
-	var cwd = shell.pwd().toString(),
+	var cwd = process.cwd(),
 		npmlog = tmppath(),
 		command = 'npm ' + options,
-		env = shell.env;
+		env = process.env;
 	logger.logApiCall(command);
-	shell.cd(dir);
-	if (shell.test('-e', '.npmrc')) {
-		env = removeKeysWithPrefix(shell.env, 'npm_');
+	process.chdir(dir);
+	if (fsUtil.fileExists('.npmrc')) {
+		env = removeKeysWithPrefix(process.env, 'npm_');
 	}
 	return execPromise(command + ' > ' + npmlog + ' 2>&1', {env: env}).then(function () {
-		shell.rm(npmlog);
-		shell.cd(cwd);
+		return fs.unlinkAsync(npmlog);
+	}).then(function () {
+		process.chdir(cwd);
 		return dir;
 	}).catch(function () {
-		shell.cd(cwd);
+		process.chdir(cwd);
 		return Promise.reject(command + ' failed. Check ' + npmlog);
 	});
 };

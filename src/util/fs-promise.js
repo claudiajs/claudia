@@ -20,6 +20,7 @@ var fs = require('fs'),
 
 promisify(fs, 'writeFile');
 promisify(fs, 'readFile');
+promisify(fs, 'unlink');
 
 module.exports = fs;
 
