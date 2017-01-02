@@ -714,7 +714,7 @@ describe('create', function () {
 				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(function (lambdaResult) {
 				expect(lambdaResult.StatusCode).toEqual(200);
-				expect(lambdaResult.Payload).toEqual('{"files":["main.js","node_modules","package.json"]}');
+				expect(JSON.parse(lambdaResult.Payload).files).not.toContain('.npmrc');
 			}).then(done, done.fail);
 		});
 		it('keeps the archive on the disk if --keep is specified', function (done) {
