@@ -1,4 +1,4 @@
-/*global describe, it, expect, require, beforeEach, afterEach */
+/*global describe, it, expect, require, beforeEach, afterEach, process */
 var tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
@@ -99,6 +99,86 @@ describe('fsUtil', function () {
 			expect(fs.readFileSync(path.join(pathName, 'copy', 'file.txt'), 'utf8')).toEqual('123');
 
 			expect(fs.readFileSync(path.join(pathName, 'file.txt'), 'utf8')).toEqual('123');
+		});
+	});
+	describe('recursiveList', function () {
+		beforeEach(function () {
+			fs.mkdirSync(pathName);
+			fs.mkdirSync(path.join(pathName, 'content'));
+			fs.mkdirSync(path.join(pathName, 'content', 'subdir'));
+			fs.writeFileSync(path.join(pathName, 'content', 'file.txt'), '123', 'utf8');
+			fs.writeFileSync(path.join(pathName, 'content', 'numbers.txt'), '331', 'utf8');
+			fs.writeFileSync(path.join(pathName, 'content', 'subdir', 'subfile.txt'), '456', 'utf8');
+
+			fs.mkdirSync(path.join(pathName, 'empty'));
+		});
+
+		describe('with absolute paths', function () {
+			it('lists contents of a directory recursively', function () {
+				expect(fsUtil.recursiveList(path.join(pathName, 'content')).sort()).toEqual(
+						['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
+				);
+			});
+			it('uses globbing patterns', function () {
+				expect(fsUtil.recursiveList(path.join(pathName, 'content', '*.txt')).sort()).toEqual([
+						path.join(pathName, 'content', 'file.txt'),
+						path.join(pathName, 'content', 'numbers.txt')
+				]);
+			});
+			it('lists a single file', function () {
+				expect(fsUtil.recursiveList(path.join(pathName, 'content', 'file.txt'))).toEqual([path.join(pathName, 'content', 'file.txt')]);
+				expect(fsUtil.recursiveList(path.join(pathName, 'content', 'file*'))).toEqual([path.join(pathName, 'content', 'file.txt')]);
+			});
+			it('returns an empty array if no matching files', function () {
+				expect(fsUtil.recursiveList(path.join(pathName, 'nx'))).toEqual([]);
+			});
+			it('returns an empty array if directory is empty', function () {
+				expect(fsUtil.recursiveList(path.join(pathName, 'empty'))).toEqual([]);
+			});
+		});
+		describe('with relative paths', function () {
+			var cwd;
+			beforeEach(function () {
+				cwd = process.cwd();
+				process.chdir(pathName);
+			});
+			afterEach(function () {
+				process.chdir(cwd);
+			});
+			it('lists contents of a directory recursively', function () {
+				expect(fsUtil.recursiveList('content').sort()).toEqual(
+						['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
+				);
+			});
+			it('uses globbing patterns', function () {
+				expect(fsUtil.recursiveList('content/*.txt').sort()).toEqual([
+						path.join('content', 'file.txt'),
+						path.join('content', 'numbers.txt')
+				]);
+			});
+			it('lists a single file', function () {
+				expect(fsUtil.recursiveList(path.join('content', 'file.txt'))).toEqual([path.join('content', 'file.txt')]);
+				expect(fsUtil.recursiveList(path.join('content', 'file*'))).toEqual([path.join('content', 'file.txt')]);
+			});
+			it('returns an empty array if no matching files', function () {
+				expect(fsUtil.recursiveList('nx')).toEqual([]);
+			});
+			it('returns an empty array if directory is empty', function () {
+				expect(fsUtil.recursiveList('empty')).toEqual([]);
+			});
+		});
+	});
+	describe('isFile', function () {
+		it('is false for non-existing paths', function () {
+			expect(fsUtil.isFile(pathName)).toBeFalsy();
+		});
+		it('is true for files', function () {
+			fs.writeFileSync(pathName, '123', 'utf8');
+			expect(fsUtil.isFile(pathName)).toBeTruthy();
+		});
+		it('is false for directories', function () {
+			fs.mkdirSync(pathName);
+			expect(fsUtil.isFile(pathName)).toBeFalsy();
 		});
 	});
 });

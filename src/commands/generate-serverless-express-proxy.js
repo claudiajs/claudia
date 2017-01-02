@@ -1,12 +1,12 @@
-/*global module, require, Promise */
+/*global module, require, Promise, process */
 var path = require('path'),
-	shell = require('shelljs'),
 	fs = require('../util/fs-promise'),
+	fsUtil = require('../util/fs-util'),
 	NullLogger = require('../util/null-logger'),
 	runNpm = require('../util/run-npm');
 module.exports = function generateServerlessExpressProxy(options, optionalLogger) {
 	'use strict';
-	var source = (options && options.source) || shell.pwd().toString(),
+	var source = (options && options.source) || process.cwd(),
 		logger = optionalLogger || new NullLogger(),
 		serverlessModule = (options && options['aws-serverless-express-module']) || 'aws-serverless-express',
 		proxyModuleName = (options && options['proxy-module-name']) || 'lambda',
@@ -19,13 +19,13 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 	if (!expressModule) {
 		return Promise.reject('please specify express app module with --express-module');
 	}
-	if (!shell.test('-e', path.join(source, expressModule + '.js'))) {
+	if (!fsUtil.fileExists(path.join(source, expressModule + '.js'))) {
 		return Promise.reject('the target directory does not contain ' + expressModule + '.js');
 	}
-	if (!shell.test('-e', path.join(source, 'package.json'))) {
+	if (!fsUtil.fileExists(path.join(source, 'package.json'))) {
 		return Promise.reject('the target directory is not a node.js project');
 	}
-	if (shell.test('-e', proxyModulePath)) {
+	if (fsUtil.fileExists('-e', proxyModulePath)) {
 		return Promise.reject(proxyModuleName + '.js already exists in the target directory');
 	}
 	if (proxyModuleName.indexOf('/') >= 0) {

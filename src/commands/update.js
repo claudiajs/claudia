@@ -1,4 +1,4 @@
-/*global module, require, console, Promise*/
+/*global module, require, console, Promise, process*/
 var zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
@@ -7,7 +7,6 @@ var zipdir = require('../tasks/zipdir'),
 	aws = require('aws-sdk'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	lambdaCode = require('../tasks/lambda-code'),
-	shell = require('shelljs'),
 	markAlias = require('../tasks/mark-alias'),
 	retriableWrap = require('../util/retriable-wrap'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
@@ -19,6 +18,7 @@ var zipdir = require('../tasks/zipdir'),
 	NullLogger = require('../util/null-logger'),
 	updateEnvVars = require('../tasks/update-env-vars'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
+	fs = require('fs'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
@@ -92,7 +92,7 @@ module.exports = function update(options, optionalLogger) {
 		packageArchive,
 		cleanup = function () {
 			if (!options.keep) {
-				shell.rm(packageArchive);
+				fs.unlinkSync(packageArchive);
 			} else {
 				updateResult.archive = packageArchive;
 			}
@@ -102,7 +102,7 @@ module.exports = function update(options, optionalLogger) {
 		s3Key;
 	options = options || {};
 	if (!options.source) {
-		options.source = shell.pwd().toString();
+		options.source = process.cwd();
 	}
 	if (options.source === os.tmpdir()) {
 		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');

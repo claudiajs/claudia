@@ -1,7 +1,7 @@
-/*global module, require */
+/*global module, require, process */
 var aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
-	shell = require('shelljs'),
+	fsPromise = require('../util/fs-promise'),
 	path = require('path'),
 	retriableWrap = require('../util/retriable-wrap'),
 	destroyRole = require('../util/destroy-role');
@@ -28,9 +28,9 @@ module.exports = function destroy(options) {
 				return destroyRole(lambdaConfig.role);
 			}
 		}).then(function () {
-			var sourceDir = (options && options.source) || shell.pwd().toString(),
+			var sourceDir = (options && options.source) || process.cwd(),
 				fileName = (options && options.config) || path.join(sourceDir, 'claudia.json');
-			shell.rm(fileName);
+			return fsPromise.unlinkAsync(fileName);
 		});
 };
 module.exports.doc = {

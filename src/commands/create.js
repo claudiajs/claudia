@@ -1,6 +1,6 @@
-/*global module, require, console, Promise */
+/*global module, require, console, Promise, process */
 var path = require('path'),
-	shell = require('shelljs'),
+	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
@@ -27,7 +27,7 @@ module.exports = function create(options, optionalLogger) {
 	var logger = optionalLogger || new NullLogger(),
 		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay']) || 5000,
 		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries']) || 15,
-		source = (options && options.source) || shell.pwd().toString(),
+		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
@@ -38,14 +38,14 @@ module.exports = function create(options, optionalLogger) {
 						}),
 		roleMetadata,
 		policyFiles = function () {
-			var files = shell.ls('-R', options.policies);
-			if (shell.test('-d', options.policies)) {
+			var files = fsUtil.recursiveList(options.policies);
+			if (fsUtil.isDir(options.policies)) {
 				files = files.map(function (filePath) {
 					return path.join(options.policies, filePath);
 				});
 			}
 			return files.filter(function (filePath) {
-				return shell.test('-f', filePath);
+				return fsUtil.isFile(filePath);
 			});
 		},
 		validationError = function () {
@@ -79,13 +79,13 @@ module.exports = function create(options, optionalLogger) {
 			if (options['api-module'] && options['api-module'].indexOf('.') >= 0) {
 				return 'API module must be a module name, without the file extension or function name';
 			}
-			if (shell.test('-e', configFile)) {
+			if (fsUtil.fileExists('-e', configFile)) {
 				if (options && options.config) {
 					return options.config + ' already exists';
 				}
 				return 'claudia.json already exists in the source folder';
 			}
-			if (!shell.test('-e', path.join(source, 'package.json'))) {
+			if (!fsUtil.fileExists(path.join(source, 'package.json'))) {
 				return 'package.json does not exist in the source folder';
 			}
 			if (options.policies && !policyFiles().length) {
@@ -353,7 +353,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		cleanup = function (result) {
 			if (!options.keep) {
-				shell.rm(packageArchive);
+				fs.unlinkSync(packageArchive);
 			} else {
 				result.archive = packageArchive;
 			}
