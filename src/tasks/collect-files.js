@@ -2,8 +2,8 @@
 var tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),
-	shell = require('shelljs'),
-	fs = require('fs'),
+	fsUtil = require('../util/fs-util'),
+	fs = require('../util/fs-promise'),
 	path = require('path'),
 	localizeDependencies = require('./localize-dependencies'),
 	expectedArchiveName = require('../util/expected-archive-name'),
@@ -18,13 +18,13 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			if (!sourcePath) {
 				return 'source directory not provided';
 			}
-			if (!shell.test('-e', sourcePath)) {
+			if (!fsUtil.fileExists(sourcePath)) {
 				return 'source directory does not exist';
 			}
-			if (!shell.test('-d', sourcePath)) {
+			if (!fsUtil.isDir(sourcePath)) {
 				return 'source path must be a directory';
 			}
-			if (!shell.test('-e', path.join(sourcePath, 'package.json'))) {
+			if (!fsUtil.fileExists(path.join(sourcePath, 'package.json'))) {
 				return 'source directory does not contain package.json';
 			}
 		},
@@ -40,18 +40,19 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			var packDir = tmppath(),
 				targetDir = tmppath(),
 				expectedName = expectedArchiveName(packageConfig);
-			shell.mkdir('-p', packDir);
+			fsUtil.ensureCleanDir(packDir);
 			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger).then(function () {
 				return extractTarGz(path.join(packDir, expectedName), packDir);
 			}).then(function () {
-				shell.mv(path.join(packDir, 'package'), targetDir);
-				shell.rm('-rf', packDir);
+				return fs.renameAsync(path.join(packDir, 'package'), targetDir);
+			}).then(function () {
+				fsUtil.rmDir(packDir);
 				return targetDir;
 			});
 		},
 		installDependencies = function (targetDir) {
 			if (useLocalDependencies) {
-				shell.cp('-r', path.join(sourcePath, 'node_modules'), targetDir);
+				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
 				return runNpm(targetDir, 'install --production', logger);

@@ -21,6 +21,7 @@ var fs = require('fs'),
 promisify(fs, 'writeFile');
 promisify(fs, 'readFile');
 promisify(fs, 'unlink');
+promisify(fs, 'rename');
 
 module.exports = fs;
 

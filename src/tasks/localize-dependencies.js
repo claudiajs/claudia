@@ -1,7 +1,7 @@
 /*global module, require */
 var fs = require('../util/fs-promise'),
 	path = require('path'),
-	shell = require('shelljs'),
+	fsUtil = require('../util/fs-util'),
 	readjson = require('../util/readjson');
 
 module.exports = function (workdir, referencedir) {
@@ -30,8 +30,8 @@ module.exports = function (workdir, referencedir) {
 		return fs.writeFileAsync(packagePath, JSON.stringify(content), {encoding: 'utf8'});
 	}).then(function () {
 		var npmRcPath = path.join(referencedir, '.npmrc');
-		if (shell.test('-e', npmRcPath)) {
-			shell.cp(npmRcPath, workdir);
+		if (fsUtil.fileExists(npmRcPath)) {
+			fsUtil.copy(npmRcPath, workdir);
 		}
 	});
 };

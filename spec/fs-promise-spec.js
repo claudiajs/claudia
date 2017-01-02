@@ -43,4 +43,16 @@ describe('fs-promise', function () {
 			}).then(done.fail, done);
 		});
 	});
+	describe('renameAsync', function () {
+		it('renames a file', function (done) {
+			var newPath = path.join(workingdir, 'new-file.txt');
+			fs.writeFileAsync(filePath, 'fileContents-123', 'utf8').then(function () {
+				return fs.renameAsync(filePath, newPath);
+			}).then(function () {
+				expect(fs.readFileSync(newPath, 'utf8')).toEqual('fileContents-123');
+			}).then(function () {
+				fs.accessSync(filePath);
+			}).then(done.fail, done);
+		});
+	});
 });
