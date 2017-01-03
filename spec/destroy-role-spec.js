@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, jasmine */
+/*global describe, require, it, expect, beforeEach */
 var underTest = require('../src/util/destroy-role'),
 	addPolicy = require('../src/tasks/add-policy'),
 	fs = require('../src/util/fs-promise'),
@@ -10,7 +10,6 @@ describe('destroyRole', function () {
 	beforeEach(function (done) {
 		testRunName = 'test' + Date.now() + '-executor';
 		iam = new aws.IAM();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 
 		fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 		.then(function (lambdaRolePolicy) {

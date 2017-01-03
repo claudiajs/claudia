@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console */
 var underTest = require('../src/commands/set-version'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -26,7 +26,6 @@ describe('setVersion', function () {
 		testRunName = 'test' + Date.now();
 		lambda = new aws.Lambda({region: awsRegion});
 		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion}));
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});

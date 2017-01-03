@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach, console */
 var underTest = require('../src/commands/add-scheduled-event'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -17,7 +17,6 @@ describe('addScheduledEvent', function () {
 		lambda = new aws.Lambda({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		shell.mkdir(workingdir);
 		eventFile = path.join(workingdir, 'test-event.json');
 		eventConfig = {

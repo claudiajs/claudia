@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeAll, beforeEach, afterAll, afterEach, console, jasmine, __dirname, global */
+/*global describe, require, it, expect, beforeAll, beforeEach, afterAll, afterEach, console, __dirname, global */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
@@ -46,7 +46,6 @@ describe('create', function () {
 		apiGatewayPromise = retriableWrap(new aws.APIGateway({region: awsRegion}));
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
 	afterEach(function (done) {

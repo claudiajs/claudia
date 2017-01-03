@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, jasmine */
+/*global describe, require, it, expect, beforeEach, afterEach */
 var underTest = require('../src/commands/test-lambda'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -14,7 +14,6 @@ describe('testLambda', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {

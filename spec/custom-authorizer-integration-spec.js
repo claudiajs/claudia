@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it*/
+/*global beforeEach, afterEach, describe, expect, require, console, it*/
 var create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	setVersion = require('../src/commands/set-version'),
@@ -72,7 +72,6 @@ describe('customAuthorizers', function () {
 	beforeEach(function (done) {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
 		shell.mkdir(workingdir);
 		shell.cp('-r', 'spec/test-projects/custom-authorizers/*', workingdir);
 		fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8').then(function (content) {

@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, Promise */
+/*global describe, require, it, expect, beforeEach, afterEach, console, Promise */
 var underTest = require('../src/commands/add-sns-event-source'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -18,7 +18,6 @@ describe('addSNSEventSource', function () {
 		sns = new aws.SNS({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000;
 		shell.mkdir(workingdir);
 		config = {
 			topic: 'test-topic',

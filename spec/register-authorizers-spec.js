@@ -1,4 +1,4 @@
-/*global describe, it, beforeEach, afterEach, expect, require, jasmine, console, it */
+/*global describe, it, beforeEach, afterEach, expect, require, console, it */
 var underTest = require('../src/tasks/register-authorizers'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -24,10 +24,6 @@ describe('registerAuthorizers', function () {
 			expect(uri).toEqual('arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + authorizerArn + ':' + version + '/invocations');
 		};
 
-
-	beforeEach(function () {
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
-	});
 
 	beforeEach(function (done) {
 		var authorizerLambdaDir, genericRole;

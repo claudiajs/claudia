@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, setTimeout, Promise */
+/*global describe, require, it, expect, beforeEach, afterEach, console, setTimeout, Promise */
 var underTest = require('../src/commands/add-s3-event-source'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
@@ -24,7 +24,6 @@ describe('addS3EventSource', function () {
 		s3 = new aws.S3();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {

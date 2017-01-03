@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, jasmine, global, __dirname */
+/*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname */
 var underTest = require('../src/commands/update'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -24,7 +24,6 @@ describe('update', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		lambda = new aws.Lambda({region: awsRegion});
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});

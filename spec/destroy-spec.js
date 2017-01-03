@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, jasmine, console */
+/*global describe, require, it, expect, beforeEach, console */
 var underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -15,7 +15,6 @@ describe('destroy', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 		newObjects = { workingdir: workingdir };
 		shell.mkdir(workingdir);
 	});

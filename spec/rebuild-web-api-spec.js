@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, jasmine, it, describe */
+/*global beforeEach, afterEach, describe, expect, require, console, it, describe */
 var underTest = require('../src/tasks/rebuild-web-api'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -24,7 +24,6 @@ describe('rebuildWebApi', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};

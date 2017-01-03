@@ -1,11 +1,8 @@
-/*global describe, it, expect, require, __dirname, beforeEach, jasmine*/
+/*global describe, it, expect, require, __dirname */
 var path = require('path'),
 	underTest = require('../src/tasks/validate-package');
 describe('validatePackage', function () {
 	'use strict';
-	beforeEach(function () {
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 5000;
-	});
 	describe('when the handler is set without api module', function () {
 		it('fails if router require fails', function () {
 			expect(function () {
