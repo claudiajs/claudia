@@ -1,5 +1,5 @@
 /*global module, require, __dirname, Promise */
-var loadConfig = require('../util/loadconfig'),
+const loadConfig = require('../util/loadconfig'),
 	readJSON = require('../util/readjson'),
 	path = require('path'),
 	iamNameSanitize = require('../util/iam-name-sanitize'),
@@ -67,18 +67,18 @@ module.exports = function addS3EventSource(options) {
 				};
 			}
 			return s3.getBucketNotificationConfiguration({
-					Bucket: options.bucket
-				}).promise().then(function (currentConfig) {
-					var merged = currentConfig || {};
-					if (!merged.LambdaFunctionConfigurations) {
-						merged.LambdaFunctionConfigurations = [];
-					}
-					merged.LambdaFunctionConfigurations.push(eventConfig);
-					return s3.putBucketNotificationConfiguration({
-						Bucket: options.bucket,
-						NotificationConfiguration: merged
-					}).promise();
-				});
+				Bucket: options.bucket
+			}).promise().then(function (currentConfig) {
+				var merged = currentConfig || {};
+				if (!merged.LambdaFunctionConfigurations) {
+					merged.LambdaFunctionConfigurations = [];
+				}
+				merged.LambdaFunctionConfigurations.push(eventConfig);
+				return s3.putBucketNotificationConfiguration({
+					Bucket: options.bucket,
+					NotificationConfiguration: merged
+				}).promise();
+			});
 		};
 
 	if (!options.bucket) {
@@ -103,7 +103,7 @@ module.exports.doc = {
 			argument: 'prefix',
 			optional: true,
 			description: 'Prefix filter for S3 keys that will cause the event',
-			example : 'infiles/'
+			example: 'infiles/'
 		},
 		{
 			argument: 'version',

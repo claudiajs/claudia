@@ -340,16 +340,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 
 		};
 	return getOwnerId(logger).then(function (accountOwnerId) {
-			ownerId = accountOwnerId;
-		})
-		.then(getExistingConfigHash)
-		.then(function (existingHash) {
-			if (existingHash && existingHash === configHash) {
-				logger.logStage('Reusing cached API configuration');
-				return { cacheReused: true };
-			} else {
-				return uploadApiConfig();
-			}
-		});
+		ownerId = accountOwnerId;
+	})
+	.then(getExistingConfigHash)
+	.then(function (existingHash) {
+		if (existingHash && existingHash === configHash) {
+			logger.logStage('Reusing cached API configuration');
+			return { cacheReused: true };
+		} else {
+			return uploadApiConfig();
+		}
+	});
 
 };

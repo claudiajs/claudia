@@ -6,16 +6,13 @@ var underTest = require('../src/commands/test-lambda'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
-	aws = require('aws-sdk'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('testLambda', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects;
+	var workingdir, testRunName, newObjects;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
-		lambda = new aws.Lambda({region: awsRegion});
 		newObjects = {workingdir: workingdir};
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		shell.mkdir(workingdir);

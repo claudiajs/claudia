@@ -10,7 +10,7 @@ var underTest = require('../src/commands/destroy'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('destroy', function () {
 	'use strict';
-	var workingdir, testRunName, config, newObjects, iam;
+	var workingdir, testRunName, newObjects, iam;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -18,7 +18,6 @@ describe('destroy', function () {
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000;
 		newObjects = { workingdir: workingdir };
 		shell.mkdir(workingdir);
-		config = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({ source: workingdir }).then(done.fail, function (reason) {

@@ -241,8 +241,8 @@ describe('rebuildWebApi', function () {
 			});
 			it('captures quoted application/json request bodies', function (done) {
 				var jsonContent = {
-						fileKey : 'Jim\'s map.mup',
-						license : {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
+						fileKey: 'Jim\'s map.mup',
+						license: {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
 					},
 					textContent = JSON.stringify(jsonContent);
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
@@ -738,10 +738,10 @@ describe('rebuildWebApi', function () {
 					.then(function () {
 						return invoke('original/echo', {method: 'OPTIONS'});
 					}).then(function (contents) {
-					expect(contents.headers['access-control-allow-origin']).toEqual('*');
-					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
-					expect(contents.headers['access-control-max-age']).toEqual('10');
-				}).then(done, done.fail);
+						expect(contents.headers['access-control-allow-origin']).toEqual('*');
+						expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+						expect(contents.headers['access-control-max-age']).toEqual('10');
+					}).then(done, done.fail);
 			});
 		});
 	});

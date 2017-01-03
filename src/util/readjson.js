@@ -13,7 +13,7 @@ module.exports = function readJSON(fileName) {
 		try {
 			return JSON.parse(content);
 		} catch (e) {
-			throw('invalid configuration in ' + fileName);
+			throw 'invalid configuration in ' + fileName;
 		}
 	});
 };

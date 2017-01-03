@@ -35,7 +35,7 @@ module.exports = function addScheduledEvent(options) {
 				Principal: 'events.amazonaws.com',
 				SourceArn: ruleArn,
 				Qualifier: options.version,
-				StatementId:  options.name  + '-access-' + Date.now()
+				StatementId: options.name  + '-access-' + Date.now()
 			}).promise();
 		},
 		createRule = function () {

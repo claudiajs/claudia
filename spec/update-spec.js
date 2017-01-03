@@ -464,19 +464,19 @@ describe('update', function () {
 			return underTest({source: workingdir, version: 'new'}, logger);
 		}).then(function () {
 			expect(logger.getStageLog(true).filter(function (entry) {
-					return entry !== 'rate-limited by AWS, waiting before retry';
-				})).toEqual([
-					'loading Lambda config',
-					'packaging files',
-					'validating package',
-					'updating configuration',
-					'zipping package',
-					'updating Lambda',
-					'setting version alias',
-					'updating REST API'
-				]);
+				return entry !== 'rate-limited by AWS, waiting before retry';
+			})).toEqual([
+				'loading Lambda config',
+				'packaging files',
+				'validating package',
+				'updating configuration',
+				'zipping package',
+				'updating Lambda',
+				'setting version alias',
+				'updating REST API'
+			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
-					'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
+				'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
@@ -508,7 +508,7 @@ describe('update', function () {
 				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
 				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
 				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
-				].sort();
+			].sort();
 			shell.cp('-r', 'spec/test-projects/env-vars/*', workingdir);
 			create({
 				name: testRunName,

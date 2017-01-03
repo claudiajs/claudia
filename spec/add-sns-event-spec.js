@@ -10,10 +10,9 @@ var underTest = require('../src/commands/add-sns-event-source'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('addSNSEventSource', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, s3, config, logs, lambda, sns;
+	var workingdir, testRunName, newObjects, config, logs, lambda, sns;
 	beforeEach(function () {
 		workingdir = tmppath();
-		s3 = new aws.S3();
 		logs = new aws.CloudWatchLogs({region: awsRegion});
 		lambda = new aws.Lambda({region: awsRegion});
 		sns = new aws.SNS({region: awsRegion});

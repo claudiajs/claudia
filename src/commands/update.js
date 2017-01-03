@@ -27,17 +27,6 @@ module.exports = function update(options, optionalLogger) {
 		functionConfig,
 		alias = (options && options.version) || 'latest',
 		packageDir,
-		updateWebApi = function () {
-			if (apiConfig && apiConfig.id) {
-				logger.logStage('updating REST API');
-				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
-				if (apiConfig.module) {
-					return updateClaudiaApiBuilderApi();
-				} else {
-					return updateProxyApi();
-				}
-			}
-		},
 		updateProxyApi = function () {
 			return getOwnerId(logger).then(function (ownerId) {
 				return allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerId, lambdaConfig.region);
@@ -88,6 +77,17 @@ module.exports = function update(options, optionalLogger) {
 						updateResult.deploy = postDeployResult;
 					}
 				});
+		},
+		updateWebApi = function () {
+			if (apiConfig && apiConfig.id) {
+				logger.logStage('updating REST API');
+				updateResult.url = apiGWUrl(apiConfig.id, lambdaConfig.region, alias);
+				if (apiConfig.module) {
+					return updateClaudiaApiBuilderApi();
+				} else {
+					return updateProxyApi();
+				}
+			}
 		},
 		packageArchive,
 		cleanup = function () {

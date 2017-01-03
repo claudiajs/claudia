@@ -121,8 +121,8 @@ describe('fsUtil', function () {
 			});
 			it('uses globbing patterns', function () {
 				expect(fsUtil.recursiveList(path.join(pathName, 'content', '*.txt')).sort()).toEqual([
-						path.join(pathName, 'content', 'file.txt'),
-						path.join(pathName, 'content', 'numbers.txt')
+					path.join(pathName, 'content', 'file.txt'),
+					path.join(pathName, 'content', 'numbers.txt')
 				]);
 			});
 			it('lists a single file', function () {
@@ -152,8 +152,8 @@ describe('fsUtil', function () {
 			});
 			it('uses globbing patterns', function () {
 				expect(fsUtil.recursiveList('content/*.txt').sort()).toEqual([
-						path.join('content', 'file.txt'),
-						path.join('content', 'numbers.txt')
+					path.join('content', 'file.txt'),
+					path.join('content', 'numbers.txt')
 				]);
 			});
 			it('lists a single file', function () {

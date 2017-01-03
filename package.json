@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "prepublish": "npm shrinkwrap && node src/util/doc-md.js",
-    "pretest": "jshint src spec && jscs src spec/*.js",
+    "pretest": "eslint src spec/*.js",
     "test": "node spec/support/jasmine-runner.js",
     "debug": "node debug spec/support/jasmine-runner.js",
     "integration-build": "aws codebuild start-build --project-name claudiajs --region us-west-2 --profile claudia-test",
@@ -56,9 +56,10 @@
   },
   "devDependencies": {
     "dotenv": "^2.0.0",
-    "jscs": "^2.9.0",
+    "eslint": "^3.12.2",
+    "eslint-config-crockford": "^0.2.0",
+    "eslint-config-defaults": "^9.0.0",
     "jasmine": "^2.5.2",
-    "jasmine-spec-reporter": "^2.7.0",
-    "jshint": "^2.9.1"
+    "jasmine-spec-reporter": "^2.7.0"
   }
 }

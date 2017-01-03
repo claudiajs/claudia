@@ -3,15 +3,13 @@ var underTest = require('../src/util/logging-wrap'),
 	aws = require('aws-sdk');
 describe('loggingWrap', function () {
 	'use strict';
-	var target, resolve, reject, logger, originalMethods;
+	var target, logger, originalMethods;
 	beforeEach(function () {
 		target = jasmine.createSpyObj('target', ['f1', 'f2']);
 		originalMethods = {};
 		Object.keys(target).forEach(function (key) {
 			originalMethods[key] = target[key];
 		});
-		resolve = jasmine.createSpy('resolve');
-		reject = jasmine.createSpy('reject');
 		logger = jasmine.createSpy('logger');
 	});
 	describe('call reporting', function () {

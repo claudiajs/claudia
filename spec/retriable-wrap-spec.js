@@ -6,7 +6,6 @@ describe('retriableWrap', function () {
 	var source,
 		requestSpy,
 		promiseSpy,
-		thirdSpy,
 		promises,
 		buildPromise = function (name) {
 			promises[name] = {};
@@ -29,7 +28,6 @@ describe('retriableWrap', function () {
 		promiseSpy = jasmine.createSpy('second').and.returnValue(buildPromise('second'));
 
 		onRetry = jasmine.createSpy('onRetry');
-		thirdSpy = jasmine.createSpy('third').and.returnValue(3);
 		source = {firstMethod: requestSpy, secondMethod: promiseSpy, thirdField: 5, fourthFunction: functionSpy};
 
 		wrapped = underTest(source, onRetry);

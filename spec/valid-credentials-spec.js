@@ -16,7 +16,7 @@ describe('validCredentials', function () {
 		'The active session of someone assuming the role of "Accounting-Role", with a role session name of "Mary"':	'arn:aws:sts::123456789012:assumed-role/Accounting-Role/Mary',
 		'The multi-factor authentication device assigned to the user named Bob': 'arn:aws:iam::123456789012:mfa/Bob',
 		'A server certificate': 'arn:aws:iam::123456789012:server-certificate/ProdServerCert',
-		'A server certificate with a path that reflects an organization chart' : 'arn:aws:iam::123456789012:server-certificate/division_abc/subdivision_xyz/ProdServerCert',
+		'A server certificate with a path that reflects an organization chart': 'arn:aws:iam::123456789012:server-certificate/division_abc/subdivision_xyz/ProdServerCert',
 		'Identity providers (SAML)': 'arn:aws:iam::123456789012:saml-provider/ADFSProvider',
 		'Identify providers (OIDC)': 'arn:aws:iam::123456789012:oidc-provider/GoogleProvider'
 	};

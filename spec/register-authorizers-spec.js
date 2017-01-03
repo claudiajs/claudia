@@ -85,7 +85,9 @@ describe('registerAuthorizers', function () {
 	});
 	it('creates header-based authorizers', function (done) {
 		var authorizerConfig = {
-				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' }
+				first: {
+					lambdaName: authorizerLambdaName, headerName: 'Authorization'
+				}
 			}, result;
 		underTest(authorizerConfig, apiId, awsRegion)
 			.then(function (createResult) {
@@ -108,12 +110,10 @@ describe('registerAuthorizers', function () {
 	});
 	it('assigns a token validation regex if supplied', function (done) {
 		var authorizerConfig = {
-				first: { lambdaName: authorizerLambdaName,  validationExpression: 'A-Z' }
-			}, result;
+			first: { lambdaName: authorizerLambdaName,  validationExpression: 'A-Z' }
+		};
 		underTest(authorizerConfig, apiId, awsRegion)
-			.then(function (createResult) {
-				result = createResult;
-			}).then(function () {
+			.then(function () {
 				return apiGateway.getAuthorizersPromise({
 					restApiId: apiId
 				});
@@ -124,20 +124,20 @@ describe('registerAuthorizers', function () {
 	it('assigns authorizer credentials if supplied', function (done) {
 		var roleArn;
 		iam.getRole({RoleName: this.genericRole}).promise().then(function (roleDetails) {
-				roleArn = roleDetails.Role.Arn;
-				expect(roleArn).toBeTruthy();
-			}).then(function () {
-				var authorizerConfig = {
-					first: { lambdaName: authorizerLambdaName,  credentials: roleArn }
-				};
-				return underTest(authorizerConfig, apiId, awsRegion);
-			}).then(function () {
-				return apiGateway.getAuthorizersPromise({
-					restApiId: apiId
-				});
-			}).then(function (authorizers) {
-				expect(authorizers.items[0].authorizerCredentials).toEqual(roleArn);
-			}).then(done, done.fail);
+			roleArn = roleDetails.Role.Arn;
+			expect(roleArn).toBeTruthy();
+		}).then(function () {
+			var authorizerConfig = {
+				first: { lambdaName: authorizerLambdaName,  credentials: roleArn }
+			};
+			return underTest(authorizerConfig, apiId, awsRegion);
+		}).then(function () {
+			return apiGateway.getAuthorizersPromise({
+				restApiId: apiId
+			});
+		}).then(function (authorizers) {
+			expect(authorizers.items[0].authorizerCredentials).toEqual(roleArn);
+		}).then(done, done.fail);
 
 	});
 	it('assigns authorizer ttl in seconds if supplied', function (done) {
@@ -257,8 +257,8 @@ describe('registerAuthorizers', function () {
 	});
 	it('creates authorizers using an ARN', function (done) {
 		var authorizerConfig = {
-			first: { lambdaArn: authorizerArn }
-		}, result;
+				first: { lambdaArn: authorizerArn }
+			}, result;
 		underTest(authorizerConfig, apiId, awsRegion)
 			.then(function (createResult) {
 				result = createResult;
@@ -278,8 +278,8 @@ describe('registerAuthorizers', function () {
 	});
 	it('creates authorizers qualified by lambda name and current stage', function (done) {
 		var authorizerConfig = {
-			first: { lambdaName: authorizerLambdaName, lambdaVersion: true }
-		}, result;
+				first: { lambdaName: authorizerLambdaName, lambdaVersion: true }
+			}, result;
 		underTest(authorizerConfig, apiId, awsRegion)
 			.then(function (createResult) {
 				result = createResult;
@@ -299,8 +299,8 @@ describe('registerAuthorizers', function () {
 	});
 	it('creates authorizers qualified by a specific value', function (done) {
 		var authorizerConfig = {
-			first: { lambdaName: authorizerLambdaName, lambdaVersion: 'original' }
-		}, result;
+				first: { lambdaName: authorizerLambdaName, lambdaVersion: 'original' }
+			}, result;
 		underTest(authorizerConfig, apiId, awsRegion)
 			.then(function (createResult) {
 				result = createResult;
@@ -320,8 +320,8 @@ describe('registerAuthorizers', function () {
 	});
 	it('allows api gateway to invoke the authorizer lambda without qualifier', function (done) {
 		var authorizerConfig = {
-				first: { lambdaName: authorizerLambdaName }
-			};
+			first: { lambdaName: authorizerLambdaName }
+		};
 		underTest(authorizerConfig, apiId, awsRegion)
 			.then(function () {
 				return lambda.getPolicy({
@@ -337,8 +337,8 @@ describe('registerAuthorizers', function () {
 
 	it('allows api gateway to invoke the authorizer lambda with a hard-coded qualifier', function (done) {
 		var authorizerConfig = {
-				first: { lambdaName: authorizerLambdaName, lambdaVersion: 'original' }
-			};
+			first: { lambdaName: authorizerLambdaName, lambdaVersion: 'original' }
+		};
 		underTest(authorizerConfig, apiId, awsRegion, 'development')
 			.then(function () {
 				return lambda.getPolicy({
@@ -354,8 +354,8 @@ describe('registerAuthorizers', function () {
 	});
 	it('allows api gateway to invoke the authorizer lambda with a current version qualifier', function (done) {
 		var authorizerConfig = {
-				first: { lambdaName: authorizerLambdaName, lambdaVersion: true }
-			};
+			first: { lambdaName: authorizerLambdaName, lambdaVersion: true }
+		};
 		underTest(authorizerConfig, apiId, awsRegion, 'original')
 			.then(function () {
 				return lambda.getPolicy({

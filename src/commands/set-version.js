@@ -44,7 +44,7 @@ module.exports = function setVersion(options, optionalLogger) {
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
 			loggingWrap(
-				new aws.APIGateway({region:  lambdaConfig.region}),
+				new aws.APIGateway({region: lambdaConfig.region}),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			function () {

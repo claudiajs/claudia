@@ -13,7 +13,7 @@ var underTest = require('../src/commands/create'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('create', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects, config,logs,
+	var workingdir, testRunName, iam, lambda, newObjects, config, logs,
 		apiGatewayPromise,
 		createFromDir = function (dir, logger) {
 			if (!shell.test('-e', workingdir)) {
@@ -298,20 +298,20 @@ describe('create', function () {
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'recursive-execution']);
 			}).then(function () {
-				return iam.getRolePolicy({PolicyName: 'recursive-execution', RoleName:  testRunName + '-executor'}).promise();
+				return iam.getRolePolicy({PolicyName: 'recursive-execution', RoleName: testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
-						{
-							'Version': '2012-10-17',
-							'Statement': [{
-								'Sid': 'InvokePermission',
-								'Effect': 'Allow',
-								'Action': [
-									'lambda:InvokeFunction'
-								],
-								'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
-							}]
-						});
+					{
+						'Version': '2012-10-17',
+						'Statement': [{
+							'Sid': 'InvokePermission',
+							'Effect': 'Allow',
+							'Action': [
+								'lambda:InvokeFunction'
+							],
+							'Resource': 'arn:aws:lambda:' + awsRegion + ':*:function:' + testRunName
+						}]
+					});
 			}).then(done, function (e) {
 				console.log(e);
 				done.fail();
@@ -319,9 +319,9 @@ describe('create', function () {
 		});
 		describe('when VPC access is desired', function () {
 			var vpc, subnet, securityGroup,
-					securityGroupName = testRunName + 'SecurityGroup',
-					CidrBlock = '10.0.0.0/16',
-					ec2 = new aws.EC2({region: awsRegion});
+				securityGroupName = testRunName + 'SecurityGroup',
+				CidrBlock = '10.0.0.0/16',
+				ec2 = new aws.EC2({region: awsRegion});
 			beforeAll(function (done) {
 				ec2.createVpc({CidrBlock: CidrBlock}).promise().then(function (vpcData) {
 					vpc = vpcData.Vpc;
@@ -363,7 +363,7 @@ describe('create', function () {
 				}).then(function (result) {
 					expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']);
 				}).then(function () {
-					return iam.getRolePolicy({PolicyName: 'vpc-access-execution', RoleName:  testRunName + '-executor'}).promise();
+					return iam.getRolePolicy({PolicyName: 'vpc-access-execution', RoleName: testRunName + '-executor'}).promise();
 				}).then(function (policy) {
 					expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
 						{
@@ -410,7 +410,7 @@ describe('create', function () {
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
 			}).then(function () {
-				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'}).promise();
+				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName: testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
 			}).then(done, done.fail);
@@ -435,7 +435,7 @@ describe('create', function () {
 			}).then(function (result) {
 				expect(result.PolicyNames).toEqual(['log-writer', 'ses-policy-json']);
 			}).then(function () {
-				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName:  testRunName + '-executor'}).promise();
+				return iam.getRolePolicy({PolicyName: 'ses-policy-json', RoleName: testRunName + '-executor'}).promise();
 			}).then(function (policy) {
 				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(sesPolicy);
 			}).then(done, done.fail);

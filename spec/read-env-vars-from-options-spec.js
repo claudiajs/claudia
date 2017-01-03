@@ -12,10 +12,10 @@ describe('readEnvVarsFromOptions', function () {
 	});
 	it('throws an error if both set-env and set-env-from-json are specified', function () {
 		var envpath = tmppath(),
-		vars = {
-			'set-env': 'XPATH=/var/www,YPATH=/var/lib',
-			'set-env-from-json': envpath
-		};
+			vars = {
+				'set-env': 'XPATH=/var/www,YPATH=/var/lib',
+				'set-env-from-json': envpath
+			};
 		fs.writeFileSync(envpath, '{"a":"b"}', 'utf8');
 		expect(function () {
 			readEnvVarsFromOptions(vars);
@@ -30,9 +30,9 @@ describe('readEnvVarsFromOptions', function () {
 	});
 	it('throws an error when set-env-from-json is set but not valid json', function () {
 		var envpath = tmppath(),
-		vars = {
-			'set-env-from-json': envpath
-		};
+			vars = {
+				'set-env-from-json': envpath
+			};
 		fs.writeFileSync(envpath, '{{', 'utf8');
 		expect(function () {
 			readEnvVarsFromOptions(vars);

@@ -11,7 +11,7 @@ var create = require('../src/commands/create'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('customAuthorizers', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, apiId,
+	var workingdir, testRunName, apiId,
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -73,7 +73,6 @@ describe('customAuthorizers', function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 150000;
-		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 		shell.cp('-r', 'spec/test-projects/custom-authorizers/*', workingdir);
 		fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8').then(function (content) {

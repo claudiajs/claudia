@@ -156,7 +156,7 @@ module.exports = function create(options, optionalLogger) {
 				function (error) {
 					return error &&
 						error.code === 'InvalidParameterValueException' &&
-						error.message == 'The role defined for the function cannot be assumed by Lambda.';
+						error.message === 'The role defined for the function cannot be assumed by Lambda.';
 				},
 				function () {
 					logger.logStage('waiting for IAM role propagation');
@@ -183,8 +183,7 @@ module.exports = function create(options, optionalLogger) {
 				apiModulePath = path.join(packageDir, options['api-module']);
 				apiModule = require(path.resolve(apiModulePath));
 				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
-			}
-			catch (e) {
+			} catch (e) {
 				console.error(e.stack || e);
 				return Promise.reject('cannot load api config from ' + apiModulePath);
 			}
@@ -351,6 +350,7 @@ module.exports = function create(options, optionalLogger) {
 				}]
 			});
 		},
+		packageArchive,
 		cleanup = function (result) {
 			if (!options.keep) {
 				fs.unlinkSync(packageArchive);
@@ -359,7 +359,6 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return result;
 		},
-		packageArchive,
 		functionDesc,
 		functionName,
 		packageFileDir;
@@ -397,7 +396,7 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options['security-group-ids']) {
 			return iam.putRolePolicy({
-				RoleName:  roleMetadata.Role.RoleName,
+				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'vpc-access-execution',
 				PolicyDocument: vpcPolicy()
 			}).promise();
@@ -405,7 +404,7 @@ module.exports = function create(options, optionalLogger) {
 	}).then(function () {
 		if (options['allow-recursion']) {
 			return iam.putRolePolicy({
-				RoleName:  roleMetadata.Role.RoleName,
+				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'recursive-execution',
 				PolicyDocument: recursivePolicy(functionName)
 			}).promise();
@@ -500,7 +499,7 @@ module.exports.doc = {
 			optional: true,
 			description: 'The name or ARN of an existing role to assign to the function. \n' +
 				'If not supplied, Claudia will create a new role. Supply an ARN to create a function without any IAM access.',
-			example:  'arn:aws:iam::123456789012:role/FileConverter'
+			example: 'arn:aws:iam::123456789012:role/FileConverter'
 		},
 		{
 			argument: 'runtime',

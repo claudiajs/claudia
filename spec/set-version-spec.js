@@ -13,7 +13,7 @@ var underTest = require('../src/commands/set-version'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('setVersion', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects, apiGateway,
+	var workingdir, testRunName, lambda, newObjects, apiGateway,
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -24,7 +24,6 @@ describe('setVersion', function () {
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
 		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion}));
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
@@ -241,7 +240,7 @@ describe('setVersion', function () {
 				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
 				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
 				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'
-				].sort();
+			].sort();
 			shell.cp('-r', 'spec/test-projects/env-vars/*', workingdir);
 			create({
 				name: testRunName,

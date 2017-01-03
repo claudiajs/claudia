@@ -2,7 +2,7 @@
 var parseKeyValueCSV = require('../src/util/parse-key-value-csv');
 describe('parseKeyValueCSV', function () {
 	'use strict';
-	[undefined, false, '', ' ', ',', 'XPATH=YYY,,ZPATH=ZZZ','PPATH=XXX,XPATH,ZPATH=ZZZ','XPATH', '\n,\t'].forEach(function (invalidValue) {
+	[undefined, false, '', ' ', ',', 'XPATH=YYY,,ZPATH=ZZZ', 'PPATH=XXX,XPATH,ZPATH=ZZZ', 'XPATH', '\n,\t'].forEach(function (invalidValue) {
 		it('throws error for invalid [' + invalidValue + ']', function () {
 			expect(function () {
 				parseKeyValueCSV();

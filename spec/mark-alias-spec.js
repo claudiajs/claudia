@@ -8,11 +8,10 @@ var underTest = require('../src/tasks/mark-alias'),
 	awsRegion = require('./helpers/test-aws-region');
 describe('markAlias', function () {
 	'use strict';
-	var workingdir, testRunName, iam, lambda, newObjects;
+	var workingdir, testRunName, lambda, newObjects;
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
 		lambda = new aws.Lambda({region: awsRegion});
 		jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 		newObjects = {workingdir: workingdir};
