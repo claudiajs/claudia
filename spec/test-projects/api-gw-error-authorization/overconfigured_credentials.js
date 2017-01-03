@@ -3,7 +3,7 @@ exports.apiConfig = function () {
 	'use strict';
 	return {
 		version: 3,
-		routes: { echo: { 'GET' : { authorizationType: 'CUSTOM', invokeWithCredentials: true } }}
+		routes: { echo: { 'GET': { authorizationType: 'CUSTOM', invokeWithCredentials: true } }}
 	};
 };
 exports.proxyRouter = function (event, context) {

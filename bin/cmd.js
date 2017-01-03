@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-'use strict';
 /* global process, __dirname, require, console */
 var minimist = require('minimist'),
 	shell = require('shelljs'),
@@ -9,6 +8,7 @@ var minimist = require('minimist'),
 	docTxt = require('../src/util/doc-txt'),
 	AWS = require('aws-sdk'),
 	readArgs = function () {
+		'use strict';
 		return minimist(process.argv.slice(2), {
 			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region', 'profile'],
@@ -17,6 +17,7 @@ var minimist = require('minimist'),
 		});
 	},
 	main = function () {
+		'use strict';
 		var args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0],

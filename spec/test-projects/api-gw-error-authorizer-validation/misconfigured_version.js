@@ -4,7 +4,7 @@ exports.apiConfig = function () {
 	return {
 		version: 3,
 		authorizers: { first: { lambdaName: 'ln', lambdaVersion: {a: 1} } },
-		routes: { echo: { 'GET' : { customAuthorizer: 'first' } }}
+		routes: { echo: { 'GET': { customAuthorizer: 'first' } }}
 	};
 };
 exports.proxyRouter = function (event, context) {

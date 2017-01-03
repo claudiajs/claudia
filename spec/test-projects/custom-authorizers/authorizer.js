@@ -2,11 +2,11 @@
 var generatePolicy = function (authToken, methodArn) {
 	'use strict';
 	var tmp = methodArn.split(':'),
-	apiGatewayArnTmp = tmp[5].split('/'),
-	awsAccountId = tmp[4],
-	region = tmp[3],
-	restApiId = apiGatewayArnTmp[0],
-	stage = apiGatewayArnTmp[1];
+		apiGatewayArnTmp = tmp[5].split('/'),
+		awsAccountId = tmp[4],
+		region = tmp[3],
+		restApiId = apiGatewayArnTmp[0],
+		stage = apiGatewayArnTmp[1];
 
 	return {
 		'principalId': authToken.split('-')[0],

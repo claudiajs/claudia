@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "prepublish": "npm shrinkwrap && node src/util/doc-md.js",
-    "pretest": "eslint src spec/*.js",
+    "pretest": "eslint .",
     "test": "node spec/support/jasmine-runner.js",
     "debug": "node debug spec/support/jasmine-runner.js",
     "integration-build": "aws codebuild start-build --project-name claudiajs --region us-west-2 --profile claudia-test",
