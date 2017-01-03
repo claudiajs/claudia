@@ -1,6 +1,0 @@
-{
-	"preset":"crockford",
-	"validateIndentation": "\t",
-	"requireBlocksOnNewline": 0,
-	"excludeFiles": ["spec/**/node_modules/"]
-}
