@@ -1,5 +1,5 @@
 /*global module, require, console, Promise, process */
-var path = require('path'),
+const path = require('path'),
 	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
@@ -24,29 +24,28 @@ var path = require('path'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
-	var logger = optionalLogger || new NullLogger(),
-		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay']) || 5000,
-		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries']) || 15,
+	let roleMetadata,
+		s3Key,
+		packageArchive,
+		functionDesc,
+		functionName,
+		packageFileDir;
+	const logger = optionalLogger || new NullLogger(),
+		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || 5000,
+		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		apiGatewayPromise = retriableWrap(
 						loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
-						function () {
-							logger.logStage('rate-limited by AWS, waiting before retry');
-						}),
-		roleMetadata,
+						() => logger.logStage('rate-limited by AWS, waiting before retry')),
 		policyFiles = function () {
 			var files = fsUtil.recursiveList(options.policies);
 			if (fsUtil.isDir(options.policies)) {
-				files = files.map(function (filePath) {
-					return path.join(options.policies, filePath);
-				});
+				files = files.map(filePath => path.join(options.policies, filePath));
 			}
-			return files.filter(function (filePath) {
-				return fsUtil.isFile(filePath);
-			});
+			return files.filter(filePath => fsUtil.isFile(filePath));
 		},
 		validationError = function () {
 			if (source === os.tmpdir()) {
@@ -118,8 +117,8 @@ module.exports = function create(options, optionalLogger) {
 		},
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
-			return readjson(path.join(source, 'package.json')).then(function (jsonConfig) {
-				var name = options.name || lambdaNameSanitize(jsonConfig.name),
+			return readjson(path.join(source, 'package.json')).then(jsonConfig => {
+				const name = options.name || lambdaNameSanitize(jsonConfig.name),
 					description = options.description || (jsonConfig.description && jsonConfig.description.trim());
 				if (!name) {
 					return Promise.reject('project name is missing. please specify with --name or in package.json');
@@ -158,26 +157,22 @@ module.exports = function create(options, optionalLogger) {
 						error.code === 'InvalidParameterValueException' &&
 						error.message === 'The role defined for the function cannot be assumed by Lambda.';
 				},
-				function () {
-					logger.logStage('waiting for IAM role propagation');
-				},
+				() => logger.logStage('waiting for IAM role propagation'),
 				Promise
 			);
 		},
 		markAliases = function (lambdaData) {
 			logger.logStage('creating version alias');
 			return markAlias(lambdaData.FunctionName, lambda, '$LATEST', 'latest')
-			.then(function () {
+			.then(() => {
 				if (options.version) {
 					return markAlias(lambdaData.FunctionName, lambda, lambdaData.Version, options.version);
 				}
-			}).then(function () {
-				return lambdaData;
-			});
+			}).then(() =>lambdaData);
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
-			var apiModule, apiConfig, apiModulePath,
-				alias = options.version || 'latest';
+			let apiModule, apiConfig, apiModulePath;
+			const alias = options.version || 'latest';
 			logger.logStage('creating REST API');
 			try {
 				apiModulePath = path.join(packageDir, options['api-module']);
@@ -185,15 +180,15 @@ module.exports = function create(options, optionalLogger) {
 				apiConfig = apiModule && apiModule.apiConfig && apiModule.apiConfig();
 			} catch (e) {
 				console.error(e.stack || e);
-				return Promise.reject('cannot load api config from ' + apiModulePath);
+				return Promise.reject(`cannot load api config from ${apiModulePath}`);
 			}
 
 			if (!apiConfig) {
-				return Promise.reject('No apiConfig defined on module \'' + options['api-module'] + '\'. Are you missing a module.exports?');
+				return Promise.reject(`No apiConfig defined on module '${options['api-module']}'. Are you missing a module.exports?`);
 			}
 			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
-			}).then(function (result) {
+			}).then((result) => {
 
 				lambdaMetadata.api = {
 					id: result.id,
@@ -201,7 +196,7 @@ module.exports = function create(options, optionalLogger) {
 					url: apiGWUrl(result.id, options.region, alias)
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
-			}).then(function () {
+			}).then(() => {
 				if (apiModule.postDeploy) {
 					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
@@ -220,7 +215,7 @@ module.exports = function create(options, optionalLogger) {
 						}
 					);
 				}
-			}).then(function (postDeployResult) {
+			}).then(postDeployResult => {
 				if (postDeployResult) {
 					lambdaMetadata.api.deploy = postDeployResult;
 				}
@@ -228,7 +223,7 @@ module.exports = function create(options, optionalLogger) {
 			});
 		},
 		deployProxyApi = function (lambdaMetadata) {
-			var apiConfig = {
+			const apiConfig = {
 					version: 3,
 					corsHandlers: true,
 					routes: {
@@ -241,18 +236,16 @@ module.exports = function create(options, optionalLogger) {
 
 			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
-			}).then(function (result) {
+			}).then(result => {
 				lambdaMetadata.api = {
 					id: result.id,
 					url: apiGWUrl(result.id, options.region, alias)
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
-			}).then(function () {
-				return lambdaMetadata;
-			});
+			}).then(() => lambdaMetadata);
 		},
 		saveConfig = function (lambdaMetaData) {
-			var config = {
+			const config = {
 				lambda: {
 					role: roleMetadata.Role.RoleName,
 					name: lambdaMetaData.FunctionName,
@@ -267,13 +260,10 @@ module.exports = function create(options, optionalLogger) {
 				configFile,
 				JSON.stringify(config, null, 2),
 				'utf8'
-			).then(function () {
-				return lambdaMetaData;
-			});
+			).then(() => lambdaMetaData);
 		},
-		s3Key,
 		formatResult = function (lambdaMetaData) {
-			var config = {
+			const config = {
 				lambda: {
 					role: roleMetadata.Role.RoleName,
 					name: lambdaMetaData.FunctionName,
@@ -305,7 +295,7 @@ module.exports = function create(options, optionalLogger) {
 				return iam.getRole({RoleName: options.role}).promise();
 			} else {
 				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-					.then(function (lambdaRolePolicy) {
+					.then(lambdaRolePolicy => {
 						return iam.createRole({
 							RoleName: functionName + '-executor',
 							AssumeRolePolicyDocument: lambdaRolePolicy
@@ -314,8 +304,8 @@ module.exports = function create(options, optionalLogger) {
 			}
 		},
 		addExtraPolicies = function () {
-			return Promise.all(policyFiles().map(function (fileName) {
-				var policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
+			return Promise.all(policyFiles().map(fileName => {
+				const policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
 		},
@@ -350,7 +340,6 @@ module.exports = function create(options, optionalLogger) {
 				}]
 			});
 		},
-		packageArchive,
 		cleanup = function (result) {
 			if (!options.keep) {
 				fs.unlinkSync(packageArchive);
@@ -358,42 +347,45 @@ module.exports = function create(options, optionalLogger) {
 				result.archive = packageArchive;
 			}
 			return result;
-		},
-		functionDesc,
-		functionName,
-		packageFileDir;
+		};
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return getPackageInfo().then(function (packageInfo) {
+	return getPackageInfo().then(packageInfo => {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
-	}).then(function () {
-		return collectFiles(source, options['use-local-dependencies'], logger);
-	}).then(function (dir) {
+	})
+	.then(() => collectFiles(source, options['use-local-dependencies'], logger))
+	.then(dir => {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);
-	}).then(function (dir) {
+	})
+	.then(dir => {
 		packageFileDir = dir;
 		return cleanUpPackage(dir, options, logger);
-	}).then(function (dir) {
+	})
+	.then(dir => {
 		logger.logStage('zipping package');
 		return zipdir(dir);
-	}).then(function (zipFile) {
+	})
+	.then(zipFile => {
 		packageArchive = zipFile;
-	}).then(function () {
-		return loadRole(functionName);
-	}).then(function (result) {
+	})
+	.then(() => loadRole(functionName))
+	.then((result) => {
 		roleMetadata = result;
-	}).then(function () {
+	})
+	.then(() => {
 		if (!options.role) {
 			return addPolicy('log-writer', roleMetadata.Role.RoleName);
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (options.policies) {
 			return addExtraPolicies();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (options['security-group-ids']) {
 			return iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
@@ -401,7 +393,8 @@ module.exports = function create(options, optionalLogger) {
 				PolicyDocument: vpcPolicy()
 			}).promise();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (options['allow-recursion']) {
 			return iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
@@ -409,13 +402,14 @@ module.exports = function create(options, optionalLogger) {
 				PolicyDocument: recursivePolicy(functionName)
 			}).promise();
 		}
-	}).then(function () {
-		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
-	}).then(function (functionCode) {
+	})
+	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], logger))
+	.then(functionCode => {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
-	}).then(markAliases)
-	.then(function (lambdaMetadata) {
+	})
+	.then(markAliases)
+	.then(lambdaMetadata => {
 		if (options['api-module']) {
 			return createWebApi(lambdaMetadata, packageFileDir);
 		} else if (options['deploy-proxy-api']) {
@@ -424,7 +418,9 @@ module.exports = function create(options, optionalLogger) {
 			return lambdaMetadata;
 		}
 	})
-	.then(saveConfig).then(formatResult).then(cleanup);
+	.then(saveConfig)
+	.then(formatResult)
+	.then(cleanup);
 };
 
 module.exports.doc = {
