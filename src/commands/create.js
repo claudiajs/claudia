@@ -38,14 +38,15 @@ module.exports = function create(options, optionalLogger) {
 		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		apiGatewayPromise = retriableWrap(
-						loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
-						() => logger.logStage('rate-limited by AWS, waiting before retry')),
+			loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
+			() => logger.logStage('rate-limited by AWS, waiting before retry')
+		),
 		policyFiles = function () {
 			var files = fsUtil.recursiveList(options.policies);
 			if (fsUtil.isDir(options.policies)) {
 				files = files.map(filePath => path.join(options.policies, filePath));
 			}
-			return files.filter(filePath => fsUtil.isFile(filePath));
+			return files.filter(fsUtil.isFile);
 		},
 		validationError = function () {
 			if (source === os.tmpdir()) {
@@ -189,7 +190,6 @@ module.exports = function create(options, optionalLogger) {
 			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
 			}).then((result) => {
-
 				lambdaMetadata.api = {
 					id: result.id,
 					module: options['api-module'],
