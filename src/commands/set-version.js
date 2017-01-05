@@ -1,5 +1,5 @@
 /*global module, require, Promise*/
-var aws = require('aws-sdk'),
+const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),
 	retriableWrap = require('../util/retriable-wrap'),
@@ -12,22 +12,18 @@ var aws = require('aws-sdk'),
 	getOwnerId = require('../tasks/get-owner-account-id');
 module.exports = function setVersion(options, optionalLogger) {
 	'use strict';
-	var lambdaConfig, lambda, apiGateway, apiConfig,
-		logger = optionalLogger || new NullLogger(),
+	let lambdaConfig, lambda, apiGateway, apiConfig;
+	const logger = optionalLogger || new NullLogger(),
 		updateApi = function () {
-			return getOwnerId(optionalLogger).then(function (ownerId) {
-				return allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region);
-			}).then(function () {
-				return apiGateway.createDeploymentPromise({
-					restApiId: apiConfig.id,
-					stageName: options.version,
-					variables: {
-						lambdaVersion: options.version
-					}
-				});
-			}).then(function () {
-				return {url: apiGWUrl(apiConfig.id, lambdaConfig.region, options.version) };
-			});
+			return getOwnerId(optionalLogger).then(ownerId => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region))
+			.then(() => apiGateway.createDeploymentPromise({
+				restApiId: apiConfig.id,
+				stageName: options.version,
+				variables: {
+					lambdaVersion: options.version
+				}
+			}))
+			.then(() => ({ url: apiGWUrl(apiConfig.id, lambdaConfig.region, options.version) }));
 		};
 	if (!options.version) {
 		return Promise.reject('version misssing. please provide using --version');
@@ -38,7 +34,7 @@ module.exports = function setVersion(options, optionalLogger) {
 		return Promise.reject(e);
 	}
 	logger.logStage('loading config');
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
@@ -47,18 +43,16 @@ module.exports = function setVersion(options, optionalLogger) {
 				new aws.APIGateway({region: lambdaConfig.region}),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
-			function () {
-				logger.logStage('rate-limited by AWS, waiting before retry');
-			});
-	}).then(function () {
+			() => logger.logStage('rate-limited by AWS, waiting before retry')
+		);
+	}).then(() => {
 		logger.logStage('updating configuration');
 		return updateEnvVars(options, lambda, lambdaConfig.name);
-	}).then(function () {
+	}).then(() => {
 		logger.logStage('updating versions');
 		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
-	}).then(function (versionResult) {
-		return markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version);
-	}).then(function () {
+	}).then(versionResult => markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version))
+	.then(() => {
 		if (apiConfig && apiConfig.id) {
 			return updateApi();
 		}

@@ -1,26 +1,25 @@
 /*global module, require, Promise */
-var loadConfig = require('../util/loadconfig'),
+const loadConfig = require('../util/loadconfig'),
 	aws = require('aws-sdk');
 
 module.exports = function addSNSEventSource(options) {
 	'use strict';
-	var lambdaConfig,
+	let lambdaConfig,
 		lambda,
-		sns,
-		initServices = function () {
+		sns;
+	const initServices = function () {
 			lambda = new aws.Lambda({region: lambdaConfig.region});
 			sns = new aws.SNS({region: lambdaConfig.region});
 		},
-		getLambda = function () {
-			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
-		},
+		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})
-				.then(function (config) {
+				.then(config => {
 					lambdaConfig = config.lambda;
-				}).then(initServices)
+				})
+				.then(initServices)
 				.then(getLambda)
-				.then(function (result) {
+				.then(result => {
 					lambdaConfig.arn = result.FunctionArn;
 					lambdaConfig.version = result.Version;
 				});

@@ -1,23 +1,24 @@
 /*global module, require, Promise*/
-var aws = require('aws-sdk'),
+const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	fs = require('../util/fs-promise');
 module.exports = function testLambda(options) {
 	'use strict';
-	var getPayload = function () {
-			if (!options.event) {
-				return Promise.resolve('');
-			} else {
-				return fs.readFileAsync(options.event, 'utf-8');
-			}
-		},
-		lambdaConfig;
+	let lambdaConfig;
+	const getPayload = function () {
+		if (!options.event) {
+			return Promise.resolve('');
+		} else {
+			return fs.readFileAsync(options.event, 'utf-8');
+		}
+	};
 
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
 		lambdaConfig = config.lambda;
-	}).then(getPayload)
-	.then(function (payload) {
-		var lambda = new aws.Lambda({region: lambdaConfig.region});
+	})
+	.then(getPayload)
+	.then(payload => {
+		const lambda = new aws.Lambda({region: lambdaConfig.region});
 		return lambda.invoke({FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version}).promise();
 	});
 };

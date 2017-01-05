@@ -1,5 +1,5 @@
 /*global module, require, process */
-var aws = require('aws-sdk'),
+const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	fsPromise = require('../util/fs-promise'),
 	path = require('path'),
@@ -7,28 +7,32 @@ var aws = require('aws-sdk'),
 	destroyRole = require('../util/destroy-role');
 module.exports = function destroy(options) {
 	'use strict';
-	var lambdaConfig, apiConfig;
+	let lambdaConfig, apiConfig;
 
 	return loadConfig(options, { lambda: { name: true, region: true, role: true } })
-		.then(function (config) {
+		.then(config => {
 			lambdaConfig = config.lambda;
 			apiConfig = config.api;
-		}).then(function () {
-			var lambda = new aws.Lambda({ region: lambdaConfig.region });
+		})
+		.then(() => {
+			const lambda = new aws.Lambda({ region: lambdaConfig.region });
 			return lambda.deleteFunction({ FunctionName: lambdaConfig.name }).promise();
-		}).then(function () {
-			var apiGateway = retriableWrap(new aws.APIGateway({ region: lambdaConfig.region }));
+		})
+		.then(() => {
+			const apiGateway = retriableWrap(new aws.APIGateway({ region: lambdaConfig.region }));
 			if (apiConfig) {
 				return apiGateway.deleteRestApiPromise({
 					restApiId: apiConfig.id
 				});
 			}
-		}).then(function () {
+		})
+		.then(() => {
 			if (lambdaConfig.role) {
 				return destroyRole(lambdaConfig.role);
 			}
-		}).then(function () {
-			var sourceDir = (options && options.source) || process.cwd(),
+		})
+		.then(() => {
+			const sourceDir = (options && options.source) || process.cwd(),
 				fileName = (options && options.config) || path.join(sourceDir, 'claudia.json');
 			return fsPromise.unlinkAsync(fileName);
 		});

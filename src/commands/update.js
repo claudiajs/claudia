@@ -1,5 +1,5 @@
 /*global module, require, console, Promise, process*/
-var zipdir = require('../tasks/zipdir'),
+const zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
@@ -22,37 +22,35 @@ var zipdir = require('../tasks/zipdir'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
-	var logger = optionalLogger || new NullLogger(),
-		lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
-		functionConfig,
+	let lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
+		functionConfig, packageDir, packageArchive, s3Key,
+		requiresHandlerUpdate = false;
+	const logger = optionalLogger || new NullLogger(),
 		alias = (options && options.version) || 'latest',
-		packageDir,
 		updateProxyApi = function () {
-			return getOwnerId(logger).then(function (ownerId) {
-				return allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerId, lambdaConfig.region);
-			}).then(function () {
-				return apiGateway.createDeploymentPromise({
+			return getOwnerId(logger)
+				.then(ownerId => allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerId, lambdaConfig.region))
+				.then(() => apiGateway.createDeploymentPromise({
 					restApiId: apiConfig.id,
 					stageName: alias,
 					variables: {
 						lambdaVersion: alias
 					}
-				});
-			});
+				}));
 		},
 		updateClaudiaApiBuilderApi = function () {
-			var apiModule, apiDef, apiModulePath;
+			let apiModule, apiDef, apiModulePath;
 			try {
 				apiModulePath = path.resolve(path.join(packageDir, apiConfig.module));
 				apiModule = require(apiModulePath);
 				apiDef = apiModule.apiConfig();
 			} catch (e) {
 				console.error(e.stack || e);
-				return Promise.reject('cannot load api config from ' + apiModulePath);
+				return Promise.reject(`cannot load api config from ${apiModulePath}`);
 			}
 
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
-				.then(function (rebuildResult) {
+				.then(rebuildResult => {
 					if (apiModule.postDeploy) {
 						Promise.map = sequentialPromiseMap;
 						return apiModule.postDeploy(
@@ -72,7 +70,8 @@ module.exports = function update(options, optionalLogger) {
 							}
 						);
 					}
-				}).then(function (postDeployResult) {
+				})
+				.then(postDeployResult => {
 					if (postDeployResult) {
 						updateResult.deploy = postDeployResult;
 					}
@@ -89,7 +88,6 @@ module.exports = function update(options, optionalLogger) {
 				}
 			}
 		},
-		packageArchive,
 		cleanup = function () {
 			if (!options.keep) {
 				fs.unlinkSync(packageArchive);
@@ -97,9 +95,7 @@ module.exports = function update(options, optionalLogger) {
 				updateResult.archive = packageArchive;
 			}
 			return updateResult;
-		},
-		requiresHandlerUpdate = false,
-		s3Key;
+		};
 	options = options || {};
 	if (!options.source) {
 		options.source = process.cwd();
@@ -118,7 +114,7 @@ module.exports = function update(options, optionalLogger) {
 
 
 	logger.logStage('loading Lambda config');
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(function (config) {
+	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
@@ -127,61 +123,70 @@ module.exports = function update(options, optionalLogger) {
 					new aws.APIGateway({region: lambdaConfig.region}),
 					{log: logger.logApiCall, logName: 'apigateway'}
 				),
-				function () {
-					logger.logStage('rate-limited by AWS, waiting before retry');
-				}
+				() => logger.logStage('rate-limited by AWS, waiting before retry')
 		);
-	}).then(function () {
-		return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise();
-	}).then(function (result) {
+	})
+	.then(() => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise())
+	.then(result => {
 		functionConfig = result;
 		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
 		if (requiresHandlerUpdate) {
 			functionConfig.Handler = functionConfig.Handler.replace(/\.router$/, '.proxyRouter');
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (apiConfig) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
 		}
-	}).then(function () {
-		return collectFiles(options.source, options['use-local-dependencies'], logger);
-	}).then(function (dir) {
+	})
+	.then(() => collectFiles(options.source, options['use-local-dependencies'], logger))
+	.then(dir => {
 		logger.logStage('validating package');
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);
-	}).then(function (dir) {
+	})
+	.then(dir => {
 		packageDir = dir;
 		return cleanUpPackage(dir, options, logger);
-	}).then(function () {
+	})
+	.then(() => {
 		if (requiresHandlerUpdate) {
 			return lambda.updateFunctionConfiguration({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler}).promise();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		logger.logStage('updating configuration');
 		return updateEnvVars(options, lambda, lambdaConfig.name);
-	}).then(function () {
+	})
+	.then(() => {
 		logger.logStage('zipping package');
 		return zipdir(packageDir);
-	}).then(function (zipFile) {
+	})
+	.then(zipFile => {
 		packageArchive = zipFile;
 		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
-	}).then(function (functionCode) {
+	})
+	.then(functionCode => {
 		logger.logStage('updating Lambda');
 		s3Key = functionCode.S3Key;
 		functionCode.FunctionName = lambdaConfig.name;
 		functionCode.Publish = true;
 		return lambda.updateFunctionCode(functionCode).promise();
-	}).then(function (result) {
+	})
+	.then(result => {
 		updateResult = result;
 		if (s3Key) {
 			updateResult.s3key = s3Key;
 		}
 		return result;
-	}).then(function (result) {
+	})
+	.then(result => {
 		if (options.version) {
 			logger.logStage('setting version alias');
 			return markAlias(result.FunctionName, lambda, result.Version, options.version);
 		}
-	}).then(updateWebApi).then(cleanup);
+	})
+	.then(updateWebApi)
+	.then(cleanup);
 };
 module.exports.doc = {
 	description: 'Deploy a new version of the Lambda function using project files, update any associated web APIs',

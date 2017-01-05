@@ -42,7 +42,7 @@ module.exports = function create(options, optionalLogger) {
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
 		),
 		policyFiles = function () {
-			var files = fsUtil.recursiveList(options.policies);
+			let files = fsUtil.recursiveList(options.policies);
 			if (fsUtil.isDir(options.policies)) {
 				files = files.map(filePath => path.join(options.policies, filePath));
 			}

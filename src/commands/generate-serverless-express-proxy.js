@@ -1,26 +1,24 @@
 /*global module, require, Promise, process */
-var path = require('path'),
+const path = require('path'),
 	fs = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),
 	NullLogger = require('../util/null-logger'),
 	runNpm = require('../util/run-npm');
 module.exports = function generateServerlessExpressProxy(options, optionalLogger) {
 	'use strict';
-	var source = (options && options.source) || process.cwd(),
+	const source = (options && options.source) || process.cwd(),
 		logger = optionalLogger || new NullLogger(),
 		serverlessModule = (options && options['aws-serverless-express-module']) || 'aws-serverless-express',
 		proxyModuleName = (options && options['proxy-module-name']) || 'lambda',
-		proxyModulePath = path.join(source, proxyModuleName + '.js'),
+		proxyModulePath = path.join(source, `${proxyModuleName}.js`),
 		expressModule = options && options['express-module'],
-		installDependencies = function (targetDir) {
-			return runNpm(targetDir, 'install ' + serverlessModule + ' -S', logger);
-		};
+		installDependencies = targetDir => runNpm(targetDir, `install ${serverlessModule} -S`, logger);
 
 	if (!expressModule) {
 		return Promise.reject('please specify express app module with --express-module');
 	}
 	if (!fsUtil.fileExists(path.join(source, expressModule + '.js'))) {
-		return Promise.reject('the target directory does not contain ' + expressModule + '.js');
+		return Promise.reject(`the target directory does not contain ${expressModule}.js`);
 	}
 	if (!fsUtil.fileExists(path.join(source, 'package.json'))) {
 		return Promise.reject('the target directory is not a node.js project');
@@ -31,19 +29,17 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 	if (proxyModuleName.indexOf('/') >= 0) {
 		return Promise.reject(proxyModuleName + '.js cannot be in a subdirectory');
 	}
-	return installDependencies(source).then(function () {
-		var contents = ['\'use strict\'',
+	return installDependencies(source).then(() => {
+		const contents = [`'use strict'`,
 			'const awsServerlessExpress = require(\'aws-serverless-express\')',
-			'const app = require(\'./' + expressModule + '\')',
+			`const app = require('./${expressModule}')`,
 			'const server = awsServerlessExpress.createServer(app)',
 			'exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)'].join('\n');
 
 		return fs.writeFileAsync(proxyModulePath, contents, 'utf8');
-	}).then(function () {
-		return {
-			'lambda-handler': proxyModuleName + '.handler'
-		};
-	});
+	}).then(() => ({
+		'lambda-handler': proxyModuleName + '.handler'
+	}));
 };
 module.exports.doc = {
 	description: 'Create a lambda proxy API wrapper for an express app using aws-serverless-express',

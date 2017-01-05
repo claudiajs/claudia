@@ -1,29 +1,28 @@
 /*global module, require, Promise */
-var loadConfig = require('../util/loadconfig'),
+const loadConfig = require('../util/loadconfig'),
 	fs = require('../util/fs-promise'),
 	aws = require('aws-sdk');
 
 module.exports = function addScheduledEvent(options) {
 	'use strict';
-	var lambdaConfig,
+	let lambdaConfig,
 		lambda,
 		events,
 		eventData,
-		ruleArn,
-		initServices = function () {
+		ruleArn;
+	const initServices = function () {
 			lambda = new aws.Lambda({region: lambdaConfig.region});
 			events = new aws.CloudWatchEvents({region: lambdaConfig.region});
 		},
-		getLambda = function () {
-			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
-		},
+		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})
-				.then(function (config) {
+				.then(config => {
 					lambdaConfig = config.lambda;
-				}).then(initServices)
+				})
+				.then(initServices)
 				.then(getLambda)
-				.then(function (result) {
+				.then(result => {
 					lambdaConfig.arn = result.FunctionArn;
 					lambdaConfig.version = result.Version;
 				});
@@ -35,7 +34,7 @@ module.exports = function addScheduledEvent(options) {
 				Principal: 'events.amazonaws.com',
 				SourceArn: ruleArn,
 				Qualifier: options.version,
-				StatementId: options.name  + '-access-' + Date.now()
+				StatementId: `${options.name}-access-${Date.now()}`
 			}).promise();
 		},
 		createRule = function () {
@@ -50,17 +49,17 @@ module.exports = function addScheduledEvent(options) {
 				Targets: [
 					{
 						Arn: lambdaConfig.arn,
-						Id: lambdaConfig.name + '-' + options.version + '-' + Date.now(),
+						Id: `${lambdaConfig.name}-${options.version}-${Date.now()}`,
 						Input: eventData
 					}
 				]
 			}).promise();
 		};
 	if (options.rate) {
-		options.schedule = 'rate(' + options.rate + ')';
+		options.schedule = `rate(${options.rate})`;
 	}
 	if (options.cron) {
-		options.schedule = 'cron(' + options.cron + ')';
+		options.schedule = `cron(${options.cron})`;
 	}
 	if (!options.event) {
 		return Promise.reject('event file not specified. please provide it with --event');
@@ -72,13 +71,15 @@ module.exports = function addScheduledEvent(options) {
 		return Promise.reject('event schedule not specified. please provide it with --schedule');
 	}
 	return fs.readFileAsync(options.event, 'utf8')
-		.then(function (contents) {
+		.then(contents => {
 			eventData = contents;
-		}).then(readConfig)
+		})
+		.then(readConfig)
 		.then(createRule)
-		.then(function (eventResult) {
+		.then(eventResult => {
 			ruleArn = eventResult.RuleArn;
-		}).then(addInvokePermission)
+		})
+		.then(addInvokePermission)
 		.then(addRuleTarget);
 };
 
