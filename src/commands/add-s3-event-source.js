@@ -70,7 +70,8 @@ module.exports = function addS3EventSource(options) {
 			}
 			return s3.getBucketNotificationConfiguration({
 				Bucket: options.bucket
-			}).promise().then(currentConfig => {
+			}).promise()
+			.then(currentConfig => {
 				const merged = currentConfig || {};
 				if (!merged.LambdaFunctionConfigurations) {
 					merged.LambdaFunctionConfigurations = [];

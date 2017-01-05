@@ -13,7 +13,8 @@ module.exports = function testLambda(options) {
 		}
 	};
 
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
+	return loadConfig(options, {lambda: {name: true, region: true}})
+	.then(config => {
 		lambdaConfig = config.lambda;
 	})
 	.then(getPayload)

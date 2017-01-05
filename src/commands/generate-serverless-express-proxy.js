@@ -29,7 +29,8 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 	if (proxyModuleName.indexOf('/') >= 0) {
 		return Promise.reject(proxyModuleName + '.js cannot be in a subdirectory');
 	}
-	return installDependencies(source).then(() => {
+	return installDependencies(source)
+	.then(() => {
 		const contents = [`'use strict'`,
 			'const awsServerlessExpress = require(\'aws-serverless-express\')',
 			`const app = require('./${expressModule}')`,
@@ -37,7 +38,8 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 			'exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)'].join('\n');
 
 		return fs.writeFileAsync(proxyModulePath, contents, 'utf8');
-	}).then(() => ({
+	})
+	.then(() => ({
 		'lambda-handler': proxyModuleName + '.handler'
 	}));
 };

@@ -118,7 +118,8 @@ module.exports = function create(options, optionalLogger) {
 		},
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
-			return readjson(path.join(source, 'package.json')).then(jsonConfig => {
+			return readjson(path.join(source, 'package.json'))
+			.then(jsonConfig => {
 				const name = options.name || lambdaNameSanitize(jsonConfig.name),
 					description = options.description || (jsonConfig.description && jsonConfig.description.trim());
 				if (!name) {
@@ -169,7 +170,8 @@ module.exports = function create(options, optionalLogger) {
 				if (options.version) {
 					return markAlias(lambdaData.FunctionName, lambda, lambdaData.Version, options.version);
 				}
-			}).then(() =>lambdaData);
+			})
+			.then(() =>lambdaData);
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			let apiModule, apiConfig, apiModulePath;
@@ -189,14 +191,16 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
-			}).then((result) => {
+			})
+			.then((result) => {
 				lambdaMetadata.api = {
 					id: result.id,
 					module: options['api-module'],
 					url: apiGWUrl(result.id, options.region, alias)
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
-			}).then(() => {
+			})
+			.then(() => {
 				if (apiModule.postDeploy) {
 					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
@@ -215,7 +219,8 @@ module.exports = function create(options, optionalLogger) {
 						}
 					);
 				}
-			}).then(postDeployResult => {
+			})
+			.then(postDeployResult => {
 				if (postDeployResult) {
 					lambdaMetadata.api.deploy = postDeployResult;
 				}
@@ -236,13 +241,15 @@ module.exports = function create(options, optionalLogger) {
 
 			return apiGatewayPromise.createRestApiPromise({
 				name: lambdaMetadata.FunctionName
-			}).then(result => {
+			})
+			.then(result => {
 				lambdaMetadata.api = {
 					id: result.id,
 					url: apiGWUrl(result.id, options.region, alias)
 				};
 				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
-			}).then(() => lambdaMetadata);
+			})
+			.then(() => lambdaMetadata);
 		},
 		saveConfig = function (lambdaMetaData) {
 			const config = {
@@ -260,7 +267,8 @@ module.exports = function create(options, optionalLogger) {
 				configFile,
 				JSON.stringify(config, null, 2),
 				'utf8'
-			).then(() => lambdaMetaData);
+			)
+			.then(() => lambdaMetaData);
 		},
 		formatResult = function (lambdaMetaData) {
 			const config = {
@@ -351,7 +359,8 @@ module.exports = function create(options, optionalLogger) {
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return getPackageInfo().then(packageInfo => {
+	return getPackageInfo()
+	.then(packageInfo => {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	})

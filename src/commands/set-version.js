@@ -15,7 +15,8 @@ module.exports = function setVersion(options, optionalLogger) {
 	let lambdaConfig, lambda, apiGateway, apiConfig;
 	const logger = optionalLogger || new NullLogger(),
 		updateApi = function () {
-			return getOwnerId(optionalLogger).then(ownerId => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region))
+			return getOwnerId(optionalLogger)
+			.then(ownerId => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region))
 			.then(() => apiGateway.createDeploymentPromise({
 				restApiId: apiConfig.id,
 				stageName: options.version,
@@ -34,7 +35,8 @@ module.exports = function setVersion(options, optionalLogger) {
 		return Promise.reject(e);
 	}
 	logger.logStage('loading config');
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
+	return loadConfig(options, {lambda: {name: true, region: true}})
+	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
@@ -45,13 +47,16 @@ module.exports = function setVersion(options, optionalLogger) {
 			),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
 		);
-	}).then(() => {
+	})
+	.then(() => {
 		logger.logStage('updating configuration');
 		return updateEnvVars(options, lambda, lambdaConfig.name);
-	}).then(() => {
+	})
+	.then(() => {
 		logger.logStage('updating versions');
 		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
-	}).then(versionResult => markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version))
+	})
+	.then(versionResult => markAlias(lambdaConfig.name, lambda, versionResult.Version, options.version))
 	.then(() => {
 		if (apiConfig && apiConfig.id) {
 			return updateApi();

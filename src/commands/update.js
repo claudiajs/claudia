@@ -114,7 +114,8 @@ module.exports = function update(options, optionalLogger) {
 
 
 	logger.logStage('loading Lambda config');
-	return loadConfig(options, {lambda: {name: true, region: true}}).then(config => {
+	return loadConfig(options, {lambda: {name: true, region: true}})
+	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
