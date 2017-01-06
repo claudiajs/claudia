@@ -7,10 +7,9 @@ module.exports = function addPolicy(policyName, roleName, fileName) {
 	const iam = new aws.IAM();
 	fileName = fileName || path.join(__dirname, '..', '..', 'json-templates', policyName + '.json');
 	return fs.readFileAsync(fileName, 'utf8')
-	.then(policyContents => iam.putRolePolicy({
+		.then(policyContents => iam.putRolePolicy({
 			RoleName: roleName,
 			PolicyName: policyName,
 			PolicyDocument: policyContents
-		}).promise();
-	);
+		}).promise());
 };
