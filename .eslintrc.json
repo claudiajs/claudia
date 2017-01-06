@@ -10,6 +10,7 @@
   "rules": {
     "semi": ["error", "always"],
     "indent": ["error", "tab" ],
+    "no-const-assign": "error",
     "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
     "quotes": ["error", "single", {"avoidEscape": true, "allowTemplateLiterals": true}]
   }
