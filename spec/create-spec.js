@@ -461,12 +461,12 @@ describe('create', function () {
 				expect(lambdaResult.Runtime).toEqual('nodejs4.3');
 			}).then(done, done.fail);
 		});
-		it('can create legacy 0.10 deployments using the --runtime argument', function (done) {
-			config.runtime = 'nodejs';
+		it('can create nodejs4.3-edge deployments using the --runtime argument', function (done) {
+			config.runtime = 'nodejs4.3-edge';
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
 			.then(function (lambdaResult) {
-				expect(lambdaResult.Runtime).toEqual('nodejs');
+				expect(lambdaResult.Runtime).toEqual('nodejs4.3-edge');
 			}).then(done, done.fail);
 		});
 	});
