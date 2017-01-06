@@ -150,7 +150,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			})
 			.then(() => {
-				const responseParams = null;
+				let responseParams = null;
 				if (!apiConfig.corsHandlers) {
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': false,
@@ -172,7 +172,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				});
 			})
 			.then(() => {
-				const responseParams = null;
+				let responseParams = null;
 
 				if (!apiConfig.corsHandlers) {
 					responseParams = {

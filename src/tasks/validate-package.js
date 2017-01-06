@@ -4,10 +4,10 @@ const path = require('path'),
 	validCredentials = require('../util/valid-credentials');
 module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 	'use strict';
-	const handlerComponents = functionHandler && functionHandler.split('.'),
-		apiModulePath = handlerComponents && handlerComponents[0],
-		handlerMethod = handlerComponents && handlerComponents[1];
-	let apiModule, apiConfig;
+	const handlerComponents = functionHandler && functionHandler.split('.');
+	let apiModulePath = handlerComponents && handlerComponents[0],
+		handlerMethod = handlerComponents && handlerComponents[1],
+		apiModule, apiConfig;
 	if (restApiModule) {
 		apiModulePath = restApiModule;
 		handlerMethod = 'proxyRouter';
