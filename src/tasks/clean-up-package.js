@@ -1,11 +1,11 @@
 /*global module, require, Promise */
-var path = require('path'),
+const path = require('path'),
 	fsUtil = require('../util/fs-util'),
 	fsPromise = require('../util/fs-promise'),
 	runNpm = require('../util/run-npm');
 module.exports = function cleanUpPackage(packageDir, options, logger) {
 	'use strict';
-	var cleanUpDependencies = function () {
+	const cleanUpDependencies = function () {
 			if (options['optional-dependencies'] === false) {
 				logger.logApiCall('removing optional dependencies');
 				fsUtil.rmDir(path.join(packageDir, 'node_modules'));
@@ -15,12 +15,12 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 			}
 		},
 		removeNpmrc = function () {
-			var npmrc = path.join(packageDir, '.npmrc');
+			const npmrc = path.join(packageDir, '.npmrc');
 			if (fsUtil.fileExists(npmrc)) {
 				return fsPromise.unlinkAsync(npmrc);
 			}
 		};
-	return cleanUpDependencies().then(removeNpmrc).then(function () {
-		return packageDir;
-	});
+	return cleanUpDependencies()
+	.then(removeNpmrc)
+	.then(() => packageDir);
 };

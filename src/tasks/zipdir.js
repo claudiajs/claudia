@@ -1,20 +1,20 @@
 /*global module, require, Promise */
-var fsUtil = require('../util/fs-util'),
+const fsUtil = require('../util/fs-util'),
 	tmppath = require('../util/tmppath'),
 	archiver = require('archiver'),
 	fs = require('fs');
 module.exports = function zipdir(path) {
 	'use strict';
-	var targetFile = tmppath('.zip');
+	const targetFile = tmppath('.zip');
 	if (!fsUtil.fileExists(path)) {
 		return Promise.reject(path + ' does not exist');
 	} else if (!fsUtil.isDir(path)) {
 		return Promise.reject(path + ' is not a directory');
 	}
 	return new Promise(function (resolve, reject) {
-		var archive = archiver.create('zip', {}),
+		const archive = archiver.create('zip', {}),
 			zipStream = fs.createWriteStream(targetFile);
-		zipStream.on('close', function () {
+		zipStream.on('close', () => {
 			fsUtil.rmDir(path);
 			resolve(targetFile);
 		});
@@ -25,9 +25,7 @@ module.exports = function zipdir(path) {
 			dot: true,
 			cwd: path
 		}]);
-		archive.on('error', function (e) {
-			reject(e);
-		});
+		archive.on('error', e => reject(e));
 		archive.finalize();
 	});
 };

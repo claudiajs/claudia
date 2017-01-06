@@ -1,5 +1,5 @@
 /*global module, require, Promise */
-var tmppath = require('../util/tmppath'),
+const tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),
 	fsUtil = require('../util/fs-util'),
@@ -13,7 +13,7 @@ var tmppath = require('../util/tmppath'),
 
 module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
 	'use strict';
-	var logger = optionalLogger || new NullLogger(),
+	const logger = optionalLogger || new NullLogger(),
 		checkPreconditions = function () {
 			if (!sourcePath) {
 				return 'source directory not provided';
@@ -29,23 +29,22 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			}
 		},
 		extractTarGz = function (archive, dir) {
-			return new Promise(function (resolve, reject) {
-				var extractStream = tarStream.extract(dir);
+			return new Promise((resolve, reject) => {
+				const extractStream = tarStream.extract(dir);
 				extractStream.on('finish', resolve);
 				extractStream.on('error', reject);
 				fs.createReadStream(archive).pipe(gunzip()).pipe(extractStream);
 			});
 		},
 		copyFiles = function (packageConfig) {
-			var packDir = tmppath(),
+			const packDir = tmppath(),
 				targetDir = tmppath(),
 				expectedName = expectedArchiveName(packageConfig);
 			fsUtil.ensureCleanDir(packDir);
-			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger).then(function () {
-				return extractTarGz(path.join(packDir, expectedName), packDir);
-			}).then(function () {
-				return fs.renameAsync(path.join(packDir, 'package'), targetDir);
-			}).then(function () {
+			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger)
+			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
+			.then(() => fs.renameAsync(path.join(packDir, 'package'), targetDir))
+			.then(() => {
 				fsUtil.rmDir(packDir);
 				return targetDir;
 			});
@@ -59,17 +58,16 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			}
 		},
 		rewireRelativeDependencies = function (targetDir) {
-			return localizeDependencies(targetDir, sourcePath).then(function () {
-				return targetDir;
-			});
+			return localizeDependencies(targetDir, sourcePath)
+			.then(() => targetDir);
 		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
 		return Promise.reject(validationError);
 	}
-	return readjson(path.join(sourcePath, 'package.json')).
-		then(copyFiles).
-		then(rewireRelativeDependencies).
-		then(installDependencies);
+	return readjson(path.join(sourcePath, 'package.json'))
+	.then(copyFiles)
+	.then(rewireRelativeDependencies)
+	.then(installDependencies);
 };

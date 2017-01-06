@@ -1,9 +1,9 @@
 /*global module */
-var extractPathParams = function (string) {
+const extractPathParams = function (string) {
 	'use strict';
-	var paramRegex = /\{([^+}]+)\+?\}/g,
-		results = [],
-		match;
+	let match;
+	const paramRegex = /\{([^+}]+)\+?\}/g,
+		results = [];
 	while ((match = paramRegex.exec(string)) !== null) {
 		results.push(match[1]);
 	}
@@ -11,16 +11,16 @@ var extractPathParams = function (string) {
 };
 module.exports = function flattenRequestParameters(paramMap, resourcePath) {
 	'use strict';
-	var result = {},
+	const result = {},
 		pathParams = extractPathParams(resourcePath);
 	if (!paramMap && !pathParams.length) {
 		return paramMap;
 	}
 	if (paramMap) {
-		Object.keys(paramMap).forEach(function (key) {
+		Object.keys(paramMap).forEach(key => {
 			if (typeof paramMap[key] === 'object') {
-				Object.keys(paramMap[key]).forEach(function (subkey) {
-					result['method.request.' + key + '.' + subkey] = paramMap[key][subkey];
+				Object.keys(paramMap[key]).forEach(subkey => {
+					result[`method.request.${key}.${subkey}`] = paramMap[key][subkey];
 				});
 			} else {
 				result[key] = paramMap[key];
@@ -28,7 +28,7 @@ module.exports = function flattenRequestParameters(paramMap, resourcePath) {
 		});
 	}
 	pathParams.forEach(function (param) {
-		result['method.request.path.' + param] = true;
+		result[`method.request.path.${param}`] = true;
 	});
 	return result;
 };

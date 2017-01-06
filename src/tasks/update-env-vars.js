@@ -1,11 +1,11 @@
 /*global module, Promise, require */
-var readEnvVarsFromOptions = require('../util/read-env-vars-from-options');
+const readEnvVarsFromOptions = require('../util/read-env-vars-from-options');
 module.exports = function updateEnvVars(options, lambdaAPI, functionName) {
 	'use strict';
-	var kmsKey = options['env-kms-key-arn'],
+	const kmsKey = options['env-kms-key-arn'],
 		envVars = readEnvVarsFromOptions(options),
-		configUpdate = {},
-		shouldUpdate = false;
+		configUpdate = {};
+	let shouldUpdate = false;
 	if (envVars) {
 		shouldUpdate = true;
 		configUpdate.Environment = envVars;
