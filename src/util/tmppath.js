@@ -1,12 +1,12 @@
 /*global require, module */
-var os = require('os'),
+const os = require('os'),
 	uuid = require('uuid'),
 	path = require('path'),
 	fsUtil = require('./fs-util');
 
 module.exports = function tmppath(ext, generator) {
 	'use strict';
-	var result;
+	let result;
 	generator = generator || uuid.v4;
 	ext = ext || '';
 	while (!result || fsUtil.fileExists(result))  {

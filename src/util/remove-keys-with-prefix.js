@@ -1,11 +1,11 @@
 /*global module */
 module.exports = function removeKeysWithPrefix(object, prefix) {
 	'use strict';
-	var result = {};
+	const result = {};
 	if (typeof object !== 'object') {
 		return object;
 	}
-	Object.keys(object).forEach(function (key) {
+	Object.keys(object).forEach(key => {
 		if (key.indexOf(prefix) !== 0) {
 			result[key] = object[key];
 		}

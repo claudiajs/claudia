@@ -1,11 +1,11 @@
 /*global module, require */
-var listWrappableFunctions = require('./list-wrappable-functions');
+const listWrappableFunctions = require('./list-wrappable-functions');
 module.exports = function loggingWrap(apiObject, options) {
 	'use strict';
-	var logPrefix = (options && options.logName && (options.logName + '.')) || '',
+	const logPrefix = (options && options.logName && (options.logName + '.')) || '',
 		magic = '__LOGGING_WRAP__',
 		remapKey = function (key) {
-			var oldFunc;
+			let oldFunc;
 			if (!apiObject[key][magic]) {
 				oldFunc = apiObject[key];
 				apiObject[key] = function () {
@@ -16,7 +16,6 @@ module.exports = function loggingWrap(apiObject, options) {
 				apiObject[key][magic] = magic;
 			}
 		};
-
 
 	if (!options || !options.log) {
 		return apiObject;

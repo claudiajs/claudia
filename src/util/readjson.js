@@ -1,5 +1,5 @@
 /*global module, require, Promise*/
-var fs = require('./fs-promise'),
+const fs = require('./fs-promise'),
 	fsUtil = require('./fs-util');
 module.exports = function readJSON(fileName) {
 	'use strict';
@@ -9,7 +9,8 @@ module.exports = function readJSON(fileName) {
 	if (!fsUtil.fileExists(fileName)) {
 		return Promise.reject(fileName + ' is missing');
 	}
-	return fs.readFileAsync(fileName, {encoding: 'utf8'}).then(function (content) {
+	return fs.readFileAsync(fileName, {encoding: 'utf8'})
+	.then(content => {
 		try {
 			return JSON.parse(content);
 		} catch (e) {
@@ -17,4 +18,3 @@ module.exports = function readJSON(fileName) {
 		}
 	});
 };
-

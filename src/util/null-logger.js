@@ -1,7 +1,6 @@
 /*global module*/
 module.exports = function NullLogger() {
 	'use strict';
-	var self = this;
-	self.logStage = function () {};
-	self.logApiCall = function () {};
+	this.logStage = function () {};
+	this.logApiCall = function () {};
 };

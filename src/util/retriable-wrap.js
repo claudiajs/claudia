@@ -1,28 +1,26 @@
 /*global module, require, Promise*/
-var retry = require('oh-no-i-insist'),
+const retry = require('oh-no-i-insist'),
 	listWrappableFunctions = require('./list-wrappable-functions');
 
 module.exports = function retriableWrap(apiObject, onRetry, timeout, retries, suffix) {
 	'use strict';
-	var rx,
-		remapKey = function (key) {
-			var oldFunc;
-			oldFunc = apiObject[key];
+	let rx;
+	const remapKey = function (key) {
+			let oldFunc = apiObject[key];
 			apiObject[key + suffix] = function () {
-				var callArgs = arguments;
+				const callArgs = arguments;
 				return retry(
-					function () {
-						var result = oldFunc.apply(apiObject, callArgs);
+					() => {
+						const result = oldFunc.apply(apiObject, callArgs);
 						if (result && result.promise && typeof result.promise === 'function') {
 							return result.promise();
 						} else {
 							return result;
 						}
 					},
-					timeout, retries,
-					function (failure) {
-						return failure.code && failure.code === 'TooManyRequestsException';
-					},
+					timeout,
+					retries,
+					failure => failure.code && failure.code === 'TooManyRequestsException',
 					onRetry,
 					Promise
 				);
@@ -41,4 +39,3 @@ module.exports = function retriableWrap(apiObject, onRetry, timeout, retries, su
 
 	return apiObject;
 };
-

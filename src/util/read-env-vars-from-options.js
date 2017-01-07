@@ -1,9 +1,9 @@
 /*global module, require */
-var parseKeyValueCSV = require('./parse-key-value-csv'),
+const parseKeyValueCSV = require('./parse-key-value-csv'),
 	fs = require('fs');
 module.exports = function readEnvVarsFromOptions(options) {
 	'use strict';
-	var envVars, fileContents;
+	let envVars, fileContents;
 	if (!options) {
 		return undefined;
 	}
@@ -30,4 +30,3 @@ module.exports = function readEnvVarsFromOptions(options) {
 		Variables: envVars
 	};
 };
-
