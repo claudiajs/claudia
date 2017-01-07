@@ -1,14 +1,13 @@
 /*global module, require, Promise */
-var childProcess = require('child_process');
+const exec = require('child_process').exec;
 module.exports = function execPromise(command, options) {
 	'use strict';
-	return new Promise(function (resolve, reject) {
-		childProcess.exec(command, options, function (err) {
+	return new Promise((resolve, reject) => {
+		exec(command, options, err => {
 			if (err) {
-				reject(err);
-			} else {
-				resolve();
+				return reject(err);
 			}
+			resolve();
 		});
 	});
 };

@@ -1,23 +1,19 @@
 /*global module */
 module.exports.commandDoc = function (command) {
 	'use strict';
-	var lines = [],
+	const lines = [],
 		indent = function (s, indent) {
-			var result = [],
+			const result = [],
 				filler = new Array(indent + 1).join(' ');
 			if (Array.isArray(s)) {
-				s.forEach(function (line) {
-					result.push(filler + line.trim());
-				});
+				s.forEach(line => result.push(filler + line.trim()));
 			} else {
 				result.push(filler + s);
 			}
 			return result;
 		},
 		pushLines = function (arr) {
-			arr.forEach(function (line) {
-				lines.push(line);
-			});
+			arr.forEach(line => lines.push(line));
 		};
 
 	lines.push('usage: claudia ' + command.command + ' {OPTIONS}');
@@ -27,8 +23,9 @@ module.exports.commandDoc = function (command) {
 	lines.push('');
 	lines.push('OPTIONS are:');
 	lines.push('');
-	command.doc.args.forEach(function (argDoc) {
-		var components = [], descLines;
+	command.doc.args.forEach(argDoc => {
+		const components = [],
+			descLines = argDoc.description.split('\n');
 		components.push('  --' + argDoc.argument);
 		if (argDoc.argument.length < 12) {
 			components.push(new Array(12 - argDoc.argument.length).join(' '));
@@ -36,7 +33,6 @@ module.exports.commandDoc = function (command) {
 		if (argDoc.optional) {
 			components.push('[OPTIONAL]');
 		}
-		descLines = argDoc.description.split('\n');
 		components.push(descLines.shift());
 		lines.push(components.join(' '));
 		if (descLines.length) {
@@ -54,25 +50,24 @@ module.exports.commandDoc = function (command) {
 };
 module.exports.index = function (commands) {
 	'use strict';
-	var lines = [];
+	const lines = [];
 	lines.push('usage: claudia [command] {OPTIONS}');
 	lines.push('');
 	lines.push('Deploy a Node.JS project to AWS as a lambda microservice, optionally updating APIs/event hooks.');
 	lines.push('');
 	lines.push('COMMANDS are:');
 	lines.push('');
-	Object.keys(commands).map(function (key) {
-		return commands[key];
-	}).sort(function (cmd1, cmd2) {
-		return cmd1.doc.priority - cmd2.doc.priority;
-	}).forEach(function (command) {
-		var components = [], descLines;
+	Object.keys(commands)
+	.map(key => commands[key])
+	.sort((cmd1, cmd2) => cmd1.doc.priority - cmd2.doc.priority)
+	.forEach(command => {
+		const components = [],
+			descLines = command.doc.description.split('\n');
 		components.push(' ');
 		components.push(command.command);
 		if (command.command.length < 20) {
 			components.push(new Array(20 - command.command.length).join(' '));
 		}
-		descLines = command.doc.description.split('\n');
 		components.push(descLines.shift());
 		lines.push(components.join(' '));
 	});

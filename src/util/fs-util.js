@@ -1,5 +1,5 @@
 /*global require, exports */
-var shell = require('shelljs');
+const shell = require('shelljs');
 exports.ensureCleanDir = function (dirPath) {
 	'use strict';
 	shell.rm('-rf', dirPath);

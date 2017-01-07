@@ -1,27 +1,23 @@
 /*global require, __dirname */
-var fs = require('fs'),
+const fs = require('fs'),
 	path = require('path'),
 	fsUtil = require('./fs-util'),
 	readCommands = require('./read-commands'),
 	commandDoc = function (command) {
 		'use strict';
-		var lines = [],
+		const lines = [],
 			indent = function (s, indent) {
-				var result = [],
+				const result = [],
 					filler = new Array(indent + 1).join(' ');
 				if (Array.isArray(s)) {
-					s.forEach(function (line) {
-						result.push(filler + line.trim());
-					});
+					s.forEach(line =>  result.push(filler + line.trim()));
 				} else {
 					result.push(filler + s);
 				}
 				return result;
 			},
 			pushLines = function (arr) {
-				arr.forEach(function (line) {
-					lines.push(line);
-				});
+				arr.forEach(line => lines.push(line));
 			};
 		lines.push('#' + command.command);
 		lines.push('');
@@ -35,13 +31,13 @@ var fs = require('fs'),
 		lines.push('');
 		lines.push('## Options');
 		lines.push('');
-		command.doc.args.forEach(function (argDoc) {
-			var components = [], descLines;
+		command.doc.args.forEach(argDoc => {
+			const components = [],
+				descLines = argDoc.description.split('\n');;
 			components.push('*  `--' + argDoc.argument + '`: ');
 			if (argDoc.optional) {
 				components.push('_optional_');
 			}
-			descLines = argDoc.description.split('\n');
 			components.push(descLines.shift());
 			lines.push(components.join(' '));
 			if (descLines.length) {
@@ -59,7 +55,7 @@ var fs = require('fs'),
 	},
 	index = function (commands) {
 		'use strict';
-		var lines = [];
+		const lines = [];
 		lines.push('# Claudia.js command line usage');
 		lines.push('');
 		lines.push('Deploy a Node.JS project to AWS as a lambda microservice, optionally updating APIs/event hooks.');
@@ -71,18 +67,17 @@ var fs = require('fs'),
 		lines.push('');
 		lines.push('## Supported commands');
 		lines.push('');
-		Object.keys(commands).map(function (key) {
-			return commands[key];
-		}).sort(function (cmd1, cmd2) {
-			return cmd1.doc.priority - cmd2.doc.priority;
-		}).forEach(function (command) {
-			var components = [], descLines;
+		Object.keys(commands)
+		.map(key => commands[key])
+		.sort((cmd1, cmd2) => cmd1.doc.priority - cmd2.doc.priority)
+		.forEach(command => {
+			const components = [],
+				descLines = command.doc.description.split('\n');
 			components.push('* [`');
 			components.push(command.command);
 			components.push('`](');
 			components.push(command.command);
 			components.push('.md) ');
-			descLines = command.doc.description.split('\n');
 			components.push(descLines.shift());
 			lines.push(components.join(''));
 		});
@@ -104,12 +99,12 @@ var fs = require('fs'),
 	},
 	main = function () {
 		'use strict';
-		var docsDir = path.join(__dirname, '../../docs'),
+		const docsDir = path.join(__dirname, '../../docs'),
 			commands = readCommands();
 		fsUtil.ensureCleanDir(docsDir);
 		fs.writeFileSync(path.join(docsDir, 'README.md'), index(commands), 'utf8');
-		Object.keys(commands).map(function (key) {
-			var command = commands[key];
+		Object.keys(commands).map(key => {
+			const command = commands[key];
 			fs.writeFileSync(path.join(docsDir, command.command + '.md'), commandDoc(command), 'utf8');
 		});
 	};

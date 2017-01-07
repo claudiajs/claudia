@@ -1,11 +1,11 @@
 /*global require, module, Promise */
-var fs = require('fs'),
+const fs = require('fs'),
 	promisify = function (target, methodName) {
 		'use strict';
 		target[methodName + 'Async'] = function () {
-			var originalArgs = Array.prototype.slice.call(arguments);
-			return new Promise(function (resolve, reject) {
-				var cb = function (err, data) {
+			const originalArgs = Array.prototype.slice.call(arguments);
+			return new Promise((resolve, reject) => {
+				const cb = function (err, data) {
 					if (err) {
 						reject(err);
 					} else {
@@ -24,4 +24,3 @@ promisify(fs, 'unlink');
 promisify(fs, 'rename');
 
 module.exports = fs;
-

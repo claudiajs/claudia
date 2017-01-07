@@ -1,9 +1,8 @@
-/*global module */
-/*global require */
-var aws = require('aws-sdk');
+/*global module, require */
+const aws = require('aws-sdk');
 module.exports = function listWrappableFunctions(object) {
 	'use strict';
-	var excluded = ['constructor'],
+	const excluded = ['constructor'],
 		excludedPrototypes = [Array.prototype, Object.prototype, Function.prototype, aws.Service.prototype],
 		isFunction = function (key) {
 			return typeof object[key] === 'function';

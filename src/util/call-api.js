@@ -1,12 +1,12 @@
 /*global require, module, Promise */
-var retry = require('oh-no-i-insist'),
+const retry = require('oh-no-i-insist'),
 	executeCall = require('minimal-request-promise');
 
 module.exports = function callApi(apiId, region, path, options) {
 	'use strict';
-	var callOptions = {hostname: apiId + '.execute-api.' + region + '.amazonaws.com', port: 443, path: '/' + path, method: 'GET'};
+	const callOptions = {hostname: `${apiId}.execute-api.${region}.amazonaws.com`, port: 443, path: '/' + path, method: 'GET'};
 	if (options) {
-		Object.keys(options).forEach(function (key) {
+		Object.keys(options).forEach(key => {
 			callOptions[key] = options[key];
 		});
 	}
@@ -19,12 +19,6 @@ module.exports = function callApi(apiId, region, path, options) {
 	if (!callOptions.retry) {
 		return executeCall(callOptions, Promise);
 	} else {
-		return retry(function () {
-			return executeCall(callOptions, Promise);
-		}, 3000, 5, function (err) {
-			return err.statusCode === callOptions.retry;
-		}, undefined, Promise);
+		return retry(() => executeCall(callOptions, Promise), 3000, 5, err => err.statusCode === callOptions.retry, undefined, Promise);
 	}
 };
-
-

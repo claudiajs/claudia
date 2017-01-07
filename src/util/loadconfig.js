@@ -1,18 +1,18 @@
 /*global require, module, Promise, process */
-var	path = require('path'),
+const	path = require('path'),
 	readjson = require('./readjson'),
 	fsUtil = require('./fs-util');
 
 module.exports = function loadConfig(options, validate) {
 	'use strict';
-	var sourceDir = process.cwd(),
-		fileName,
-		configMissingError = function () {
-			if (options && options.config) {
-				return options.config + ' does not exist';
-			}
-			return 'claudia.json does not exist in the source folder';
-		};
+	let fileName,
+		sourceDir = process.cwd();
+	const configMissingError = function () {
+		if (options && options.config) {
+			return `${options.config} does not exist`;
+		}
+		return 'claudia.json does not exist in the source folder';
+	};
 
 	validate = validate || {};
 	if (typeof options === 'string') {
@@ -26,8 +26,9 @@ module.exports = function loadConfig(options, validate) {
 	if (!fsUtil.fileExists(fileName)) {
 		return Promise.reject(configMissingError());
 	}
-	return readjson(fileName).then(function (config) {
-		var name = config && config.lambda && config.lambda.name,
+	return readjson(fileName)
+	.then(config => {
+		const name = config && config.lambda && config.lambda.name,
 			region = config && config.lambda && config.lambda.region,
 			role = config && config.lambda && config.lambda.role;
 		if (validate.lambda && validate.lambda.name && !name) {
