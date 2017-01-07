@@ -33,7 +33,7 @@ const fs = require('fs'),
 		lines.push('');
 		command.doc.args.forEach(argDoc => {
 			const components = [],
-				descLines = argDoc.description.split('\n');;
+				descLines = argDoc.description.split('\n');
 			components.push('*  `--' + argDoc.argument + '`: ');
 			if (argDoc.optional) {
 				components.push('_optional_');
