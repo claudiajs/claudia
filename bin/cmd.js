@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-/* global process, __dirname, require, console */
-var minimist = require('minimist'),
+const minimist = require('minimist'),
 	shell = require('shelljs'),
 	path = require('path'),
 	readCommands = require('../src/util/read-commands'),
@@ -18,7 +17,7 @@ var minimist = require('minimist'),
 	},
 	main = function () {
 		'use strict';
-		var args = readArgs(),
+		const args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0],
 			logger = (!args.quiet) && new ConsoleLogger();
@@ -27,7 +26,7 @@ var minimist = require('minimist'),
 			return;
 		}
 		if (command && !commands[command]) {
-			console.error('unsupported command ' + command + '. re-run with --help for usage information');
+			console.error(`unsupported command ${command}. re-run with --help for usage information`);
 			process.exit(1);
 			return;
 		}
@@ -39,7 +38,6 @@ var minimist = require('minimist'),
 			}
 			return;
 		}
-
 		if (!command) {
 			console.error('command not provided. re-run with --help for usage information');
 			process.exit(1);
@@ -51,12 +49,12 @@ var minimist = require('minimist'),
 		if (args['aws-client-timeout']) {
 			AWS.config.httpOptions = { timeout: args['aws-client-timeout'] };
 		}
-		commands[command](args, logger).then(function (result) {
+		commands[command](args, logger).then(result => {
 			if (result) {
 				console.log(JSON.stringify(result, null, 2));
 			}
 			process.exit();
-		}, function (e) {
+		}, e => {
 			console.error(e);
 			process.exit(1);
 		});
