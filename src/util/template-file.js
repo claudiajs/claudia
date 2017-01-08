@@ -1,4 +1,3 @@
-/*global module, require, __dirname*/
 const path = require('path');
 module.exports = function templateFile(fileName) {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global module, __dirname, require */
 const path = require('path'),
 	fs = require('../util/fs-promise'),
 	aws = require('aws-sdk');

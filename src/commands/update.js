@@ -1,4 +1,3 @@
-/*global module, require, console, Promise, process*/
 const zipdir = require('../tasks/zipdir'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),

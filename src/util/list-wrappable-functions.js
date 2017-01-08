@@ -1,4 +1,3 @@
-/*global module, require */
 const aws = require('aws-sdk');
 module.exports = function listWrappableFunctions(object) {
 	'use strict';

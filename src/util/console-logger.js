@@ -1,4 +1,3 @@
-/*global module, console */
 module.exports = function ConsoleLogger(prefix, loggable) {
 	'use strict';
 	let writer = loggable || console,

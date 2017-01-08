@@ -1,4 +1,3 @@
-/*global require, module */
 const os = require('os'),
 	uuid = require('uuid'),
 	path = require('path'),

@@ -1,4 +1,3 @@
-/*global module, require */
 const listWrappableFunctions = require('./list-wrappable-functions');
 module.exports = function loggingWrap(apiObject, options) {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global module, require, Promise */
 const aws = require('aws-sdk'),
 	iam = new aws.IAM();
 module.exports = function destroyRole(roleName) {

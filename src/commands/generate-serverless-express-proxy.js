@@ -1,4 +1,3 @@
-/*global module, require, Promise, process */
 const path = require('path'),
 	fs = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),

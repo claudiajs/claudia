@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function validCredentials(creds) {
 	'use strict';
 	const credsRegex = /^arn:aws:(iam|sts)::(\*|\d{12})?:/;

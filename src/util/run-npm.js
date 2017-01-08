@@ -1,4 +1,3 @@
-/*global module, require, Promise, process */
 const removeKeysWithPrefix = require('./remove-keys-with-prefix'),
 	execPromise = require('./exec-promise'),
 	fsUtil = require('./fs-util'),

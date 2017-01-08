@@ -1,4 +1,3 @@
-/*global module, require, Promise*/
 const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	allowApiInvocation = require('../tasks/allow-api-invocation'),

@@ -1,4 +1,3 @@
-/*global module, require, Promise */
 const fsUtil = require('../util/fs-util'),
 	tmppath = require('../util/tmppath'),
 	archiver = require('archiver'),

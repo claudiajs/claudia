@@ -1,4 +1,3 @@
-/*global module, require, Promise */
 const exec = require('child_process').exec;
 module.exports = function execPromise(command, options) {
 	'use strict';

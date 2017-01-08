@@ -1,4 +1,3 @@
-/*global module, require, Promise */
 const tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),

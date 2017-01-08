@@ -1,4 +1,3 @@
-/*global module, require, __dirname, Promise */
 const loadConfig = require('../util/loadconfig'),
 	readJSON = require('../util/readjson'),
 	path = require('path'),

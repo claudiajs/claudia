@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function parseKeyValueCSV(string) {
 	'use strict';
 	const result = {};

@@ -1,4 +1,3 @@
-/*global require, __dirname */
 const fs = require('fs'),
 	path = require('path'),
 	fsUtil = require('./fs-util'),

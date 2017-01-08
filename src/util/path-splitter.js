@@ -1,4 +1,3 @@
-/*global module, require */
 const path = require('path');
 module.exports = function pathSplitter(pathString) {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global module */
 module.exports.commandDoc = function (command) {
 	'use strict';
 	const lines = [],

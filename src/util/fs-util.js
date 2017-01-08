@@ -1,4 +1,3 @@
-/*global require, exports */
 const shell = require('shelljs');
 exports.ensureCleanDir = function (dirPath) {
 	'use strict';

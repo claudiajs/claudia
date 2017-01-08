@@ -1,4 +1,3 @@
-/*global require, module */
 const	path = require('path'),
 	fs = require('../util/fs-promise'),
 	loggingWrap = require('../util/logging-wrap'),

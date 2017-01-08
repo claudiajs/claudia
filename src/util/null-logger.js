@@ -1,4 +1,3 @@
-/*global module*/
 module.exports = function NullLogger() {
 	'use strict';
 	this.logStage = function () {};

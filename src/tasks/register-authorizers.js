@@ -1,4 +1,3 @@
-/*global module, require, Promise */
 const aws = require('aws-sdk'),
 	loggingWrap = require('../util/logging-wrap'),
 	retriableWrap = require('../util/retriable-wrap'),

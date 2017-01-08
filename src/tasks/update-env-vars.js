@@ -1,4 +1,3 @@
-/*global module, Promise, require */
 const readEnvVarsFromOptions = require('../util/read-env-vars-from-options');
 module.exports = function updateEnvVars(options, lambdaAPI, functionName) {
 	'use strict';

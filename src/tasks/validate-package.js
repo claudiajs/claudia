@@ -1,4 +1,3 @@
-/*global module, require, console */
 const path = require('path'),
 	validAuthType = require('../util/valid-auth-type'),
 	validCredentials = require('../util/valid-credentials');

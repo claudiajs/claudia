@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function validAuthType(type) {
 	'use strict';
 	const authTypes = ['AWS_IAM', 'NONE', 'CUSTOM'];

@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function ArrayLogger() {
 	'use strict';
 	const combinedLog = [],

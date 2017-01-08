@@ -1,4 +1,3 @@
-/*global module, __dirname, require */
 const path = require('path'),
 	fs = require('fs');
 module.exports = function readCommands() {

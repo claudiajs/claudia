@@ -1,4 +1,3 @@
-/*global require, module, Promise*/
 const aws = require('aws-sdk');
 module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion, path) {
 	'use strict';

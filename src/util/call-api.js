@@ -1,4 +1,3 @@
-/*global require, module, Promise */
 const retry = require('oh-no-i-insist'),
 	executeCall = require('minimal-request-promise');
 

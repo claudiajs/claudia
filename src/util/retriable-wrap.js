@@ -1,4 +1,3 @@
-/*global module, require, Promise*/
 const retry = require('oh-no-i-insist'),
 	listWrappableFunctions = require('./list-wrappable-functions');
 

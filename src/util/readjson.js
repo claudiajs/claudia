@@ -1,4 +1,3 @@
-/*global module, require, Promise*/
 const fs = require('./fs-promise'),
 	fsUtil = require('./fs-util');
 module.exports = function readJSON(fileName) {

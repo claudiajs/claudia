@@ -1,4 +1,3 @@
-/*global module, Promise */
 module.exports = function sequentialPromiseMap(array, generator) {
 	'use strict';
 	const results = [],

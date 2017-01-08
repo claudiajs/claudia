@@ -1,4 +1,3 @@
-/*global module, require*/
 const crypto = require('crypto');
 /* returns a sha hash of an object, transformed to be safe for an API gateway stage variable */
 module.exports = function safeHash(object) {

@@ -1,4 +1,3 @@
-/*global module */
 const extractPathParams = function (string) {
 	'use strict';
 	let match;

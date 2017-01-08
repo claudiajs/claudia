@@ -1,4 +1,3 @@
-/*global require, module, Promise */
 const fs = require('fs'),
 	promisify = function (target, methodName) {
 		'use strict';

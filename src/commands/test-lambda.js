@@ -1,4 +1,3 @@
-/*global module, require, Promise*/
 const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
 	fs = require('../util/fs-promise');

@@ -1,4 +1,3 @@
-/*global require, module, Promise, process */
 const	path = require('path'),
 	readjson = require('./readjson'),
 	fsUtil = require('./fs-util');

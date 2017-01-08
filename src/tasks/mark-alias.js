@@ -1,4 +1,3 @@
-/*global module, Promise*/
 module.exports = function markAlias(functionName, lambda, versionName, versionAlias) {
 	'use strict';
 	const config = {

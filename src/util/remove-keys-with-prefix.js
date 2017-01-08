@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function removeKeysWithPrefix(object, prefix) {
 	'use strict';
 	const result = {};
