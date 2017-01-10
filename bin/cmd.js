@@ -57,7 +57,7 @@ var minimist = require('minimist'),
 			}
 			process.exit();
 		}, function (e) {
-			console.error(e);
+			console.error(e.stack);
 			process.exit(1);
 		});
 	};
