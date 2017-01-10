@@ -1,10 +1,10 @@
 /*global jasmine*/
+'use strict';
 const Jasmine = require('jasmine'),
 	SpecReporter = require('jasmine-spec-reporter'),
 	jrunner = new Jasmine();
 let filter;
 process.argv.slice(2).forEach(option => {
-	'use strict';
 	if (option === 'full') {
 		jasmine.getEnv().clearReporters();
 		jasmine.getEnv().addReporter(new SpecReporter({
