@@ -1,9 +1,9 @@
-/*global jasmine, require, process*/
-var Jasmine = require('jasmine'),
+/*global jasmine*/
+const Jasmine = require('jasmine'),
 	SpecReporter = require('jasmine-spec-reporter'),
-	jrunner = new Jasmine(),
-	filter;
-process.argv.slice(2).forEach(function (option) {
+	jrunner = new Jasmine();
+let filter;
+process.argv.slice(2).forEach(option => {
 	'use strict';
 	if (option === 'full') {
 		jasmine.getEnv().clearReporters();
@@ -29,5 +29,5 @@ process.argv.slice(2).forEach(function (option) {
 		filter = option.match('^filter=(.*)')[1];
 	}
 });
-jrunner.loadConfigFile();                           // load jasmine.json configuration
+jrunner.loadConfigFile(); // load jasmine.json configuration
 jrunner.execute(undefined, filter);
