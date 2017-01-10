@@ -30,7 +30,7 @@ module.exports = function create(options, optionalLogger) {
 		functionName,
 		packageFileDir;
 	const logger = optionalLogger || new NullLogger(),
-		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || 5000,
+		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || (process.env.AWS_DELAY && parseInt(process.env.AWS_DELAY, 10)) || 5000,
 		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
