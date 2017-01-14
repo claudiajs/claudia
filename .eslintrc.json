@@ -9,8 +9,13 @@
   },
   "rules": {
     "semi": ["error", "always"],
+    "strict": ["error", "function"],
+    "no-unused-vars": "error",
     "indent": ["error", "tab" ],
     "no-const-assign": "error",
+    "one-var": "error",
+    "prefer-const": "error",
+    "no-var": "warn",
     "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
     "quotes": ["error", "single", {"avoidEscape": true, "allowTemplateLiterals": true}]
   }

@@ -1,6 +1,7 @@
 /*global describe, require, it, expect, beforeAll, beforeEach, afterAll, afterEach, console, __dirname, global */
 var underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
+	destroyObjects = require('./util/destroy-objects'),
 	callApi = require('../src/util/call-api'),
 	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
@@ -10,7 +11,7 @@ var underTest = require('../src/commands/create'),
 	path = require('path'),
 	os = require('os'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('create', function () {
 	'use strict';
 	var workingdir, testRunName, iam, lambda, newObjects, config, logs,
@@ -48,8 +49,8 @@ describe('create', function () {
 		newObjects = {workingdir: workingdir};
 		config = {name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'};
 	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	describe('config validation', function () {
 		it('fails if the source folder is same as os tmp folder', function (done) {

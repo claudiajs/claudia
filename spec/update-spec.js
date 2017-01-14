@@ -1,5 +1,6 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname */
 var underTest = require('../src/commands/update'),
+	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
@@ -9,7 +10,7 @@ var underTest = require('../src/commands/update'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('update', function () {
 	'use strict';
 	var workingdir, testRunName,  lambda, newObjects,
@@ -27,8 +28,8 @@ describe('update', function () {
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {

@@ -1,7 +1,7 @@
 const path = require('path');
 module.exports = function pathSplitter(pathString) {
 	'use strict';
-	let parent, pathPart;
+	let parent;
 	if (pathString.indexOf('/') === 0) {
 		pathString = pathString.substring(1);
 	}
@@ -12,6 +12,5 @@ module.exports = function pathSplitter(pathString) {
 	if (parent === '.') {
 		parent = '';
 	}
-	pathPart = path.basename(pathString);
-	return { parentPath: parent, pathPart: pathPart};
+	return { parentPath: parent, pathPart: path.basename(pathString)};
 };

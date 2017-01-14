@@ -1,12 +1,13 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/add-scheduled-event'),
 	create = require('../src/commands/create'),
+	destroyObjects = require('./util/destroy-objects'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('addScheduledEvent', () => {
 	'use strict';
 	let workingdir, testRunName, newObjects, config, events, lambda, eventConfig;
@@ -29,9 +30,8 @@ describe('addScheduledEvent', () => {
 			schedule: 'rate(5 minutes)'
 		};
 	});
-	afterEach(function (done) {
-		// Not an arrow function because `this` should not be from an outer scope
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('fails when the event file is not defined in options', done => {
 		config.event = '';

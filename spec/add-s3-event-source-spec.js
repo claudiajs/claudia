@@ -1,5 +1,6 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/add-s3-event-source'),
+	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	shell = require('shelljs'),
@@ -7,7 +8,7 @@ const underTest = require('../src/commands/add-s3-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('addS3EventSource', () => {
 	'use strict';
 	let workingdir, testRunName, newObjects, s3;
@@ -25,8 +26,7 @@ describe('addS3EventSource', () => {
 		shell.mkdir(workingdir);
 	});
 	afterEach(function (done) {
-		// Not an arrow function because `this` should not be from an outer scope
-		this.destroyObjects(newObjects).then(done);
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('fails when the bucket is not defined in options', done => {
 		underTest({ source: workingdir })

@@ -1,21 +1,20 @@
 module.exports = function ConsoleLogger(prefix, loggable) {
 	'use strict';
-	let writer = loggable || console,
-		prepend = prefix || '\x1b[1F\x1b[2K',
-		currentStage = '',
+	let currentStage = '',
 		currentPrepend = '';
-	const formatArg = function (argArr) {
-		let argOb;
-		if (!Array.isArray(argArr) || !argArr.length) {
-			return '';
-		}
-		argOb = argArr[0];
-		return Object.keys(argOb)
-		.filter(useKey => /Name$/i.test(useKey) || /Id$/i.test(useKey) || /^path/i.test(useKey))
-		.sort()
-		.map(key => `\t${key}=${argOb[key]}`)
-		.join('');
-	};
+	const writer = loggable || console,
+		prepend = prefix || '\x1b[1F\x1b[2K',
+		formatArg = function (argArr) {
+			if (!Array.isArray(argArr) || !argArr.length) {
+				return '';
+			}
+			const argOb = argArr[0];
+			return Object.keys(argOb)
+				.filter(useKey => /Name$/i.test(useKey) || /Id$/i.test(useKey) || /^path/i.test(useKey))
+				.sort()
+				.map(key => `\t${key}=${argOb[key]}`)
+				.join('');
+		};
 	this.logStage = function (stage) {
 		currentStage = stage + '\t';
 		writer.log(currentPrepend + stage);

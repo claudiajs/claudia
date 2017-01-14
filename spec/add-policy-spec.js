@@ -1,5 +1,6 @@
 /*global describe, it, expect, beforeEach, afterEach  */
 const underTest = require('../src/tasks/add-policy'),
+	destroyObjects = require('./util/destroy-objects'),
 	aws = require('aws-sdk');
 describe('add-policy', function () {
 	'use strict';
@@ -23,9 +24,8 @@ describe('add-policy', function () {
 		}).promise()
 		.then(done, done.fail);
 	});
-	afterEach(function (done) {
-		// Not an arrow function because `this` should not be from an outer scope
-		this.destroyObjects({ lambdaRole: testRunName }).then(done, done.fail);
+	afterEach((done) => {
+		destroyObjects({ lambdaRole: testRunName }).then(done, done.fail);
 	});
 	it('appends a policy from the templates folder to the role', done => {
 		const expectedPolicy = require('../json-templates/log-writer');
