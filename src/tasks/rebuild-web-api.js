@@ -9,6 +9,7 @@ const aws = require('aws-sdk'),
 	NullLogger = require('../util/null-logger'),
 	safeHash = require('../util/safe-hash'),
 	flattenRequestParameters = require('./flatten-request-parameters'),
+	patchBinaryTypes = require('./patch-binary-types'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion, optionalLogger, configCacheStageVar) {
@@ -24,6 +25,16 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						),
 						() => logger.logApiCall('rate-limited by AWS, waiting before retry')),
 		configHash = safeHash(apiConfig),
+		defaultBinaryMediaTypes = [
+			'image/jpg',
+			'image/jpeg',
+			'image/gif',
+			'image/png',
+			'application/octet',
+			'application/octet-stream',
+			'application/pdf',
+			'application.zip'
+		],
 		knownIds = {},
 		findByPath = function (resourceItems, path) {
 			let result;
@@ -56,7 +67,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		},
-		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters) {
+		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters, integrationContentHandling) {
 			return apiGateway.putIntegrationPromise({
 				restApiId: restApiId,
 				resourceId: resourceId,
@@ -65,6 +76,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				type: 'AWS_PROXY',
 				cacheKeyParameters: cacheKeyParameters,
 				integrationHttpMethod: 'POST',
+				passthroughBehavior: 'WHEN_NO_MATCH',
+				contentHandling: integrationContentHandling,
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 			});
 		},
@@ -101,6 +114,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}
 					return null;
 				},
+				integrationContentHandling = methodOptions.integrationContentHandling === false ? undefined : (methodOptions.integrationContentHandling || 'CONVERT_TO_TEXT'),
+				responseContentHandling = methodOptions.responseContentHandling === false ? undefined : (methodOptions.responseContentHandling || 'CONVERT_TO_BINARY'),
 				addMethodResponse = function () {
 					return apiGateway.putMethodResponsePromise({
 						restApiId: restApiId,
@@ -112,10 +127,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						restApiId: restApiId,
 						resourceId: resourceId,
 						httpMethod: methodName,
-						statusCode: '200',
-						responseTemplates: {
-							'application/json': ''
-						}
+						contentHandling: responseContentHandling,
+						statusCode: '200'
 					}));
 				},
 				authorizerId = function () {
@@ -131,7 +144,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				requestParameters: parameters,
 				apiKeyRequired: apiKeyRequired()
 			})
-			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters)))
+			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters), integrationContentHandling))
 			.then(addMethodResponse);
 		},
 		createCorsHandler = function (resourceId) {
@@ -164,9 +177,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
 					statusCode: '200',
-					responseModels: {
-						'application/json': 'Empty'
-					},
 					responseParameters: responseParams
 				});
 			})
@@ -189,9 +199,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
 					statusCode: '200',
-					responseTemplates: {
-						'application/json': ''
-					},
 					responseParameters: responseParams
 				});
 			});
@@ -331,11 +338,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			})
 			.then(stage => stage.variables && stage.variables[configCacheStageVar])
 			.catch(() => false);
+		},
+		getRequestedBinaryTypes = function () {
+			return apiConfig.binaryMediaTypes || defaultBinaryMediaTypes;
 		};
 	return getOwnerId(logger)
 	.then(accountOwnerId => {
 		ownerId = accountOwnerId;
 	})
+	.then(() => patchBinaryTypes(restApiId, apiGateway, getRequestedBinaryTypes()))
 	.then(getExistingConfigHash)
 	.then(existingHash => {
 		if (existingHash && existingHash === configHash) {
