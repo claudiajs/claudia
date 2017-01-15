@@ -13,6 +13,7 @@ exports.handler = function (event, context) {
 		body: event.body,
 		headers: {
 			'Content-Type': event.headers['result-content-type']
-		}
+		},
+		isBase64Encoded: !!event.headers['result-encoded']
 	});
 };

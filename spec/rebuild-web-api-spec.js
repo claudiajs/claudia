@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, it, describe, fit */
+/*global beforeEach, afterEach, describe, expect, require, console, it, describe */
 const underTest = require('../src/tasks/rebuild-web-api'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),
@@ -573,11 +573,11 @@ describe('rebuildWebApi', function () {
 				corsHandlers: false
 			};
 		});
-		it('installs default binary media support to an API if no specific types are requested', done => {
+		it('does not install any binary media support to an API if no specific types are requested', done => {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => apiGateway.getRestApiPromise({restApiId: apiId}))
 			.then(restApiConfig => {
-				expect(restApiConfig.binaryMediaTypes).toEqual(['image/jpg', 'image/jpeg', 'image/gif', 'image/png', 'application/octet', 'application/octet-stream', 'application/pdf', 'application.zip']);
+				expect(restApiConfig.binaryMediaTypes).toBeUndefined();
 			}).then(done, done.fail);
 		});
 		it('installs configured binary media type support if an API contains binaryMediaTypes', done => {
@@ -596,19 +596,19 @@ describe('rebuildWebApi', function () {
 				expect(restApiConfig.binaryMediaTypes).toBeUndefined();
 			}).then(done, done.fail);
 		});
-		it('sets up base64 encoding on input and decoding on output by default', function (done) {
+		it('does not set up base64 encoding or decoding by default', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => apiGateway.getResourcesPromise({restApiId: apiId}))
 			.then(resources => resources.items.find(resource => resource.path === '/echo').id)
 			.then(resourceId => apiGateway.getMethodPromise({restApiId: apiId, httpMethod: 'POST', resourceId: resourceId}))
 			.then(method => {
 				expect(method.methodIntegration.passthroughBehavior).toEqual('WHEN_NO_MATCH');
-				expect(method.methodIntegration.contentHandling).toEqual('CONVERT_TO_TEXT');
-				expect(method.methodIntegration.integrationResponses['200'].contentHandling).toEqual('CONVERT_TO_BINARY');
+				expect(method.methodIntegration.contentHandling).toBeUndefined();
+				expect(method.methodIntegration.integrationResponses['200'].contentHandling).toBeUndefined();
 			}).then(done, done.fail);
 		});
-		it('allows the api configuration to override input content handling with integrationContentHandling', done => {
-			apiRouteConfig.routes.echo.POST.integrationContentHandling = 'CONVERT_TO_BINARY';
+		it('allows the api configuration to override set content handling with requestContentHandling', done => {
+			apiRouteConfig.routes.echo.POST.requestContentHandling = 'CONVERT_TO_BINARY';
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => apiGateway.getResourcesPromise({restApiId: apiId}))
 			.then(resources => resources.items.find(resource => resource.path === '/echo').id)
@@ -617,19 +617,8 @@ describe('rebuildWebApi', function () {
 				expect(method.methodIntegration.contentHandling).toEqual('CONVERT_TO_BINARY');
 			}).then(done, done.fail);
 		});
-		it('allows the api configuration to remove input content handling with integrationContentHandling', done => {
-			apiRouteConfig.routes.echo.POST.integrationContentHandling = false;
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(() => apiGateway.getResourcesPromise({restApiId: apiId}))
-			.then(resources => resources.items.find(resource => resource.path === '/echo').id)
-			.then(resourceId => apiGateway.getMethodPromise({restApiId: apiId, httpMethod: 'POST', resourceId: resourceId}))
-			.then(method => {
-				expect(method.methodIntegration.contentHandling).toBeUndefined();
-			}).then(done, done.fail);
-		});
-
-		it('allows the api configuration to override response content handling with responseContentHandling', done => {
-			apiRouteConfig.routes.echo.POST.responseContentHandling = 'CONVERT_TO_TEXT';
+		it('allows the api configuration to set response content handling with responseContentHandling', done => {
+			apiRouteConfig.routes.echo.POST.success = { contentHandling: 'CONVERT_TO_TEXT' };
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => apiGateway.getResourcesPromise({restApiId: apiId}))
 			.then(resources => resources.items.find(resource => resource.path === '/echo').id)
@@ -638,17 +627,8 @@ describe('rebuildWebApi', function () {
 				expect(method.methodIntegration.integrationResponses['200'].contentHandling).toEqual('CONVERT_TO_TEXT');
 			}).then(done, done.fail);
 		});
-		it('allows the api configuration to remove response content handling with responseContentHandling', done => {
-			apiRouteConfig.routes.echo.POST.responseContentHandling = false;
-			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
-			.then(() => apiGateway.getResourcesPromise({restApiId: apiId}))
-			.then(resources => resources.items.find(resource => resource.path === '/echo').id)
-			.then(resourceId => apiGateway.getMethodPromise({restApiId: apiId, httpMethod: 'POST', resourceId: resourceId}))
-			.then(method => {
-				expect(method.methodIntegration.integrationResponses['200'].contentHandling).toBeUndefined();
-			}).then(done, done.fail);
-		});
-		fit('sets up the API to convert binary data into text', done => {
+		it('converts recognised binary content types into base64 text', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => {
 				return invoke('original/echo', {
@@ -660,8 +640,22 @@ describe('rebuildWebApi', function () {
 				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
 			}).then(done, done.fail);
 		});
-		fit('does not convert if integrationContentHandling is turned off', done => {
-			apiRouteConfig.routes.echo.POST.integrationContentHandling = false;
+		it('converts recognised binary content types into base64 when requestContentHandling is CONVERT_TO_TEXT', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
+			apiRouteConfig.routes.echo.POST.requestContentHandling = 'CONVERT_TO_TEXT';
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => {
+				return invoke('original/echo', {
+					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+					body: 'Hello World',
+					method: 'POST'
+				});
+			}).then(function (contents) {
+				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+			}).then(done, done.fail);
+		});
+		it('does not convert if content type is not recognised as binary', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/x-markdown', 'image/tiff'];
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => {
 				return invoke('original/echo', {
@@ -673,17 +667,48 @@ describe('rebuildWebApi', function () {
 				expect(contents.body).toEqual('Hello World');
 			}).then(done, done.fail);
 		});
-		it('sets up the API to convert base64 results to binary', done => {
+		it('does not convert when requestContentHandling is set to CONVERT_TO_BINARY', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
+			apiRouteConfig.routes.echo.POST.requestContentHandling = 'CONVERT_TO_BINARY';
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(() => {
 				return invoke('original/echo', {
-					headers: {'content-type': 'text/plain', 'accept': 'application/octet-stream', 'result-content-type': 'application/octet-stream'},
+					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+					body: 'Hello World',
+					method: 'POST'
+				});
+			}).then(function (contents) {
+				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+			}).then(done, done.fail);
+		});
+		it('sets up the API to convert base64 results to binary', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
+			apiRouteConfig.routes.echo.POST.success = { contentHandling: 'CONVERT_TO_BINARY' };
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => {
+				return invoke('original/echo', {
+					headers: {'Content-Type': 'text/plain', 'result-encoded': 'true', 'accept': 'image/png', 'result-content-type': 'image/png'},
 					body: 'SGVsbG8gV29ybGQ=',
 					method: 'POST'
 				});
 			}).then(function (contents) {
 				expect(contents.body).toEqual('Hello World');
-				expect(contents.headers['content-type']).toEqual('application/octet-stream');
+				expect(contents.headers['content-type']).toEqual('image/png');
+			}).then(done, done.fail);
+		});
+		it('does not convert to binary unless the encoding flag is set', done => {
+			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
+			apiRouteConfig.routes.echo.POST.success = { contentHandling: 'CONVERT_TO_BINARY' };
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => {
+				return invoke('original/echo', {
+					headers: {'Content-Type': 'text/plain', 'accept': 'image/png', 'result-content-type': 'image/png'},
+					body: 'SGVsbG8gV29ybGQ=',
+					method: 'POST'
+				});
+			}).then(function (contents) {
+				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+				expect(contents.headers['content-type']).toEqual('image/png');
 			}).then(done, done.fail);
 		});
 	});

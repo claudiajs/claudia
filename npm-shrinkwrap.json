@@ -73,9 +73,16 @@
       "resolved": "https://registry.npmjs.org/async/-/async-1.5.2.tgz"
     },
     "aws-sdk": {
-      "version": "2.7.7",
-      "from": "aws-sdk@>=2.7.0 <3.0.0",
-      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.7.7.tgz"
+      "version": "2.7.21",
+      "from": "aws-sdk@>=2.7.7 <3.0.0",
+      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.7.21.tgz",
+      "dependencies": {
+        "uuid": {
+          "version": "3.0.0",
+          "from": "uuid@3.0.0",
+          "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.0.0.tgz"
+        }
+      }
     },
     "babel-code-frame": {
       "version": "6.20.0",
