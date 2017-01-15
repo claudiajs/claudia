@@ -88,7 +88,7 @@ describe('addSNSEventSource', () => {
 					FunctionName: testRunName
 				}).promise();
 			})
-			.then(function (lambdaResult) {
+			.then(lambdaResult => {
 				functionArn = lambdaResult.FunctionArn;
 			})
 			.then(() => underTest(config))
@@ -135,7 +135,7 @@ describe('addSNSEventSource', () => {
 					Qualifier: 'special'
 				}).promise();
 			})
-			.then(function (lambdaResult) {
+			.then(lambdaResult => {
 				functionArn = lambdaResult.FunctionArn;
 			})
 			.then(() => underTest(config))

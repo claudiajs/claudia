@@ -22,9 +22,7 @@ module.exports = function (workdir, referencedir) {
 		};
 	return readjson(packagePath)
 	.then(content => {
-		['dependencies', 'devDependencies', 'optionalDependencies'].forEach(function (depType) {
-			localize(content[depType]);
-		});
+		['dependencies', 'devDependencies', 'optionalDependencies'].forEach(depType => localize(content[depType]));
 		return content;
 	})
 	.then(content => fs.writeFileAsync(packagePath, JSON.stringify(content), {encoding: 'utf8'}))

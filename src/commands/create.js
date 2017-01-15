@@ -132,7 +132,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		createLambda = function (functionName, functionDesc, functionCode, roleArn) {
 			return retry(
-				function () {
+				() => {
 					logger.logStage('creating Lambda');
 					return lambda.createFunction({
 						Code: functionCode,
@@ -153,7 +153,7 @@ module.exports = function create(options, optionalLogger) {
 					}).promise();
 				},
 				awsDelay, awsRetries,
-				function (error) {
+				error => {
 					return error &&
 						error.code === 'InvalidParameterValueException' &&
 						error.message === 'The role defined for the function cannot be assumed by Lambda.';

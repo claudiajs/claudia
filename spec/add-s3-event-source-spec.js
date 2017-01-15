@@ -25,8 +25,9 @@ describe('addS3EventSource', () => {
 		newObjects = { workingdir: workingdir };
 		shell.mkdir(workingdir);
 	});
-	afterEach(function (done) {
-		destroyObjects(newObjects).then(done, done.fail);
+	afterEach(done => {
+		destroyObjects(newObjects)
+		.then(done, done.fail);
 	});
 	it('fails when the bucket is not defined in options', done => {
 		underTest({ source: workingdir })
@@ -128,7 +129,7 @@ describe('addS3EventSource', () => {
 			})
 			.then(done, done.fail);
 		});
-		it('adds default event if no events requested', function (done) {
+		it('adds default event if no events requested', done => {
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;

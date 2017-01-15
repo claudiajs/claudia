@@ -1,10 +1,10 @@
 /*global require, beforeEach, afterEach*/
-var shell = require('shelljs'),
+const shell = require('shelljs'),
 	cwd = shell.pwd();
-beforeEach(function () {
+beforeEach(() => {
 	'use strict';
 });
-afterEach(function () {
+afterEach(() => {
 	'use strict';
 	shell.cd(cwd);
 });

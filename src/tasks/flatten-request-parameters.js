@@ -26,7 +26,7 @@ module.exports = function flattenRequestParameters(paramMap, resourcePath) {
 			}
 		});
 	}
-	pathParams.forEach(function (param) {
+	pathParams.forEach(param => {
 		result[`method.request.path.${param}`] = true;
 	});
 	return result;

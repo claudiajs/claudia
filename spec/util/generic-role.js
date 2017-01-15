@@ -9,7 +9,7 @@ const aws = require('aws-sdk'),
 module.exports.create = function create() {
 	'use strict';
 	return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-		.then(function (lambdaRolePolicy) {
+		.then(lambdaRolePolicy => {
 			return iam.createRole({
 				RoleName: genericRoleName,
 				AssumeRolePolicyDocument: lambdaRolePolicy
@@ -28,4 +28,3 @@ module.exports.get = function () {
 	}
 	return genericRoleName;
 };
-

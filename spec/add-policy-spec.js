@@ -2,7 +2,7 @@
 const underTest = require('../src/tasks/add-policy'),
 	destroyObjects = require('./util/destroy-objects'),
 	aws = require('aws-sdk');
-describe('add-policy', function () {
+describe('add-policy', () => {
 	'use strict';
 	let testRunName;
 	const iam = new aws.IAM(),

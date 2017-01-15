@@ -8,23 +8,21 @@ const aws = require('aws-sdk'),
 
 module.exports = function destroyObjects(newObjects) {
 	'use strict';
-	const lambda = new aws.Lambda({region: awsRegion}),
-		logs = new aws.CloudWatchLogs({region: awsRegion}),
-		apiGatewayPromise = retriableWrap(new aws.APIGateway({region: awsRegion})),
+	const lambda = new aws.Lambda({ region: awsRegion }),
+		logs = new aws.CloudWatchLogs({ region: awsRegion }),
+		apiGatewayPromise = retriableWrap(new aws.APIGateway({ region: awsRegion })),
 		s3 = new aws.S3(),
-		sns = new aws.SNS({region: awsRegion}),
-		events = new aws.CloudWatchEvents({region: awsRegion}),
+		sns = new aws.SNS({ region: awsRegion }),
+		events = new aws.CloudWatchEvents({ region: awsRegion }),
 		destroyRule = function (ruleName) {
-			return events.listTargetsByRule({Rule: ruleName}).promise().then(function (config) {
-				const ids = config.Targets.map(function (target) {
-					return target.Id;
-				});
+			return events.listTargetsByRule({ Rule: ruleName }).promise()
+			.then(config => {
+				const ids = config.Targets.map(target => target.Id);
 				if (ids.length) {
-					return events.removeTargets({Rule: ruleName, Ids: ids }).promise();
+					return events.removeTargets({ Rule: ruleName, Ids: ids }).promise();
 				}
-			}).then(function () {
-				return events.deleteRule({Name: ruleName}).promise();
-			});
+			})
+			.then(() => events.deleteRule({ Name: ruleName }).promise());
 		},
 		destroyBucket = function (bucketName) {
 			const deleteSingleObject = function (ob) {
@@ -33,11 +31,9 @@ module.exports = function destroyObjects(newObjects) {
 					Key: ob.Key
 				}).promise();
 			};
-			return s3.listObjects({Bucket: bucketName}).promise().then(function (result) {
-				return Promise.all(result.Contents.map(deleteSingleObject));
-			}).then(function () {
-				return s3.deleteBucket({Bucket: bucketName}).promise();
-			});
+			return s3.listObjects({Bucket: bucketName}).promise()
+			.then(result => Promise.all(result.Contents.map(deleteSingleObject)))
+			.then(() => s3.deleteBucket({ Bucket: bucketName }).promise());
 		};
 
 	if (!newObjects) {
@@ -48,45 +44,51 @@ module.exports = function destroyObjects(newObjects) {
 		fsUtil.rmDir(newObjects.workingdir);
 	}
 
-	return Promise.resolve().then(function () {
+	return Promise.resolve()
+	.then(() => {
 		if (newObjects.restApi) {
 			return apiGatewayPromise.deleteRestApiPromise({
 				restApiId: newObjects.restApi
 			});
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.lambdaFunction) {
-			return lambda.deleteFunction({FunctionName: newObjects.lambdaFunction}).promise();
+			return lambda.deleteFunction({ FunctionName: newObjects.lambdaFunction }).promise();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.lambdaFunction) {
-			return logs.deleteLogGroup({logGroupName: '/aws/lambda/' + newObjects.lambdaFunction}).promise().catch(function () {
-				return true;
-			});
+			return logs.deleteLogGroup({ logGroupName: '/aws/lambda/' + newObjects.lambdaFunction }).promise()
+			.catch(() => true);
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.snsTopic) {
 			return sns.deleteTopic({
 				TopicArn: newObjects.snsTopic
 			}).promise();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.eventRule) {
 			return destroyRule(newObjects.eventRule);
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.lambdaRole) {
 			return destroyRole(newObjects.lambdaRole);
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.logGroup) {
-			return logs.deleteLogGroup({logGroupName: newObjects.logGroup}).promise();
+			return logs.deleteLogGroup({ logGroupName: newObjects.logGroup }).promise();
 		}
-	}).then(function () {
+	})
+	.then(() => {
 		if (newObjects.s3Bucket) {
 			return destroyBucket(newObjects.s3Bucket);
 		}
-	}).catch(function (e) {
-		console.log('error cleaning up', e.stack || e.message || e);
-	});
+	})
+	.catch(e => console.log('error cleaning up', e.stack || e.message || e));
 };

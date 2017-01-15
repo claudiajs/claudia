@@ -10,7 +10,7 @@ module.exports = function zipdir(path) {
 	} else if (!fsUtil.isDir(path)) {
 		return Promise.reject(path + ' is not a directory');
 	}
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		const archive = archiver.create('zip', {}),
 			zipStream = fs.createWriteStream(targetFile);
 		zipStream.on('close', () => {

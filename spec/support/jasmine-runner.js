@@ -5,7 +5,7 @@ const Jasmine = require('jasmine'),
 	runJasmine = function () {
 		'use strict';
 		let filter;
-		process.argv.slice(2).forEach(function (option) {
+		process.argv.slice(2).forEach(option => {
 			if (option === 'full') {
 				jasmine.getEnv().clearReporters();
 				jasmine.getEnv().addReporter(new SpecReporter({
