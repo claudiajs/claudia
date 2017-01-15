@@ -8,7 +8,7 @@ module.exports = function loggingWrap(apiObject, options) {
 			if (!apiObject[key][magic]) {
 				oldFunc = apiObject[key];
 				apiObject[key] = function () {
-					var callArgs = arguments;
+					const callArgs = arguments;
 					options.log(logPrefix + key, Array.prototype.slice.call(callArgs));
 					return oldFunc.apply(apiObject, callArgs);
 				};

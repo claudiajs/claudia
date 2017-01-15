@@ -13,7 +13,7 @@ module.exports = function listWrappableFunctions(object) {
 			return Object.keys(target).filter(target.hasOwnProperty.bind(target)).filter(isFunction).filter(notExcluded);
 		},
 		hierarchicalFunctions = function (target) {
-			var result = ownFunctions(target),
+			const result = ownFunctions(target),
 				proto = Object.getPrototypeOf(target);
 			if (excludedPrototypes.indexOf(proto) < 0) {
 				return result.concat(hierarchicalFunctions(proto));
