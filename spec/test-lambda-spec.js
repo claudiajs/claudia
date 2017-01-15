@@ -1,12 +1,13 @@
 /*global describe, require, it, expect, beforeEach, afterEach */
 var underTest = require('../src/commands/test-lambda'),
+	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	path = require('path'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('testLambda', function () {
 	'use strict';
 	var workingdir, testRunName, newObjects;
@@ -16,8 +17,8 @@ describe('testLambda', function () {
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
 	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('fails when the source dir does not contain the project config file', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {

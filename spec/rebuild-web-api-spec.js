@@ -1,5 +1,7 @@
 /*global beforeEach, afterEach, describe, expect, require, console, it, describe */
-var underTest = require('../src/tasks/rebuild-web-api'),
+const underTest = require('../src/tasks/rebuild-web-api'),
+	destroyObjects = require('./util/destroy-objects'),
+	genericTestRole = require('./util/generic-role'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	querystring = require('querystring'),
@@ -9,11 +11,11 @@ var underTest = require('../src/tasks/rebuild-web-api'),
 	callApi = require('../src/util/call-api'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	ArrayLogger = require('../src/util/array-logger'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('rebuildWebApi', function () {
 	'use strict';
-	var workingdir, testRunName, newObjects, apiId, apiRouteConfig,
-		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion})),
+	let workingdir, testRunName, newObjects, apiId, apiRouteConfig;
+	const apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion})),
 		invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -28,13 +30,13 @@ describe('rebuildWebApi', function () {
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
 	});
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	describe('when working with a blank api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -51,7 +53,7 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, done.fail);
@@ -62,7 +64,7 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke('original/echo?name=mike&' + encodeURIComponent('to=m') + '=' + encodeURIComponent('val,a=b'));
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.queryStringParameters).toEqual({name: 'mike', 'to=m': 'val,a=b'});
 				}).then(done, function (e) {
 					console.log(e);
@@ -74,7 +76,7 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke('original/echo?name=O\'Reilly');
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.queryStringParameters).toEqual({name: 'O\'Reilly'});
 				}).then(done, function (e) {
 					console.log(e);
@@ -87,7 +89,7 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke('original/people/Marcus');
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.pathParameters.personId).toEqual('Marcus');
 				}).then(done, done.fail);
 
@@ -98,7 +100,7 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke('original/people/Mar\'cus');
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.pathParameters.personId).toEqual('Mar\'cus');
 				}).then(done, done.fail);
 
@@ -110,7 +112,7 @@ describe('rebuildWebApi', function () {
 						headers: {'auth-head': 'auth3-val', 'Capital-Head': 'Capital-Val'}
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3-val');
 					expect(params.headers['Capital-Head']).toEqual('Capital-Val');
 				}).then(done, done.fail);
@@ -122,7 +124,7 @@ describe('rebuildWebApi', function () {
 						headers: {'auth-head': 'auth3\'val', 'Capital-Head': 'Capital\'Val'}
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.headers['auth-head']).toEqual('auth3\'val');
 					expect(params.headers['Capital-Head']).toEqual('Capital\'Val');
 				}).then(done, done.fail);
@@ -143,7 +145,7 @@ describe('rebuildWebApi', function () {
 				.then(function () {
 					return invoke ('fromtest/echo');
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.stageVariables).toEqual({
 						lambdaVersion: 'original',
 						authKey: 'abs123',
@@ -160,12 +162,12 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(querystring.stringify({name: 'tom', surname: 'bond'}));
 				}).then(done, done.fail);
 			});
 			it('captures quoted form POST variables correctly', function (done) {
-				var body = 'first_name=Jobin\'s&receiver_email=xxx@yyy.com&address_country_code=CA&payer_business_name=Jobin\'s Services&address_state=Quebec';
+				const body = 'first_name=Jobin\'s&receiver_email=xxx@yyy.com&address_country_code=CA&payer_business_name=Jobin\'s Services&address_state=Quebec';
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
@@ -174,7 +176,7 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(body);
 				}).then(done, function (result) {
 					console.log(result);
@@ -182,7 +184,7 @@ describe('rebuildWebApi', function () {
 				});
 			});
 			it('captures text/xml request bodies', function (done) {
-				var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
+				const xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
@@ -191,12 +193,12 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(xml);
 				}).then(done, done.fail);
 			});
 			it('captures application/xml request bodies', function (done) {
-				var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
+				const xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<test>1234</test>';
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
@@ -205,12 +207,12 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(xml);
 				}).then(done, done.fail);
 			});
 			it('captures text/plain request bodies', function (done) {
-				var textContent = 'this is just plain text';
+				const textContent = 'this is just plain text';
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
@@ -219,13 +221,13 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(textContent);
 				}).then(done, done.fail);
 			});
 
 			it('captures quoted text/plain request bodies', function (done) {
-				var textContent = 'this is single \' quote';
+				const textContent = 'this is single \' quote';
 				underTest(newObjects.lambdaFunction, 'original', apiId, {corsHandlers: false, version: 3, routes: {'echo': { 'POST': {}}}}, awsRegion)
 				.then(function () {
 					return invoke('original/echo', {
@@ -234,12 +236,12 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(params.body).toEqual(textContent);
 				}).then(done, done.fail);
 			});
 			it('captures quoted application/json request bodies', function (done) {
-				var jsonContent = {
+				const jsonContent = {
 						fileKey: 'Jim\'s map.mup',
 						license: {version: 2, accountType: 'mindmup-gold', account: 'dave', signature: 'signature-1'}
 					},
@@ -252,7 +254,7 @@ describe('rebuildWebApi', function () {
 						method: 'POST'
 					});
 				}).then(function (contents) {
-					var params = JSON.parse(contents.body);
+					const params = JSON.parse(contents.body);
 					expect(JSON.parse(params.body)).toEqual(jsonContent);
 				}).then(done, done.fail);
 			});
@@ -263,19 +265,19 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'PUT'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('PUT');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, done.fail);
@@ -285,19 +287,19 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo', {method: 'PUT'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('PUT');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, function (e) {
@@ -314,25 +316,25 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/echo/sub/res', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/echo/sub/res');
 			}).then(function () {
 				return invoke('original/sub/hello', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/sub/hello');
 			}).then(function () {
 				return invoke('original/echo/hello', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/echo/hello');
 			}).then(done, function (e) {
@@ -341,7 +343,7 @@ describe('rebuildWebApi', function () {
 			});
 		});
 		it('sets apiKeyRequired if requested', function (done) {
-			var echoResourceId;
+			let echoResourceId;
 			apiRouteConfig.routes.echo.POST = {apiKeyRequired: true};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
@@ -374,7 +376,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('sets authorizationType if requested', function (done) {
-			var echoResourceId;
+			let echoResourceId;
 			apiRouteConfig.routes.echo.POST = {authorizationType: 'AWS_IAM'};
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
@@ -407,7 +409,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('sets caller credentials when invokeWithCredentials is true', function (done) {
-			var echoResourceId;
+			let echoResourceId;
 			apiRouteConfig.routes.echo.POST = {
 				invokeWithCredentials: true
 			};
@@ -442,8 +444,8 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('sets custom credentials when invokeWithCredentials is a string', function (done) {
-			var iam = new aws.IAM({region: awsRegion}),
-				echoResourceId,
+			const iam = new aws.IAM({region: awsRegion});
+			let echoResourceId,
 				testCredentials;
 			iam.getUser().promise().then(function (data) {
 				testCredentials = data.User.Arn;
@@ -481,7 +483,7 @@ describe('rebuildWebApi', function () {
 			}).then(done, done.fail);
 		});
 		it('does not set credentials or authorizationType if invokeWithCredentials is invalid', function (done) {
-			var echoResourceId;
+			let echoResourceId;
 			apiRouteConfig.routes.echo.POST = {
 				invokeWithCredentials: 'invalid_credentials'
 			};
@@ -523,25 +525,25 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(function () {
 				return invoke('original/hello', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/hello');
 			}).then(function () {
 				return invoke('original/hello/res', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/hello/res');
 			}).then(function () {
 				return invoke('original/');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/');
 			}).then(done, function (e) {
@@ -551,10 +553,9 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('custom authorizers', function () {
-		var authorizerLambdaName;
+		let authorizerLambdaName;
 		beforeEach(function (done) {
-			var authorizerLambdaDir = path.join(workingdir, 'authorizer'),
-				genericRole = this.genericRole;
+			const authorizerLambdaDir = path.join(workingdir, 'authorizer');
 
 			shell.mkdir('-p', workingdir);
 			shell.mkdir('-p', authorizerLambdaDir);
@@ -562,7 +563,7 @@ describe('rebuildWebApi', function () {
 			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
 
 			apiRouteConfig.corsHandlers = false;
-			create({name: testRunName, version: 'original', role: genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({name: testRunName});
@@ -570,17 +571,18 @@ describe('rebuildWebApi', function () {
 				apiId = result.id;
 				newObjects.restApi = result.id;
 			}).then(function () {
-				return create({name: testRunName + 'auth', version: 'original', role: genericRole, region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'});
+				return create({name: testRunName + 'auth', version: 'original', role: genericTestRole.get(), region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler'});
 			}).then(function (result) {
 				authorizerLambdaName = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
 		});
 		afterEach(function (done) {
-			var lambda = new aws.Lambda({region: awsRegion});
+			const lambda = new aws.Lambda({region: awsRegion});
 			lambda.deleteFunction({FunctionName: authorizerLambdaName}).promise().then(done, done.fail);
 		});
 		it('assigns authorizers by name', function (done) {
-			var authorizerIds = {}, echoResourceId;
+			const authorizerIds = {};
+			let echoResourceId;
 			apiRouteConfig.authorizers = {
 				first: { lambdaName: authorizerLambdaName, headerName: 'Authorization' },
 				second: { lambdaName: authorizerLambdaName, headerName: 'UserId' }
@@ -630,7 +632,7 @@ describe('rebuildWebApi', function () {
 	describe('CORS handling', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/api-gw-proxy-headers/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -748,7 +750,7 @@ describe('rebuildWebApi', function () {
 	describe('when working with an existing api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -771,7 +773,7 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/extra');
 			}).then(done, done.fail);
@@ -781,7 +783,7 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/sub/map2/map3');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/sub/map2/map3');
 			}).then(done, function (e) {
@@ -795,7 +797,7 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/echo', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 			}).then(done, done.fail);
@@ -806,13 +808,13 @@ describe('rebuildWebApi', function () {
 			.then(function () {
 				return invoke('original/', {method: 'POST'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('POST');
 				expect(params.requestContext.resourcePath).toEqual('/');
 			}).then(function () {
 				return invoke('original/', {method: 'GET'});
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.httpMethod).toEqual('GET');
 				expect(params.requestContext.resourcePath).toEqual('/');
 			}).then(done, done.fail);
@@ -831,7 +833,7 @@ describe('rebuildWebApi', function () {
 			}).then(function () {
 				return invoke('original/extra');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'original',
 					authKey: 'abs123',
@@ -841,8 +843,8 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('setting request parameters for caching', function () {
-		var testMethodConfig = function (methodConfig, resourcePath, method) {
-			var echoResourceId;
+		const testMethodConfig = function (methodConfig, resourcePath, method) {
+			let echoResourceId;
 			apiRouteConfig.routes = methodConfig;
 			return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 			.then(function () {
@@ -866,7 +868,7 @@ describe('rebuildWebApi', function () {
 		};
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -954,11 +956,11 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('logging', function () {
-		var logger;
+		let logger;
 		beforeEach(function (done) {
 			logger = new ArrayLogger();
 			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -987,11 +989,11 @@ describe('rebuildWebApi', function () {
 		});
 	});
 	describe('configuration cashing', function () {
-		var logger;
+		let logger;
 		beforeEach(function (done) {
 			logger = new ArrayLogger();
 			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, version: 'original', role: this.genericRole, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(function () {
 				return apiGateway.createRestApiPromise({
@@ -1006,7 +1008,7 @@ describe('rebuildWebApi', function () {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash').then(function () {
 				return invoke('original/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'original',
 					configHash: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='

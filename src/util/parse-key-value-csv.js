@@ -5,7 +5,7 @@ module.exports = function parseKeyValueCSV(string) {
 		throw 'Invalid CSV value';
 	}
 	string.trim().split(',').forEach(pair => {
-		let keyval = pair && pair.split('=');
+		const keyval = pair && pair.split('=');
 		if (!keyval || keyval.length < 2) {
 			throw 'Invalid CSV element ' + pair;
 		}

@@ -1,32 +1,16 @@
-/*global beforeAll, afterAll, require, beforeEach, console */
-var aws = require('aws-sdk'),
-	iam = new aws.IAM(),
-	templateFile = require('../../src/util/template-file'),
-	destroyRole = require('../../src/util/destroy-role'),
-	fs = require('../../src/util/fs-promise.js'),
-	genericRoleName;
-beforeAll(function (done) {
+/*global beforeAll, afterAll, require, console */
+const genericRole = require('../util/generic-role');
+beforeAll(done => {
 	'use strict';
-	genericRoleName = 'test-generic-role-' + Date.now();
-	fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-		.then(function (lambdaRolePolicy) {
-			return iam.createRole({
-				RoleName: genericRoleName,
-				AssumeRolePolicyDocument: lambdaRolePolicy
-			}).promise();
-		}).then(done, function (x) {
-			console.log(x);
-			done.fail(x);
-		});
+	genericRole.create().then(done, err => {
+		console.log('error creating generic role', err);
+		done.fail(err);
+	});
 });
-beforeEach(function () {
+afterAll(done => {
 	'use strict';
-	this.genericRole = genericRoleName;
-});
-afterAll(function (done) {
-	'use strict';
-	destroyRole(genericRoleName).then(done, function () {
-		console.log('error destroying generic role', genericRoleName);
-		done();
+	genericRole.destroy().then(done, err => {
+		console.log('error destroying generic role', err);
+		done.fail(err);
 	});
 });

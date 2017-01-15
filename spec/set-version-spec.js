@@ -1,5 +1,7 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console */
-var underTest = require('../src/commands/set-version'),
+const underTest = require('../src/commands/set-version'),
+	genericTestRole = require('./util/generic-role'),
+	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	shell = require('shelljs'),
@@ -10,17 +12,17 @@ var underTest = require('../src/commands/set-version'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('setVersion', function () {
 	'use strict';
-	var workingdir, testRunName, lambda, newObjects, apiGateway,
-		invoke = function (url, options) {
-			if (!options) {
-				options = {};
-			}
-			options.retry = 403;
-			return callApi(newObjects.restApi, awsRegion, url, options);
-		};
+	let workingdir, testRunName, lambda, newObjects, apiGateway;
+	const invoke = function (url, options) {
+		if (!options) {
+			options = {};
+		}
+		options.retry = 403;
+		return callApi(newObjects.restApi, awsRegion, url, options);
+	};
 	beforeEach(function () {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -30,8 +32,8 @@ describe('setVersion', function () {
 		shell.mkdir(workingdir);
 	});
 
-	afterEach(function (done) {
-		this.destroyObjects(newObjects).then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('fails when the options do not contain a version name', function (done) {
 		underTest({source: workingdir}).then(done.fail, function (reason) {
@@ -62,7 +64,7 @@ describe('setVersion', function () {
 	describe('when the lambda project does not contain a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', role: this.genericRole}).then(function (result) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', role: genericTestRole.get()}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
 		});
@@ -103,7 +105,7 @@ describe('setVersion', function () {
 	describe('when the lambda project contains a web api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: this.genericRole}).then(function (result) {
+			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: genericTestRole.get()}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
 			}).then(done, done.fail);
@@ -115,7 +117,7 @@ describe('setVersion', function () {
 			}).then(function () {
 				return invoke('dev/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'dev'
@@ -136,8 +138,7 @@ describe('setVersion', function () {
 			}).then(function () {
 				return invoke('fromtest/echo');
 			}).then(function (contents) {
-				var params;
-				params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'fromtest',
@@ -153,7 +154,7 @@ describe('setVersion', function () {
 	describe('when the lambda project contains a proxy api', function () {
 		beforeEach(function (done) {
 			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true, role: this.genericRole}).then(function (result) {
+			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true, role: genericTestRole.get()}).then(function (result) {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
 			}).then(done, done.fail);
@@ -165,7 +166,7 @@ describe('setVersion', function () {
 			}).then(function () {
 				return invoke('dev/echo');
 			}).then(function (contents) {
-				var params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.resourcePath).toEqual('/{proxy+}');
 				expect(params.path).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
@@ -187,8 +188,7 @@ describe('setVersion', function () {
 			}).then(function () {
 				return invoke('fromtest/echo');
 			}).then(function (contents) {
-				var params;
-				params = JSON.parse(contents.body);
+				const params = JSON.parse(contents.body);
 				expect(params.requestContext.resourcePath).toEqual('/{proxy+}');
 				expect(params.path).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
@@ -204,9 +204,9 @@ describe('setVersion', function () {
 	});
 
 	it('logs progress', function (done) {
-		var logger = new ArrayLogger();
+		const logger = new ArrayLogger();
 		shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
-		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: this.genericRole}).then(function (result) {
+		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: genericTestRole.get()}).then(function (result) {
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			newObjects.restApi = result.api && result.api.id;
 		}).then(function () {
@@ -227,11 +227,10 @@ describe('setVersion', function () {
 	});
 
 	describe('environment variables', function () {
-		var standardEnvKeys,
-			logger,
-			nonStandard = function (key) {
-				return standardEnvKeys.indexOf(key) < 0;
-			};
+		let standardEnvKeys, logger;
+		const nonStandard = function (key) {
+			return standardEnvKeys.indexOf(key) < 0;
+		};
 		beforeEach(function (done) {
 			logger = new ArrayLogger();
 			standardEnvKeys = [
@@ -273,7 +272,7 @@ describe('setVersion', function () {
 					InvocationType: 'RequestResponse'
 				}).promise();
 			}).then(function (result) {
-				var env = JSON.parse(result.Payload);
+				const env = JSON.parse(result.Payload);
 				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH']);
 				expect(env.XPATH).toEqual('/var/www');
 				expect(env.YPATH).toEqual('/var/lib');
@@ -299,7 +298,7 @@ describe('setVersion', function () {
 					InvocationType: 'RequestResponse'
 				}).promise();
 			}).then(function (result) {
-				var env = JSON.parse(result.Payload);
+				const env = JSON.parse(result.Payload);
 				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'ZPATH']);
 				expect(env.XPATH).toEqual('/opt');
 				expect(env.YPATH).toBeFalsy();
@@ -307,7 +306,7 @@ describe('setVersion', function () {
 			}).then(done, done.fail);
 		});
 		it('changes env variables specified in a JSON file', function (done) {
-			var envpath = path.join(workingdir, 'env.json');
+			const envpath = path.join(workingdir, 'env.json');
 			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
 			return underTest({source: workingdir, version: 'new', 'set-env-from-json': envpath}, logger).then(function () {
 				return lambda.getFunctionConfiguration({
@@ -328,7 +327,7 @@ describe('setVersion', function () {
 					InvocationType: 'RequestResponse'
 				}).promise();
 			}).then(function (result) {
-				var env = JSON.parse(result.Payload);
+				const env = JSON.parse(result.Payload);
 				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'ZPATH']);
 				expect(env.XPATH).toEqual('/opt');
 				expect(env.YPATH).toBeFalsy();

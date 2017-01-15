@@ -8,7 +8,7 @@ var create = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	fs = require('../src/util/fs-promise'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('customAuthorizers', function () {
 	'use strict';
 	var workingdir, testRunName, apiId,

@@ -1,5 +1,5 @@
 /*global describe, it, expect, beforeEach, jasmine */
-var ConsoleLogger = require('../src/util/console-logger');
+const ConsoleLogger = require('../src/util/console-logger');
 describe('ConsoleLogger', () => {
 	'use strict';
 	let underTest, fakeConsole;

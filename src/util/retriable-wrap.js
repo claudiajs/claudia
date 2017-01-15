@@ -3,9 +3,12 @@ const retry = require('oh-no-i-insist'),
 
 module.exports = function retriableWrap(apiObject, onRetry, timeout, retries, suffix) {
 	'use strict';
-	let rx;
+	timeout = timeout || 3000;
+	retries = retries || 10;
+	suffix = suffix || 'Promise';
+
 	const remapKey = function (key) {
-			let oldFunc = apiObject[key];
+			const oldFunc = apiObject[key];
 			apiObject[key + suffix] = function () {
 				const callArgs = arguments;
 				return retry(
@@ -25,14 +28,10 @@ module.exports = function retriableWrap(apiObject, onRetry, timeout, retries, su
 				);
 			};
 		},
+		rx = new RegExp(suffix + '$'),
 		matching = function (key) {
 			return !rx.test(key);
 		};
-
-	timeout = timeout || 3000;
-	retries = retries || 10;
-	suffix = suffix || 'Promise';
-	rx = new RegExp(suffix + '$');
 
 	listWrappableFunctions(apiObject).filter(matching).forEach(remapKey);
 

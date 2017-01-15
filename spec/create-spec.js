@@ -1,6 +1,7 @@
 /*global describe, it, expect, beforeAll, beforeEach, afterAll, afterEach*/
 const underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
+	destroyObjects = require('./util/destroy-objects'),
 	callApi = require('../src/util/call-api'),
 	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
@@ -10,7 +11,7 @@ const underTest = require('../src/commands/create'),
 	path = require('path'),
 	os = require('os'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./helpers/test-aws-region');
+	awsRegion = require('./util/test-aws-region');
 describe('create', () => {
 	'use strict';
 	let workingdir, testRunName, iam, lambda, newObjects, config, logs, apiGatewayPromise;
@@ -49,10 +50,8 @@ describe('create', () => {
 		newObjects = { workingdir: workingdir };
 		config = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
 	});
-	afterEach(function (done) {
-		// Not an arrow function because `this` should not be from an outer scope
-		this.destroyObjects(newObjects)
-		.then(done);
+	afterEach(done => {
+		destroyObjects(newObjects).then(done, done.fail);
 	});
 	describe('config validation', () => {
 		it('fails if the source folder is same as os tmp folder', done => {
@@ -311,7 +310,7 @@ describe('create', () => {
 				.then(vpcData => vpcData.Vpc)
 				.then(vpc => ec2.createSubnet({ CidrBlock: CidrBlock, VpcId: vpc.VpcId }).promise())
 				.then(subnetData => subnetData.Subnet)
-				.then(subnet => ec2.createSecurityGroup({ GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId }).promise())
+				.then(() => ec2.createSecurityGroup({ GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId }).promise())
 				.then(securityGroupData => {
 					securityGroup = securityGroupData;
 				})
@@ -394,7 +393,7 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('loads additional policies from a file pattern, if provided', done => {
-			var sesPolicy = {
+			const sesPolicy = {
 					'Version': '2012-10-17',
 					'Statement': [{
 						'Effect': 'Allow',
@@ -641,7 +640,7 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('uses local dependencies if requested', done => {
-			var projectDir =  path.join(__dirname, 'test-projects', 'local-dependencies');
+			const projectDir =  path.join(__dirname, 'test-projects', 'local-dependencies');
 			config['use-local-dependencies'] = true;
 			shell.rm('-rf', path.join(projectDir, 'node_modules'));
 			shell.mkdir(path.join(projectDir, 'node_modules'));
@@ -740,7 +739,7 @@ describe('create', () => {
 		it('creates a proxy web API', done => {
 			createFromDir('apigw-proxy-echo')
 			.then(creationResult => {
-				let apiId = creationResult.api && creationResult.api.id;
+				const apiId = creationResult.api && creationResult.api.id;
 				expect(apiId).toBeTruthy();
 				expect(creationResult.api.url).toEqual(`https://${apiId}.execute-api.${awsRegion}.amazonaws.com/latest`);
 				return apiId;
@@ -824,7 +823,7 @@ describe('create', () => {
 		it('ignores the handler but creates an API if the api-module is provided', done => {
 			createFromDir('api-gw-hello-world')
 			.then(creationResult => {
-				let apiId = creationResult.api && creationResult.api.id;
+				const apiId = creationResult.api && creationResult.api.id;
 				expect(apiId).toBeTruthy();
 				expect(creationResult.api.module).toEqual('main');
 				expect(creationResult.api.url).toEqual(`https://${apiId}.execute-api.${awsRegion}.amazonaws.com/latest`);
@@ -969,7 +968,7 @@ describe('create', () => {
 		});
 	});
 	it('logs call execution', done => {
-		var logger = new ArrayLogger();
+		const logger = new ArrayLogger();
 		config.handler = undefined;
 		config['api-module'] = 'main';
 		createFromDir('api-gw-hello-world', logger)
