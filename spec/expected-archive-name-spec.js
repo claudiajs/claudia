@@ -1,11 +1,11 @@
-/*global describe, it, expect, require */
-var expectedArchiveName = require('../src/util/expected-archive-name');
-describe('expectedArchiveName', function () {
+/*global describe, it, expect */
+const expectedArchiveName = require('../src/util/expected-archive-name');
+describe('expectedArchiveName', () => {
 	'use strict';
-	it('packages name, version and .tgz for non-scoped names', function () {
+	it('packages name, version and .tgz for non-scoped names', () => {
 		expect(expectedArchiveName({name: 'hello-world', version: '1.0.0'})).toEqual('hello-world-1.0.0.tgz');
 	});
-	it('works for scoped packages', function () {
-		expect(expectedArchiveName({name: '@company/hello-world', version: '1.0.0'})).toEqual('company-hello-world-1.0.0.tgz');
+	it('works for scoped packages', () => {
+		expect(expectedArchiveName({ name: '@company/hello-world', version: '1.0.0' })).toEqual('company-hello-world-1.0.0.tgz');
 	});
 });

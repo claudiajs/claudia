@@ -1,5 +1,5 @@
 /*global describe, require, it, expect, beforeEach, console */
-var underTest = require('../src/commands/destroy'),
+const underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
 	retriableWrap = require('../src/util/retriable-wrap'),
@@ -8,132 +8,138 @@ var underTest = require('../src/commands/destroy'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region');
-describe('destroy', function () {
+describe('destroy', () => {
 	'use strict';
-	var workingdir, testRunName, newObjects, iam;
-	beforeEach(function () {
+	let workingdir, testRunName, newObjects, iam;
+	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		newObjects = { workingdir: workingdir };
 		shell.mkdir(workingdir);
 	});
-	it('fails when the source dir does not contain the project config file', function (done) {
-		underTest({ source: workingdir }).then(done.fail, function (reason) {
-			expect(reason).toEqual('claudia.json does not exist in the source folder');
-			done();
-		});
+	it('fails when the source dir does not contain the project config file', done => {
+		underTest({ source: workingdir })
+		.then(done.fail, reason => expect(reason).toEqual('claudia.json does not exist in the source folder'))
+		.then(done);
 	});
-	it('fails when the project config file does not contain the lambda name', function (done) {
+	it('fails when the project config file does not contain the lambda name', done => {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
-		underTest({ source: workingdir }).then(done.fail, function (reason) {
-			expect(reason).toEqual('invalid configuration -- lambda.name missing from claudia.json');
-			done();
-		});
+		underTest({ source: workingdir })
+		.then(done.fail, reason => expect(reason).toEqual('invalid configuration -- lambda.name missing from claudia.json'))
+		.then(done);
 	});
-	it('fails when the project config file does not contain the lambda region', function (done) {
+	it('fails when the project config file does not contain the lambda region', done => {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify({ lambda: { name: 'xxx' } }), 'utf8');
-		underTest({ source: workingdir }).then(done.fail, function (reason) {
-			expect(reason).toEqual('invalid configuration -- lambda.region missing from claudia.json');
-			done();
-		});
+		underTest({ source: workingdir })
+		.then(done.fail, reason => expect(reason).toEqual('invalid configuration -- lambda.region missing from claudia.json'))
+		.then(done);
 	});
-	describe('when only a lambda function exists', function () {
-		beforeEach(function (done) {
+	describe('when only a lambda function exists', () => {
+		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(function (result) {
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
+			.then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
-			}).then(done, done.fail);
+			})
+			.then(done, done.fail);
 		});
-		it('destroys the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				var lambda = new aws.Lambda({ region: awsRegion });
+		it('destroys the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => {
+				const lambda = new aws.Lambda({ region: awsRegion });
 				return lambda.listVersionsByFunction({ FunctionName: testRunName }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaFunction);
-			}).then(done, done.fail);
+			})
+			.catch(expectedException => expect(expectedException.message).toContain(newObjects.lambdaFunction))
+			.then(done, done.fail);
 		});
-		it('destroys the roles for the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				return iam.getRole({ RoleName: newObjects.lambdaRole }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.code).toEqual('NoSuchEntity');
-			}).then(done, done.fail);
+		it('destroys the roles for the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => iam.getRole({ RoleName: newObjects.lambdaRole }).promise())
+			.catch(expectedException => expect(expectedException.code).toEqual('NoSuchEntity'))
+			.then(done, done.fail);
 		});
-		it('destroys the policies for the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				return iam.listRolePolicies({ RoleName: newObjects.lambdaRole }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaRole);
-			}).then(done, done.fail);
+		it('destroys the policies for the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => iam.listRolePolicies({ RoleName: newObjects.lambdaRole }).promise())
+			.catch(expectedException => expect(expectedException.message).toContain(newObjects.lambdaRole))
+			.then(done, done.fail);
 		});
 	});
-	describe('removing the config file', function () {
-		beforeEach(function (done) {
+	describe('removing the config file', () => {
+		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(function (result) {
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
+			.then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
-			}).then(done, done.fail);
+			})
+			.then(done, done.fail);
 		});
-		it('removes claudia.json if --config is not provided', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy();
-			}).then(done, done.fail);
+		it('removes claudia.json if --config is not provided', done => {
+			underTest({ source: workingdir })
+			.then(() => expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy())
+			.then(done, done.fail);
 		});
-		it('removes specified config if --config is provided', function (done) {
-			var otherPath = tmppath();
+		it('removes specified config if --config is provided', done => {
+			const otherPath = tmppath();
 			shell.cp(path.join(workingdir, 'claudia.json'), otherPath);
-			underTest({ source: workingdir, config: otherPath}).then(function () {
+			underTest({ source: workingdir, config: otherPath})
+			.then(() => {
 				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeTruthy();
 				expect(shell.test('-e', path.join(workingdir, otherPath))).toBeFalsy();
-			}).then(done, function (e) {
+			})
+			.then(done, e => {
 				console.log(e.stack || e.message || e);
 				done.fail(e);
 			});
 		});
 	});
-	describe('when the lambda project contains a web api', function () {
-		beforeEach(function (done) {
+	describe('when the lambda project contains a web api', () => {
+		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
-			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(function (result) {
+			create({ name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main' })
+			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
-			}).then(done, done.fail);
+			})
+			.then(done, done.fail);
 		});
-		it('destroys the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				var lambda = new aws.Lambda({ region: awsRegion });
+		it('destroys the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => {
+				const lambda = new aws.Lambda({ region: awsRegion });
 				return lambda.listVersionsByFunction({ FunctionName: testRunName }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaFunction);
-			}).then(done, done.fail);
+			})
+			.catch(expectedException => expect(expectedException.message).toContain(newObjects.lambdaFunction))
+			.then(done, done.fail);
 		});
 
-		it('destroys the web api', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				var apiGateway = retriableWrap(new aws.APIGateway({ region: awsRegion }));
+		it('destroys the web api', done => {
+			underTest({ source: workingdir })
+			.then(() => {
+				const apiGateway = retriableWrap(new aws.APIGateway({ region: awsRegion }));
 				return apiGateway.getRestApi({ restApiId: newObjects.restApi }).promise();
-			}).catch(function (expectedException) {
+			})
+			.catch(expectedException => {
 				expect(expectedException.message).toEqual('Invalid REST API identifier specified');
 				expect(expectedException.code).toEqual('NotFoundException');
-			}).then(done, done.fail);
+			})
+			.then(done, done.fail);
 		});
-		it('destroys the roles for the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				return iam.getRole({ RoleName: newObjects.lambdaRole }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.code).toEqual('NoSuchEntity');
-			}).then(done, done.fail);
+		it('destroys the roles for the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => iam.getRole({ RoleName: newObjects.lambdaRole }).promise())
+			.catch(expectedException => expect(expectedException.code).toEqual('NoSuchEntity'))
+			.then(done, done.fail);
 		});
-		it('destroys the policies for the lambda function', function (done) {
-			underTest({ source: workingdir }).then(function () {
-				return iam.listRolePolicies({ RoleName: newObjects.lambdaRole }).promise();
-			}).catch(function (expectedException) {
-				expect(expectedException.message).toContain(newObjects.lambdaRole);
-			}).then(done, done.fail);
+		it('destroys the policies for the lambda function', done => {
+			underTest({ source: workingdir })
+			.then(() => iam.listRolePolicies({ RoleName: newObjects.lambdaRole }).promise())
+			.catch(expectedException => expect(expectedException.message).toContain(newObjects.lambdaRole))
+			.then(done, done.fail);
 		});
 	});
 });

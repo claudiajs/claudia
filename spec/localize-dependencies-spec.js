@@ -1,51 +1,48 @@
-/*global describe, it, expect, beforeEach, afterEach, require, __dirname */
-var os = require('os'),
+/*global describe, it, expect, beforeEach, afterEach */
+const os = require('os'),
 	uuid = require('uuid'),
 	path = require('path'),
 	shell = require('shelljs'),
 	readjson = require('../src/util/readjson'),
 	fs = require('fs'),
 	localizeDependencies = require('../src/tasks/localize-dependencies');
-describe('localizeDependencies', function () {
+describe('localizeDependencies', () => {
 	'use strict';
-	var workdir, referencedir;
-	beforeEach(function () {
+	let workdir, referencedir;
+	beforeEach(() => {
 		workdir = path.join(os.tmpdir(), uuid.v4());
 		referencedir = path.join(os.tmpdir(), uuid.v4());
 		shell.mkdir(workdir);
 		shell.mkdir(referencedir);
 	});
-	afterEach(function () {
-		shell.rm('-rf', workdir, referencedir);
-	});
-	it('does not modify package properties that have nothing to do with dependencies', function (done) {
-		var referenceJSON;
+	afterEach(() => shell.rm('-rf', workdir, referencedir));
+	it('does not modify package properties that have nothing to do with dependencies', done => {
+		let referenceJSON;
 		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
-		localizeDependencies(workdir, referencedir).then(function () {
-			return readjson(path.join(__dirname, '..', 'package.json'));
-		}).then(function (contents) {
+		localizeDependencies(workdir, referencedir)
+		.then(() => readjson(path.join(__dirname, '..', 'package.json')))
+		.then(contents => {
 			referenceJSON = contents;
-		}).then(function () {
-			return readjson(path.join(workdir, 'package.json'));
-		}).then(function (contents) {
-			expect(contents).toEqual(referenceJSON);
-		}).then(done, done.fail);
+		})
+		.then(() => readjson(path.join(workdir, 'package.json')))
+		.then(contents => expect(contents).toEqual(referenceJSON))
+		.then(done, done.fail);
 	});
-	it('complains if the working directory does not contain package.json', function (done) {
-		localizeDependencies(workdir, referencedir).then(done.fail, function (err) {
-			expect(err).toEqual(workdir + '/package.json is missing');
-			done();
-		});
+	it('complains if the working directory does not contain package.json', done => {
+		localizeDependencies(workdir, referencedir)
+		.then(done.fail, err => expect(err).toEqual(workdir + '/package.json is missing'))
+		.then(done);
 	});
-	['dependencies', 'devDependencies', 'optionalDependencies'].forEach(function (depType) {
-		var writeTemplate = function (overrideKey, value) {
-			return readjson(path.join(__dirname, '..', 'package.json')).then(function (content) {
+	['dependencies', 'devDependencies', 'optionalDependencies'].forEach(depType => {
+		const writeTemplate = function (overrideKey, value) {
+			return readjson(path.join(__dirname, '..', 'package.json'))
+			.then(content => {
 				content[overrideKey] = value;
-				return fs.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), {encoding: 'utf8'});
+				return fs.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), { encoding: 'utf8' });
 			});
 		};
-		it('does not modify remote dependencies in ' + depType, function (done) {
-			var exampleDependencies = {
+		it(`does not modify remote dependencies in ${depType}`, done => {
+			const exampleDependencies = {
 				'foo': '1.0.0 - 2.9999.9999',
 				'bar': '>=1.0.2 <2.1.2',
 				'baz': '>1.0.2 <=2.3.4',
@@ -65,66 +62,61 @@ describe('localizeDependencies', function () {
 				'express': 'visionmedia/express',
 				'mocha': 'visionmedia/mocha#4727d357ea'
 			};
-			writeTemplate(depType, exampleDependencies).then(function () {
-				return localizeDependencies(workdir, referencedir);
-			}).then(function () {
-				return readjson(path.join(workdir, 'package.json'));
-			}).then(function (content) {
-				expect(content[depType]).toEqual(exampleDependencies);
-			}).then(done, done.fail);
-
+			writeTemplate(depType, exampleDependencies)
+			.then(() => localizeDependencies(workdir, referencedir))
+			.then(() => readjson(path.join(workdir, 'package.json')))
+			.then(content => expect(content[depType]).toEqual(exampleDependencies))
+			.then(done, done.fail);
 		});
-		it('does not modify local dependencies that point to absolute paths in ' + depType, function (done) {
-			var exampleDependencies = {
+		it(`does not modify local dependencies that point to absolute paths in ${depType}`, done => {
+			const exampleDependencies = {
 				'homeRelative': '~/foo/bar',
 				'absolute': '/foo/bar',
 				'fileAbsolute': 'file:/foo/bar',
 				'fileHome': 'file:~/foo/bar'
 			};
-			writeTemplate(depType, exampleDependencies).then(function () {
-				return localizeDependencies(workdir, referencedir);
-			}).then(function () {
-				return readjson(path.join(workdir, 'package.json'));
-			}).then(function (content) {
-				expect(content[depType]).toEqual(exampleDependencies);
-			}).then(done, done.fail);
-
+			writeTemplate(depType, exampleDependencies)
+			.then(() => localizeDependencies(workdir, referencedir))
+			.then(() => readjson(path.join(workdir, 'package.json')))
+			.then(content => expect(content[depType]).toEqual(exampleDependencies))
+			.then(done, done.fail);
 		});
-		it('modifies local dependencies in ' + depType, function (done) {
-			var exampleDependencies = {
+		it(`modifies local dependencies in ${depType}`, done => {
+			const exampleDependencies = {
 				'parentRelative': '../foo/bar',
 				'subdirRelative': './foo/bar',
 				'fileRelative': 'file:../foo/bar',
 				'fileSubdir': 'file:./foo/bar'
 			};
-			writeTemplate(depType, exampleDependencies).then(function () {
-				return localizeDependencies(workdir, referencedir);
-			}).then(function () {
-				return readjson(path.join(workdir, 'package.json'));
-			}).then(function (content) {
+			writeTemplate(depType, exampleDependencies)
+			.then(() => localizeDependencies(workdir, referencedir))
+			.then(() => readjson(path.join(workdir, 'package.json')))
+			.then(content => {
 				expect(content[depType]).toEqual({
 					'parentRelative': 'file:' + path.resolve(referencedir, '../foo/bar'),
 					'subdirRelative': 'file:' + path.resolve(referencedir, './foo/bar'),
 					'fileRelative': 'file:' + path.resolve(referencedir, '../foo/bar'),
 					'fileSubdir': 'file:' + path.resolve(referencedir, './foo/bar')
 				});
-			}).then(done, done.fail);
+			})
+			.then(done, done.fail);
 		});
 	});
-	it('does not create .npmrc if the original directory does not have one', function (done) {
+	it('does not create .npmrc if the original directory does not have one', done => {
 		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
-		localizeDependencies(workdir, referencedir).then(function () {
-			expect(shell.test('-e', path.join(workdir, '.npmrc'))).toBeFalsy();
-		}).then(done, done.fail);
+		localizeDependencies(workdir, referencedir)
+		.then(() => expect(shell.test('-e', path.join(workdir, '.npmrc'))).toBeFalsy())
+		.then(done, done.fail);
 	});
-	it('copies .npmrc if the original directory contains it', function (done) {
+	it('copies .npmrc if the original directory contains it', done => {
 		fs.writeFileSync(path.join(referencedir, '.npmrc'), 'optional = false', 'utf8');
 		shell.cp(path.join(__dirname, '..', 'package.json'), workdir);
-		localizeDependencies(workdir, referencedir).then(function () {
-			var npmRcPath = path.join(workdir, '.npmrc');
+		localizeDependencies(workdir, referencedir)
+		.then(() => {
+			const npmRcPath = path.join(workdir, '.npmrc');
 			expect(shell.test('-e', npmRcPath)).toBeTruthy();
 			expect(fs.readFileSync(npmRcPath, 'utf8')).toEqual('optional = false');
-		}).then(done, done.fail);
+		})
+		.then(done, done.fail);
 	});
-
 });

@@ -1,114 +1,106 @@
-/*global describe, it, expect, beforeEach, afterEach, require */
-var underTest = require('../src/util/loadconfig'),
+/*global describe, it, expect, beforeEach, afterEach */
+const underTest = require('../src/util/loadconfig'),
 	tmppath = require('../src/util/tmppath'),
 	shell = require('shelljs'),
 	fs = require('fs'),
 	path = require('path');
-describe('loadConfig', function () {
+describe('loadConfig', () => {
 	'use strict';
-	var workingdir, exampleConfig, cwd;
-	beforeEach(function () {
-		exampleConfig = {name: 'config'};
+	let workingdir, exampleConfig, cwd;
+	beforeEach(() => {
+		exampleConfig = { name: 'config' };
 		workingdir = tmppath();
 		shell.mkdir(workingdir);
 		cwd = shell.pwd().toString();
 	});
-	afterEach(function () {
+	afterEach(() => {
 		shell.cd(cwd);
 		shell.rm('-rf', workingdir);
 	});
-	it('loads config from the current directory if no directory provided', function (done) {
+	it('loads config from the current directory if no directory provided', done => {
 		shell.cd(workingdir);
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest().then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest()
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-	it('loads config from the source directory if string provided', function (done) {
+	it('loads config from the source directory if string provided', done => {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest(workingdir)
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-	it('loads config from the source directory if object provided', function (done) {
+	it('loads config from the source directory if object provided', done => {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest({source: workingdir}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest({ source: workingdir })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-	it('loads config from an alternative file in the current dir, if config is provided', function (done) {
+	it('loads config from an alternative file in the current dir, if config is provided', done => {
 		shell.cd(workingdir);
 		fs.writeFileSync(path.join(workingdir, 'lambda.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest({config: 'lambda.json'}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest({ config: 'lambda.json' })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-	it('loads config from an alternative file in a different dir, if config is provided', function (done) {
+	it('loads config from an alternative file in a different dir, if config is provided', done => {
 		fs.writeFileSync(path.join(workingdir, 'lambda.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest({config: path.join(workingdir, 'lambda.json')}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest({ config: path.join(workingdir, 'lambda.json') })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-	it('complains about claudia.json if no config is given and claudia.json does not exist', function (done) {
-		underTest({source: workingdir}).then(done.fail, function (err) {
-			expect(err).toEqual('claudia.json does not exist in the source folder');
-			done();
-		});
+	it('complains about claudia.json if no config is given and claudia.json does not exist', done => {
+		underTest({ source: workingdir })
+		.then(done.fail, err => expect(err).toEqual('claudia.json does not exist in the source folder'))
+		.then(done);
 	});
-	it('complains about the source path if config is given but does not exist', function (done) {
-		var configPath = path.join(workingdir, 'lambda.json');
-		underTest({config: configPath}).then(done.fail, function (err) {
-			expect(err).toEqual(configPath + ' does not exist');
-			done();
-		});
+	it('complains about the source path if config is given but does not exist', done => {
+		const configPath = path.join(workingdir, 'lambda.json');
+		underTest({ config: configPath })
+		.then(done.fail, err => expect(err).toEqual(configPath + ' does not exist'))
+		.then(done);
 	});
-	it('validates lambda name if required', function (done) {
+	it('validates lambda name if required', done => {
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {name: true}}).then(done.fail, function (err) {
-			expect(err).toEqual('invalid configuration -- lambda.name missing from claudia.json');
-			done();
-		});
+		underTest(workingdir, { lambda: { name: true } })
+		.then(done.fail, err => expect(err).toEqual('invalid configuration -- lambda.name missing from claudia.json'))
+		.then(done);
 	});
-	it('passes name validation if name is provided', function (done) {
+	it('passes name validation if name is provided', done => {
 		exampleConfig = { lambda: {name: 'mike'} };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {name: true}}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest(workingdir, { lambda: { name: true } })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
 
-	it('validates lambda region if required', function (done) {
-		exampleConfig = { lambda: {name: 'mike'} };
+	it('validates lambda region if required', done => {
+		exampleConfig = { lambda: { name: 'mike' } };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {region: true}}).then(done.fail, function (err) {
-			expect(err).toEqual('invalid configuration -- lambda.region missing from claudia.json');
-			done();
-		});
+		underTest(workingdir, { lambda: { region: true } })
+		.then(done.fail, err => expect(err).toEqual('invalid configuration -- lambda.region missing from claudia.json'))
+		.then(done);
 	});
-	it('passes region validation if name is provided', function (done) {
-		exampleConfig = { lambda: {name: 'mike', region: 'us-east-1'} };
+	it('passes region validation if name is provided', done => {
+		exampleConfig = { lambda: { name: 'mike', region: 'us-east-1' } };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {region: true}}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest(workingdir, { lambda: { region: true } })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
 
-	it('validates lambda role if required', function (done) {
-		exampleConfig = { lambda: {name: 'mike'} };
+	it('validates lambda role if required', done => {
+		exampleConfig = { lambda: { name: 'mike' } };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {role: true}}).then(done.fail, function (err) {
-			expect(err).toEqual('invalid configuration -- lambda.role missing from claudia.json');
-			done();
-		});
+		underTest(workingdir, { lambda: { role: true } })
+		.then(done.fail, err => expect(err).toEqual('invalid configuration -- lambda.role missing from claudia.json'))
+		.then(done);
 	});
-	it('passes region validation if name is provided', function (done) {
-		exampleConfig = { lambda: {role: 'us-east-1'} };
+	it('passes region validation if name is provided', done => {
+		exampleConfig = { lambda: { role: 'us-east-1' } };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
-		underTest(workingdir, {lambda: {role: true}}).then(function (config) {
-			expect(config).toEqual(exampleConfig);
-		}).then(done, done.fail);
+		underTest(workingdir, { lambda: { role: true } })
+		.then(config => expect(config).toEqual(exampleConfig))
+		.then(done, done.fail);
 	});
-
-
-
 });

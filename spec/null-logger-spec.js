@@ -1,14 +1,13 @@
-/*global describe, it, require, expect, beforeEach */
-var NullLogger = require('../src/util/null-logger');
-describe('NullLogger', function () {
+/*global describe, it, expect, beforeEach */
+const NullLogger = require('../src/util/null-logger');
+describe('NullLogger', () => {
 	'use strict';
-	var underTest;
-	beforeEach(function () {
+	let underTest;
+	beforeEach(() => {
 		underTest = new NullLogger();
 	});
-	it('has the API methods for logging', function () {
+	it('has the API methods for logging', () => {
 		expect(typeof underTest.logStage).toEqual('function');
 		expect(typeof underTest.logApiCall).toEqual('function');
 	});
 });
-

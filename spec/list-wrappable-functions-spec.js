@@ -1,23 +1,23 @@
-/*global describe, expect, it, require */
-var aws = require('aws-sdk'),
+/*global describe, expect, it */
+const aws = require('aws-sdk'),
 	listWrappableFunctions = require('../src/util/list-wrappable-functions'),
 	iam = new aws.IAM(),
 	s3 = new aws.S3();
-describe('listWrappableFunctions', function () {
+describe('listWrappableFunctions', () => {
 	'use strict';
-	it('should identify methods', function () {
+	it('should identify methods', () => {
 		expect(listWrappableFunctions(iam)).toContain('createRole');
 	});
-	it('should ignore generic methods', function () {
+	it('should ignore generic methods', () => {
 		expect(listWrappableFunctions(iam)).not.toContain('makeRequest');
 	});
-	it('should ignore constructors', function () {
+	it('should ignore constructors', () => {
 		expect(listWrappableFunctions(iam)).not.toContain('constructor');
 	});
-	it('should include super-prototype methods', function () {
+	it('should include super-prototype methods', () => {
 		expect(listWrappableFunctions(s3)).toContain('upload');
 	});
-	it('should not contain any properties', function () {
-		expect(listWrappableFunctions({ a: function () { }, b: 5})).toEqual(['a']);
+	it('should not contain any properties', () => {
+		expect(listWrappableFunctions({ a: () => {}, b: 5 })).toEqual(['a']);
 	});
 });

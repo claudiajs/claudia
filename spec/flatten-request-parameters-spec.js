@@ -1,13 +1,13 @@
-/*global describe, it, expect, require */
-var underTest = require('../src/tasks/flatten-request-parameters');
-describe('flattenRequestParameters', function () {
+/*global describe, it, expect */
+const underTest = require('../src/tasks/flatten-request-parameters');
+describe('flattenRequestParameters', () => {
 	'use strict';
-	it('returns false for falsy objects', function () {
+	it('returns false for falsy objects', () => {
 		expect(underTest(false)).toEqual(false);
 		expect(underTest(undefined)).toEqual(undefined);
 		expect(underTest({})).toEqual({});
 	});
-	it('squashes querystring parameters', function () {
+	it('squashes querystring parameters', () => {
 		expect(underTest({
 			querystring: {
 				'tim': true,
@@ -18,7 +18,7 @@ describe('flattenRequestParameters', function () {
 			'method.request.querystring.tom': false
 		});
 	});
-	it('squashes header parameters', function () {
+	it('squashes header parameters', () => {
 		expect(underTest({
 			header: {
 				'tim': true,
@@ -29,7 +29,7 @@ describe('flattenRequestParameters', function () {
 			'method.request.header.tom': false
 		});
 	});
-	it('squashes mixed querystring/header parameters', function () {
+	it('squashes mixed querystring/header parameters', () => {
 		expect(underTest({
 			header: {
 				'tim': true
@@ -42,39 +42,39 @@ describe('flattenRequestParameters', function () {
 			'method.request.querystring.tom': false
 		});
 	});
-	it('clones direct string params', function () {
+	it('clones direct string params', () => {
 		expect(underTest({
 			'method.request.querystring.name': true
 		})).toEqual({
 			'method.request.querystring.name': true
 		});
 	});
-	it('parses path params', function () {
+	it('parses path params', () => {
 		expect(underTest(false, '/echo/{name}/{lastName}')).toEqual({
 			'method.request.path.name': true,
 			'method.request.path.lastName': true
 		});
 	});
-	it('parses path params when ending with slash', function () {
+	it('parses path params when ending with slash', () => {
 		expect(underTest(undefined, '/echo/{name}/{lastName}/')).toEqual({
 			'method.request.path.name': true,
 			'method.request.path.lastName': true
 		});
 	});
-	it('parses path params when starting with a dynamic param', function () {
+	it('parses path params when starting with a dynamic param', () => {
 		expect(underTest(undefined, '/{name}')).toEqual({
 			'method.request.path.name': true
 		});
 	});
-	it('uses greedy without +', function () {
+	it('uses greedy without +', () => {
 		expect(underTest(undefined, '/echo/{proxy+}')).toEqual({
 			'method.request.path.proxy': true
 		});
 	});
-	it('does not include path params for static paths', function () {
+	it('does not include path params for static paths', () => {
 		expect(underTest(undefined, '/echo/name/lastName')).toBeFalsy();
 	});
-	it('will mix paths params and explicit params', function () {
+	it('will mix paths params and explicit params', () => {
 		expect(underTest({
 			header: {
 				'tim': true

@@ -28,7 +28,7 @@ describe('cleanUpPackage', () => {
 		runNpm(sourcedir, 'install', logger)
 		.then(done, done.fail);
 	});
-	afterEach(function () {
+	afterEach(() => {
 		shell.cd(pwd);
 		if (sourcedir) {
 			shell.rm('-rf', sourcedir);
