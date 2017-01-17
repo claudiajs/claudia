@@ -1020,6 +1020,7 @@ describe('create', function () {
 				'apigateway.createRestApi',
 				'apigateway.setupRequestListeners',
 				'apigateway.setAcceptHeader',
+				'apigateway.getRestApi',
 				'apigateway.getResources',
 				'apigateway.createResource',
 				'apigateway.putMethod',

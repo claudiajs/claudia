@@ -1134,9 +1134,10 @@ describe('rebuildWebApi', function () {
 		it('logs execution', function (done) {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger).then(function () {
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
-					'apigateway.getResources',
+					'apigateway.getRestApi',
 					'apigateway.setupRequestListeners',
 					'apigateway.setAcceptHeader',
+					'apigateway.getResources',
 					'apigateway.createResource',
 					'apigateway.putMethod',
 					'apigateway.putIntegration',
@@ -1209,9 +1210,10 @@ describe('rebuildWebApi', function () {
 			}).then(function (result) {
 				expect(result.cacheReused).toBeTruthy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
-					'apigateway.getStage',
+					'apigateway.getRestApi',
 					'apigateway.setupRequestListeners',
-					'apigateway.setAcceptHeader'
+					'apigateway.setAcceptHeader',
+					'apigateway.getStage'
 				]);
 				expect(logger.getStageLog(true)).toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
