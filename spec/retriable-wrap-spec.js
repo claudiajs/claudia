@@ -42,16 +42,16 @@ describe('retriableWrap', () => {
 		expect(wrapped.thirdField).toEqual(5);
 		expect(wrapped.thirdFieldPromise).toBeUndefined();
 	});
-	it('proxies calls to request methods', function (done) {
-		requestSpy.and.callFake(function (number, object) {
+	it('proxies calls to request methods', done => {
+		requestSpy.and.callFake((number, object) => {
 			expect(number).toEqual(124);
 			expect(object).toEqual({a: 123});
 			done();
 		});
 		wrapped.firstMethodPromise(124, {a: 123});
 	});
-	it('proxies calls to promise methods', function (done) {
-		promiseSpy.and.callFake(function (number, object) {
+	it('proxies calls to promise methods', done => {
+		promiseSpy.and.callFake((number, object) => {
 			expect(number).toEqual(124);
 			expect(object).toEqual({a: 123});
 			expect(functionSpy).not.toHaveBeenCalled();
@@ -60,8 +60,8 @@ describe('retriableWrap', () => {
 		});
 		wrapped.secondMethodPromise(124, {a: 123});
 	});
-	it('proxies calls to functions', function (done) {
-		functionSpy.and.callFake(function (number, object) {
+	it('proxies calls to functions', done => {
+		functionSpy.and.callFake((number, object) => {
 			expect(number).toEqual(124);
 			expect(object).toEqual({a: 123});
 			expect(promiseSpy).not.toHaveBeenCalled();
@@ -71,48 +71,48 @@ describe('retriableWrap', () => {
 		wrapped.fourthFunctionPromise(124, {a: 123});
 	});
 	describe('when the underlying method returns something with .promise', () => {
-		it('does not resolve or reject until the underlying promise resolves', function (done) {
-			var resolve = jasmine.createSpy('resolve'), reject = jasmine.createSpy('reject');
+		it('does not resolve or reject until the underlying promise resolves', done => {
+			const resolve = jasmine.createSpy('resolve'), reject = jasmine.createSpy('reject');
 			wrapped.firstMethodPromise('124').then(resolve, reject);
 			Promise.resolve().then(() => {
 				expect(resolve).not.toHaveBeenCalled();
 				expect(reject).not.toHaveBeenCalled();
 			}).then(done, done.fail);
 		});
-		it('resolves as soon as the underlying promise resolves', function (done) {
-			wrapped.firstMethodPromise('124').then(function (res) {
+		it('resolves as soon as the underlying promise resolves', done => {
+			wrapped.firstMethodPromise('124').then(res => {
 				expect(res).toEqual('result');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done, done.fail);
 			promises.first.resolve('result');
 		});
-		it('rejects as soon as the underlying promise resolves with a non retriable error', function (done) {
-			wrapped.firstMethodPromise('124').then(done.fail, function (err) {
+		it('rejects as soon as the underlying promise resolves with a non retriable error', done => {
+			wrapped.firstMethodPromise('124').then(done.fail, err => {
 				expect(err).toEqual('result');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done);
 			promises.first.reject('result');
 		});
-		it('retries TooManyRequestsException', function (done) {
-			var sequence = [buildPromise('a'), buildPromise('b')],
+		it('retries TooManyRequestsException', done => {
+			const sequence = [buildPromise('a'), buildPromise('b')],
 				source = { retryAsync: () => {
 					return sequence.shift();
 				}},
 				wrapped = underTest(source, onRetry, 10, 5);
-			wrapped.retryAsyncPromise().then(function (result) {
+			wrapped.retryAsyncPromise().then(result => {
 				expect(onRetry).toHaveBeenCalled();
 				expect(result).toEqual('good');
 			}).then(done, done.fail);
 			promises.a.reject({code: 'TooManyRequestsException'});
 			promises.b.resolve('good');
 		});
-		it('fails TooManyRequestsException if over the retry limit', function (done) {
-			var sequence = [buildPromise('a'), buildPromise('b'), buildPromise('c')],
+		it('fails TooManyRequestsException if over the retry limit', done => {
+			const sequence = [buildPromise('a'), buildPromise('b'), buildPromise('c')],
 				source = { retryAsync: () => {
 					return sequence.shift();
 				}},
 				wrapped = underTest(source, onRetry, 10, 1);
-			wrapped.retryAsyncPromise().then(done.fail, function (err) {
+			wrapped.retryAsyncPromise().then(done.fail, err => {
 				expect(onRetry).not.toHaveBeenCalled();
 				expect(err).toEqual({code: 'TooManyRequestsException'});
 			}).then(done);
@@ -121,48 +121,48 @@ describe('retriableWrap', () => {
 		});
 	});
 	describe('when the underlying method returns a thenable value without .promise', () => {
-		it('does not resolve or reject until the underlying promise resolves', function (done) {
-			var resolve = jasmine.createSpy('resolve'), reject = jasmine.createSpy('reject');
+		it('does not resolve or reject until the underlying promise resolves', done => {
+			const resolve = jasmine.createSpy('resolve'), reject = jasmine.createSpy('reject');
 			wrapped.secondMethodPromise('124').then(resolve, reject);
 			Promise.resolve().then(() => {
 				expect(resolve).not.toHaveBeenCalled();
 				expect(reject).not.toHaveBeenCalled();
 			}).then(done, done.fail);
 		});
-		it('resolves as soon as the underlying promise resolves', function (done) {
-			wrapped.secondMethodPromise('124').then(function (res) {
+		it('resolves as soon as the underlying promise resolves', done => {
+			wrapped.secondMethodPromise('124').then(res => {
 				expect(res).toEqual('result');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done, done.fail);
 			promises.second.resolve('result');
 		});
-		it('rejects as soon as the underlying promise resolves with a non retriable error', function (done) {
-			wrapped.secondMethodPromise('124').then(done.fail, function (err) {
+		it('rejects as soon as the underlying promise resolves with a non retriable error', done => {
+			wrapped.secondMethodPromise('124').then(done.fail, err => {
 				expect(err).toEqual('result');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done);
 			promises.second.reject('result');
 		});
-		it('retries TooManyRequestsException', function (done) {
-			var sequence = [buildPromise('a'), buildPromise('b')],
+		it('retries TooManyRequestsException', done => {
+			const sequence = [buildPromise('a'), buildPromise('b')],
 				source = { retryAsync: () => {
 					return sequence.shift();
 				}},
 				wrapped = underTest(source, onRetry, 10, 5);
-			wrapped.retryAsyncPromise().then(function (result) {
+			wrapped.retryAsyncPromise().then(result => {
 				expect(onRetry).toHaveBeenCalled();
 				expect(result).toEqual('good');
 			}).then(done, done.fail);
 			promises.a.reject({code: 'TooManyRequestsException'});
 			promises.b.resolve('good');
 		});
-		it('fails TooManyRequestsException if over the retry limit', function (done) {
-			var sequence = [buildPromise('a'), buildPromise('b'), buildPromise('c')],
+		it('fails TooManyRequestsException if over the retry limit', done => {
+			const sequence = [buildPromise('a'), buildPromise('b'), buildPromise('c')],
 				source = { retryAsync: () => {
 					return sequence.shift();
 				}},
 				wrapped = underTest(source, onRetry, 10, 1);
-			wrapped.retryAsyncPromise().then(done.fail, function (err) {
+			wrapped.retryAsyncPromise().then(done.fail, err => {
 				expect(onRetry).not.toHaveBeenCalled();
 				expect(err).toEqual({code: 'TooManyRequestsException'});
 			}).then(done);
@@ -172,29 +172,29 @@ describe('retriableWrap', () => {
 	});
 	describe('when the underlying method returns a primitive', () => {
 
-		it('resolves immediately with the function result', function (done) {
+		it('resolves immediately with the function result', done => {
 			functionSpy.and.returnValue('result');
-			wrapped.fourthFunctionPromise('124').then(function (res) {
+			wrapped.fourthFunctionPromise('124').then(res => {
 				expect(res).toEqual('result');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done, done.fail);
 		});
-		it('rejects with the function exception', function (done) {
+		it('rejects with the function exception', done => {
 			functionSpy.and.throwError('boom');
-			wrapped.fourthFunctionPromise('124').then(done.fail, function (err) {
+			wrapped.fourthFunctionPromise('124').then(done.fail, err => {
 				expect(err.message).toEqual('boom');
 				expect(onRetry).not.toHaveBeenCalled();
 			}).then(done);
 		});
 		describe('retrying', () => {
-			var sequence;
+			let sequence;
 			beforeEach(() => {
 				sequence = ['TooManyRequestsException'];
 				source = {
 					fourthFunction: functionSpy
 				};
 				functionSpy.and.callFake(() => {
-					var next = sequence.shift();
+					const next = sequence.shift();
 					if (next) {
 						throw {code: next};
 					} else {
@@ -202,27 +202,27 @@ describe('retriableWrap', () => {
 					}
 				});
 			});
-			it('retries TooManyRequestsException', function (done) {
+			it('retries TooManyRequestsException', done => {
 				wrapped = underTest(source, onRetry, 10, 5);
 
-				wrapped.fourthFunctionPromise('A').then(function (result) {
+				wrapped.fourthFunctionPromise('A').then(result => {
 					expect(onRetry).toHaveBeenCalled();
 					expect(result).toEqual('good');
 				}).then(done, done.fail);
 			});
-			it('does not retry other exceptions', function (done) {
+			it('does not retry other exceptions', done => {
 				sequence.push('TooFewRequestsException');
 				wrapped = underTest(source, onRetry, 10, 5);
 
-				wrapped.fourthFunctionPromise('A').then(done.fail, function (err) {
+				wrapped.fourthFunctionPromise('A').then(done.fail, err => {
 					expect(onRetry).toHaveBeenCalled();
 					expect(err).toEqual({code: 'TooFewRequestsException'});
 				}).then(done, done.fail);
 			});
 
-			it('fails TooManyRequestsException if over the retry limit', function (done) {
+			it('fails TooManyRequestsException if over the retry limit', done => {
 				wrapped = underTest(source, onRetry, 10, 1);
-				wrapped.fourthFunctionPromise('A').then(done.fail, function (err) {
+				wrapped.fourthFunctionPromise('A').then(done.fail, err => {
 					expect(onRetry).not.toHaveBeenCalled();
 					expect(err).toEqual({code: 'TooManyRequestsException'});
 				}).then(done, done.fail);
@@ -231,10 +231,10 @@ describe('retriableWrap', () => {
 		});
 	});
 	describe('working with AWS-SDK objects', () => {
-		it('wraps API objects', function (done) {
-			var sts = underTest(new aws.STS());
+		it('wraps API objects', done => {
+			const sts = underTest(new aws.STS());
 			expect(typeof sts.getCallerIdentityPromise).toBe('function');
-			sts.getCallerIdentityPromise().then(function (callerIdentity) {
+			sts.getCallerIdentityPromise().then(callerIdentity => {
 				expect(callerIdentity.Account).not.toBeUndefined();
 			}).then(done, done.fail);
 		});

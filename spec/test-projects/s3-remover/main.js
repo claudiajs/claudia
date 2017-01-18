@@ -1,9 +1,9 @@
 /*global exports, require, console*/
-var aws = require('aws-sdk'),
+const aws = require('aws-sdk'),
 	s3 = new aws.S3();
 exports.handler = function (event, context) {
 	'use strict';
-	var eventRecord = event.Records && event.Records && event.Records[0];
+	const eventRecord = event.Records && event.Records && event.Records[0];
 	console.log('got record', eventRecord);
 	if (eventRecord) {
 		if (eventRecord.eventSource === 'aws:s3' && eventRecord.s3) {

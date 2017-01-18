@@ -22,13 +22,13 @@ describe('createPatchArrayForTypes', () => {
 			{op: 'remove', path: '/binaryMediaTypes/image~1png'}
 		]);
 	});
-	it('returns an empty array if existing and requested are equal', function () {
+	it('returns an empty array if existing and requested are equal', () => {
 		expect(createPatchArrayForTypes(['image/jpg', 'image/png'], ['image/jpg', 'image/png'])).toEqual([]);
 	});
-	it('ignores order when comparing for equality', function () {
+	it('ignores order when comparing for equality', () => {
 		expect(createPatchArrayForTypes(['image/png', 'image/jpg'], ['image/jpg', 'image/png'])).toEqual([]);
 	});
-	it('returns the difference when both requested and existing are set', function () {
+	it('returns the difference when both requested and existing are set', () => {
 		expect(createPatchArrayForTypes(['image/jpg', 'image/png'], ['image/png', 'image/gif'])).toEqual([
 			{op: 'remove', path: '/binaryMediaTypes/image~1jpg'},
 			{op: 'add', path: '/binaryMediaTypes/image~1gif'}

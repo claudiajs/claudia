@@ -1,5 +1,5 @@
 /*global exports, require*/
-var fs = require('fs');
+const fs = require('fs');
 exports.handler = function (event, context) {
 	'use strict';
 	context.succeed({

@@ -4,11 +4,11 @@ const aws = require('aws-sdk'),
 	patchBinaryTypes = require('../src/tasks/patch-binary-types'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	destroyObjects = require('./util/destroy-objects');
-describe('patchBinaryTypes', function () {
+describe('patchBinaryTypes', () => {
 	'use strict';
 	let testRunName, apiId;
 	const apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion}));
-	beforeEach(function () {
+	beforeEach(() => {
 		testRunName = 'test' + Date.now();
 	});
 	afterEach(done => {

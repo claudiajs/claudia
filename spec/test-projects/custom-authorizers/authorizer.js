@@ -1,7 +1,7 @@
 /*global exports */
-var generatePolicy = function (authToken, methodArn) {
+const generatePolicy = function (authToken, methodArn) {
 	'use strict';
-	var tmp = methodArn.split(':'),
+	const tmp = methodArn.split(':'),
 		apiGatewayArnTmp = tmp[5].split('/'),
 		awsAccountId = tmp[4],
 		region = tmp[3],

@@ -8,7 +8,7 @@ exports.apiConfig = function () {
 };
 exports.postDeploy = function (options, lambdaDetails, utils) {
 	'use strict';
-	var deployment = {
+	const deployment = {
 		restApiId: lambdaDetails.apiId,
 		stageName: 'postdeploy',
 		variables: {
@@ -23,7 +23,7 @@ exports.postDeploy = function (options, lambdaDetails, utils) {
 			'hasPromise': (!!utils.Promise).toString()
 		}
 	};
-	return utils.apiGatewayPromise.createDeploymentPromise(deployment).then(function () {
+	return utils.apiGatewayPromise.createDeploymentPromise(deployment).then(() => {
 		return {
 			result: options.postresult,
 			wasApiCacheUsed: !!lambdaDetails.apiCacheReused
