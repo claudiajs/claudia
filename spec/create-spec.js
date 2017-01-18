@@ -307,10 +307,14 @@ describe('create', () => {
 				ec2 = new aws.EC2({ region: awsRegion });
 			beforeAll(done => {
 				ec2.createVpc({ CidrBlock: CidrBlock }).promise()
-				.then(vpcData => vpcData.Vpc)
-				.then(vpc => ec2.createSubnet({ CidrBlock: CidrBlock, VpcId: vpc.VpcId }).promise())
-				.then(subnetData => subnetData.Subnet)
-				.then(() => ec2.createSecurityGroup({ GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId }).promise())
+				.then(vpcData => {
+					vpc = vpcData.Vpc;
+					return ec2.createSubnet({CidrBlock: CidrBlock, VpcId: vpc.VpcId}).promise();
+				})
+				.then(subnetData => {
+					subnet = subnetData.Subnet;
+					return ec2.createSecurityGroup({ GroupName: securityGroupName, Description: 'Temporary testing group', VpcId: vpc.VpcId }).promise();
+				})
 				.then(securityGroupData => {
 					securityGroup = securityGroupData;
 				})
@@ -767,9 +771,11 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('saves the api ID without module into claudia.json', done => {
-			const savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
 			createFromDir('apigw-proxy-echo')
-			.then(creationResult => expect(savedContents.api).toEqual({ id: creationResult.api.id }))
+			.then(creationResult => {
+				const savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({ id: creationResult.api.id });
+			})
 			.then(done, done.fail);
 		});
 		it('sets up the API to route sub-resource calls to Lambda', done => {
@@ -834,19 +840,23 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('saves the api name and module only into claudia.json', done => {
-			const savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
 			createFromDir('api-gw-hello-world')
-			.then(creationResult => expect(savedContents.api).toEqual({ id: creationResult.api.id, module: creationResult.api.module }))
+			.then(creationResult => {
+				const savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({ id: creationResult.api.id, module: creationResult.api.module });
+			})
 			.then(done, done.fail);
 		});
 		it('works when the source is a relative path', done => {
 			const workingParent = path.dirname(workingdir),
-				relativeWorkingDir = './' + path.basename(workingdir),
-				savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				relativeWorkingDir = './' + path.basename(workingdir);
 			shell.cd(workingParent);
 			config.source = relativeWorkingDir;
 			createFromDir('api-gw-hello-world')
-			.then(creationResult => expect(savedContents.api).toEqual({ id: creationResult.api.id, module: creationResult.api.module }))
+			.then(creationResult => {
+				const savedContents = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
+				expect(savedContents.api).toEqual({ id: creationResult.api.id, module: creationResult.api.module });
+			})
 			.then(done, done.fail);
 		});
 		it('uses the name from package.json if --name is not provided', done => {
