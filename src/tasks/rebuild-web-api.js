@@ -9,6 +9,7 @@ const aws = require('aws-sdk'),
 	NullLogger = require('../util/null-logger'),
 	safeHash = require('../util/safe-hash'),
 	flattenRequestParameters = require('./flatten-request-parameters'),
+	patchBinaryTypes = require('./patch-binary-types'),
 	getOwnerId = require('./get-owner-account-id'),
 	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion, optionalLogger, configCacheStageVar) {
@@ -56,7 +57,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				}
 			});
 		},
-		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters) {
+		putLambdaIntegration = function (resourceId, methodName, credentials, cacheKeyParameters, integrationContentHandling) {
 			return apiGateway.putIntegrationPromise({
 				restApiId: restApiId,
 				resourceId: resourceId,
@@ -65,6 +66,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				type: 'AWS_PROXY',
 				cacheKeyParameters: cacheKeyParameters,
 				integrationHttpMethod: 'POST',
+				passthroughBehavior: 'WHEN_NO_MATCH',
+				contentHandling: integrationContentHandling,
 				uri: 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/arn:aws:lambda:' + awsRegion + ':' + ownerId + ':function:' + functionName + ':${stageVariables.lambdaVersion}/invocations'
 			});
 		},
@@ -112,10 +115,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						restApiId: restApiId,
 						resourceId: resourceId,
 						httpMethod: methodName,
-						statusCode: '200',
-						responseTemplates: {
-							'application/json': ''
-						}
+						contentHandling: methodOptions && methodOptions.success && methodOptions.success.contentHandling,
+						statusCode: '200'
 					}));
 				},
 				authorizerId = function () {
@@ -131,7 +132,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				requestParameters: parameters,
 				apiKeyRequired: apiKeyRequired()
 			})
-			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters)))
+			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters), methodOptions.requestContentHandling))
 			.then(addMethodResponse);
 		},
 		createCorsHandler = function (resourceId) {
@@ -164,9 +165,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
 					statusCode: '200',
-					responseModels: {
-						'application/json': 'Empty'
-					},
 					responseParameters: responseParams
 				});
 			})
@@ -189,9 +187,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					resourceId: resourceId,
 					httpMethod: 'OPTIONS',
 					statusCode: '200',
-					responseTemplates: {
-						'application/json': ''
-					},
 					responseParameters: responseParams
 				});
 			});
@@ -325,24 +320,22 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			if (!configCacheStageVar) {
 				return false;
 			}
-			return apiGateway.getStagePromise({
-				restApiId: restApiId,
-				stageName: functionVersion
-			})
-			.then(stage => stage.variables && stage.variables[configCacheStageVar])
-			.catch(() => false);
+			return apiGateway.getStagePromise({ restApiId: restApiId, stageName: functionVersion })
+				.then(stage => stage.variables && stage.variables[configCacheStageVar])
+				.catch(() => false);
 		};
 	return getOwnerId(logger)
-	.then(accountOwnerId => {
-		ownerId = accountOwnerId;
-	})
-	.then(getExistingConfigHash)
-	.then(existingHash => {
-		if (existingHash && existingHash === configHash) {
-			logger.logStage('Reusing cached API configuration');
-			return { cacheReused: true };
-		} else {
-			return uploadApiConfig();
-		}
-	});
+		.then(accountOwnerId => {
+			ownerId = accountOwnerId;
+		})
+		.then(() => patchBinaryTypes(restApiId, apiGateway, apiConfig.binaryMediaTypes))
+		.then(getExistingConfigHash)
+		.then(existingHash => {
+			if (existingHash && existingHash === configHash) {
+				logger.logStage('Reusing cached API configuration');
+				return { cacheReused: true };
+			} else {
+				return uploadApiConfig();
+			}
+		});
 };

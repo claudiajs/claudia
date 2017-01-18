@@ -1,5 +1,9 @@
 # Release history
 
+### 2.6.0, 17 January 2016
+
+- support for API Gateway Binary content handling
+
 ### 2.5.0, 21 December 2016
 
 - support for configuring VPC access using `--subnet-ids` and `--security-group-ids` (thanks to [Roy Reiss](https://github.com/royreiss))
