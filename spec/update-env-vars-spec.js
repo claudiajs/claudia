@@ -1,37 +1,37 @@
 /*global require, describe, it, expect, beforeEach, Promise, jasmine */
-var updateEnvVars = require('../src/tasks/update-env-vars'),
+const updateEnvVars = require('../src/tasks/update-env-vars'),
 	fs = require('fs'),
 	tmppath = require('../src/util/tmppath');
 
-describe('updateEnvVars', function () {
+describe('updateEnvVars', () => {
 	'use strict';
-	var fakeLambdaAPI;
+	let fakeLambdaAPI;
 
-	beforeEach(function () {
+	beforeEach(() => {
 		fakeLambdaAPI = jasmine.createSpyObj('lambda', ['updateFunctionConfiguration']);
 		fakeLambdaAPI.updateFunctionConfiguration.and.returnValue(
 			{
-				promise: function () {
+				promise: () => {
 					return Promise.resolve();
 				}
 			}
 		);
 	});
-	it('does not invoke the lambda method if no env options are provided', function (done) {
-		updateEnvVars({a: 'b'}, fakeLambdaAPI, 'MyFunc').then(function () {
+	it('does not invoke the lambda method if no env options are provided', done => {
+		updateEnvVars({a: 'b'}, fakeLambdaAPI, 'MyFunc').then(() => {
 			expect(fakeLambdaAPI.updateFunctionConfiguration).not.toHaveBeenCalled();
 		}).then(done, done.fail);
 	});
-	it('sets only the KMS key if it is the only option', function (done) {
-		updateEnvVars({a: 'b', 'env-kms-key-arn': 'A:B:C'}, fakeLambdaAPI, 'MyFunc').then(function () {
+	it('sets only the KMS key if it is the only option', done => {
+		updateEnvVars({a: 'b', 'env-kms-key-arn': 'A:B:C'}, fakeLambdaAPI, 'MyFunc').then(() => {
 			expect(fakeLambdaAPI.updateFunctionConfiguration).toHaveBeenCalledWith({
 				FunctionName: 'MyFunc',
 				KMSKeyArn: 'A:B:C'
 			});
 		}).then(done, done.fail);
 	});
-	it('sets only the variables if set-env is the only option', function (done) {
-		updateEnvVars({a: 'b', 'set-env': 'A=B,C=D'}, fakeLambdaAPI, 'MyFunc').then(function () {
+	it('sets only the variables if set-env is the only option', done => {
+		updateEnvVars({a: 'b', 'set-env': 'A=B,C=D'}, fakeLambdaAPI, 'MyFunc').then(() => {
 			expect(fakeLambdaAPI.updateFunctionConfiguration).toHaveBeenCalledWith({
 				FunctionName: 'MyFunc',
 				Environment: {
@@ -43,10 +43,10 @@ describe('updateEnvVars', function () {
 			});
 		}).then(done, done.fail);
 	});
-	it('sets only the variables if set-env-from-json is the only option', function (done) {
-		var envpath = tmppath();
+	it('sets only the variables if set-env-from-json is the only option', done => {
+		const envpath = tmppath();
 		fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
-		updateEnvVars({a: 'b', 'set-env-from-json': envpath}, fakeLambdaAPI, 'MyFunc').then(function () {
+		updateEnvVars({a: 'b', 'set-env-from-json': envpath}, fakeLambdaAPI, 'MyFunc').then(() => {
 			expect(fakeLambdaAPI.updateFunctionConfiguration).toHaveBeenCalledWith({
 				FunctionName: 'MyFunc',
 				Environment: {
@@ -58,8 +58,8 @@ describe('updateEnvVars', function () {
 			});
 		}).then(done, done.fail);
 	});
-	it('sets both KMS key and environment variables if provided together', function (done) {
-		updateEnvVars({a: 'b', 'env-kms-key-arn': 'A:B:C',  'set-env': 'A=B,C=D'}, fakeLambdaAPI, 'MyFunc').then(function () {
+	it('sets both KMS key and environment variables if provided together', done => {
+		updateEnvVars({a: 'b', 'env-kms-key-arn': 'A:B:C',  'set-env': 'A=B,C=D'}, fakeLambdaAPI, 'MyFunc').then(() => {
 			expect(fakeLambdaAPI.updateFunctionConfiguration).toHaveBeenCalledWith({
 				FunctionName: 'MyFunc',
 				KMSKeyArn: 'A:B:C',

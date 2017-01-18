@@ -1,11 +1,11 @@
 /*global describe, it, expect, require, beforeEach, Promise,setTimeout */
-var sequentialPromiseMap = require('../src/util/sequential-promise-map');
-describe('sequentialPromiseMap', function () {
+const sequentialPromiseMap = require('../src/util/sequential-promise-map');
+describe('sequentialPromiseMap', () => {
 	'use strict';
-	var promises,
-		waitFor = function (index) {
-			return new Promise(function (resolve) {
-				var poll = function () {
+	let promises;
+	const waitFor = function (index) {
+			return new Promise(resolve => {
+				const poll = function () {
 					if (promises[index]) {
 						resolve({ promise: promises[index] });
 					} else {
@@ -16,8 +16,8 @@ describe('sequentialPromiseMap', function () {
 			});
 		},
 		generator = function (arg) {
-			var next = {}, res, rej;
-			next = new Promise(function (resolve, reject) {
+			let next = {}, res, rej;
+			next = new Promise((resolve, reject) => {
 				res = resolve;
 				rej = reject;
 			});
@@ -27,78 +27,60 @@ describe('sequentialPromiseMap', function () {
 			promises.push(next);
 			return next;
 		};
-	beforeEach(function () {
+	beforeEach(() => {
 		promises = [];
 	});
-	it('resolves immediately if no arguments', function (done) {
-		sequentialPromiseMap([], generator).then(function (result) {
+	it('resolves immediately if no arguments', done => {
+		sequentialPromiseMap([], generator).then(result => {
 			expect(promises.length).toEqual(0);
 			expect(result).toEqual([]);
 		}).then(done, done.fail);
 	});
-	it('executes a single promise mapping', function (done) {
-		sequentialPromiseMap(['a'], generator).then(function (result) {
+	it('executes a single promise mapping', done => {
+		sequentialPromiseMap(['a'], generator).then(result => {
 			expect(promises.length).toEqual(1);
 			expect(result).toEqual(['eee']);
 			expect(promises[0].arg).toEqual('a');
 		}).then(done, done.fail);
-		waitFor(0).then(function (promiseContainer) {
+		waitFor(0).then(promiseContainer => {
 			expect(promiseContainer.promise.arg).toEqual('a');
 			promiseContainer.promise.resolve('eee');
 		}).catch(done.fail);
 	});
-	it('does not resolve until all promises resolve', function (done) {
+	it('does not resolve until all promises resolve', done => {
 		sequentialPromiseMap(['a', 'b', 'c'], generator).then(done.fail, done.fail);
-		waitFor(0).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('eee');
-		});
-		waitFor(1).then(function () {
-			expect(promises.length).toEqual(2);
-		}).then(done);
+		waitFor(0).then(promiseContainer => promiseContainer.promise.resolve('eee'));
+		waitFor(1).then(() => expect(promises.length).toEqual(2)).then(done);
 	});
-	it('resolves after all the promises resolve', function (done) {
-		sequentialPromiseMap(['a', 'b'], generator).then(function (result) {
-			expect(result).toEqual(['aaa', 'bbb']);
-		}).then(done, done.fail);
-		waitFor(0).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('aaa');
-		});
-		waitFor(1).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('bbb');
-		});
+	it('resolves after all the promises resolve', done => {
+		sequentialPromiseMap(['a', 'b'], generator)
+			.then(result => expect(result).toEqual(['aaa', 'bbb']))
+			.then(done, done.fail);
+		waitFor(0).then(promiseContainer => promiseContainer.promise.resolve('aaa'));
+		waitFor(1).then(promiseContainer => promiseContainer.promise.resolve('bbb'));
 	});
-	it('does not modify the original array', function (done) {
-		var originalArray = ['a', 'b'];
-		sequentialPromiseMap(originalArray, generator).then(function () {
-			expect(originalArray).toEqual(['a', 'b']);
-		}).then(done, done.fail);
-		waitFor(0).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('aaa');
-		});
-		waitFor(1).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('bbb');
-		});
-
+	it('does not modify the original array', done => {
+		const originalArray = ['a', 'b'];
+		sequentialPromiseMap(originalArray, generator)
+			.then(() => expect(originalArray).toEqual(['a', 'b']))
+			.then(done, done.fail);
+		waitFor(0).then(promiseContainer => promiseContainer.promise.resolve('aaa'));
+		waitFor(1).then(promiseContainer => promiseContainer.promise.resolve('bbb'));
 	});
-	it('does not execute subsequent promises after a failure', function (done) {
-		sequentialPromiseMap(['a', 'b'], generator).then(done.fail, function () {
+	it('does not execute subsequent promises after a failure', done => {
+		sequentialPromiseMap(['a', 'b'], generator).then(done.fail, () => {
 			expect(promises.length).toEqual(1);
 			done();
 		});
-		waitFor(0).then(function (promiseContainer) {
-			promiseContainer.promise.reject('aaa');
-		});
+		waitFor(0).then(promiseContainer => promiseContainer.promise.reject('aaa'));
 	});
-	it('rejects with the error of the first rejected promise', function (done) {
-		sequentialPromiseMap(['a', 'b', 'c'], generator).then(done.fail, function (err) {
+	it('rejects with the error of the first rejected promise', done => {
+		sequentialPromiseMap(['a', 'b', 'c'], generator)
+		.then(done.fail, err => {
 			expect(err).toEqual('boom');
 			done();
 		});
-		waitFor(0).then(function (promiseContainer) {
-			promiseContainer.promise.resolve('aaa');
-		});
-		waitFor(1).then(function (promiseContainer) {
-			promiseContainer.promise.reject('boom');
-		});
+		waitFor(0).then(promiseContainer => promiseContainer.promise.resolve('aaa'));
+		waitFor(1).then(promiseContainer => promiseContainer.promise.reject('boom'));
 	});
 });
