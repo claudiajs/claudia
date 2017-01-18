@@ -1,9 +1,9 @@
 /*global describe, it, expect, require */
-var validCredentials = require('../src/util/valid-credentials');
-describe('validCredentials', function () {
+const validCredentials = require('../src/util/valid-credentials');
+describe('validCredentials', () => {
 	'use strict';
 	//http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html
-	var referenceIdentifiers = {
+	const referenceIdentifiers = {
 		'The root account - the account itself': 'arn:aws:iam::123456789012:root',
 		'An IAM user in the account': 'arn:aws:iam::123456789012:user/Bob',
 		'Another user with a path reflecting an organization chart': 'arn:aws:iam::123456789012:user/division_abc/subdivision_xyz/Bob',
@@ -20,25 +20,25 @@ describe('validCredentials', function () {
 		'Identity providers (SAML)': 'arn:aws:iam::123456789012:saml-provider/ADFSProvider',
 		'Identify providers (OIDC)': 'arn:aws:iam::123456789012:oidc-provider/GoogleProvider'
 	};
-	Object.keys(referenceIdentifiers).forEach(function (key) {
-		it('recognises ' + key, function () {
+	Object.keys(referenceIdentifiers).forEach(key => {
+		it('recognises ' + key, () => {
 			expect(validCredentials(referenceIdentifiers[key])).toBeTruthy();
 		});
 	});
-	it('recognises ARN masks', function () {
+	it('recognises ARN masks', () => {
 		expect(validCredentials('arn:aws:iam::*:role/apigAwsProxyRole')).toBeTruthy();
 		expect(validCredentials('arn:aws:iam::*:user/*')).toBeTruthy();
 		expect(validCredentials('arn:aws:iam::*:role/*')).toBeTruthy();
 	});
-	it('recognises true', function () {
+	it('recognises true', () => {
 		expect(validCredentials(true)).toBeTruthy();
 	});
-	it('does not recognise invalid format', function () {
+	it('does not recognise invalid format', () => {
 		expect(validCredentials('xxx:aws:iam::*:role/apigAwsProxyRole')).toBeFalsy();
 		expect(validCredentials('arn:aws:iam::*')).toBeFalsy();
 		expect(validCredentials('arn:aws:iam:*:role/*')).toBeFalsy();
 	});
-	it('does not recognise non string truthy values', function () {
+	it('does not recognise non string truthy values', () => {
 		expect(validCredentials([])).toBeFalsy();
 		expect(validCredentials({a: 1})).toBeFalsy();
 	});
