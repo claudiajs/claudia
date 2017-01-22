@@ -25,7 +25,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 		},
 		getAuthorizerArn = function (authConfig) {
 			if (!authConfig.lambdaName && authConfig.providerARNs) {
-				return Promise.resolve(null)
+				return Promise.resolve(null);
 			} else if (authConfig.lambdaArn) {
 				return Promise.resolve(authConfig.lambdaArn);
 			} else {
@@ -54,13 +54,13 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 		},
 		configureAuthorizer = function (authConfig, lambdaArn, authName) {
 
-			var type = authConfig.type || (authConfig.providerARNs ? 'COGNITO_USER_POOLS' : 'TOKEN');
-			const params = {
-				identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
-				name: authName,
-				restApiId: apiId,
-				type: type
-			};
+			const type = authConfig.type || (authConfig.providerARNs ? 'COGNITO_USER_POOLS' : 'TOKEN'),
+				params = {
+					identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
+					name: authName,
+					restApiId: apiId,
+					type: type
+				};
 			if (type === 'TOKEN') {
 				params.authorizerUri = 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
 			}

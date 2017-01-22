@@ -122,9 +122,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}));
 				},
 				authorizerId = function () {
-					var authorizerName = methodOptions.customAuthorizer || methodOptions.cognitoAuthorizer
+					const authorizerName = methodOptions.customAuthorizer || methodOptions.cognitoAuthorizer;
 					return methodOptions && authorizerName && authorizerIds[authorizerName];
-				};
+				},
+				parameters = flattenRequestParameters(methodOptions.requestParameters, path);
 			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
 				authorizerId: authorizerId(),
