@@ -35,6 +35,7 @@
     "docs"
   ],
   "scripts": {
+    "prepublish": "npm shrinkwrap && node src/util/doc-md.js",
     "pretest": "eslint .",
     "test": "node spec/support/jasmine-runner.js",
     "debug": "node debug spec/support/jasmine-runner.js",
