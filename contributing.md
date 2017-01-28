@@ -1,52 +1,75 @@
 # Developing and contributing to Claudia 
 
-AWS Lambda currently supports Node.js 4.3.2 and 0.10.36. The support for 0.10 is going away in October 2016. Until then, please run all tests using both versions before submitting a pull request. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment.
+* **Would you like to report a bug?** Please log an issue [directly in this github repository](https://github.com/claudiajs/claudia/issues).
+* **Would you like to ask a question or discuss feature ideas?** Let's chat in the [ClaudiaJS chat channel]gitter.im/claudiajs/claudia). Please don't add an issue to GitHub.
+* **Would you like to contribute code?** Lovely! Please submit a pull request. Check out the rest of this document for guidelines on where to add/change code before doing so.
 
-One important downside of 0.10 support is lack of support for promises. Newer Node.js versions support promises out of the box, but Claudia has to use an external dependency for that. To support future migration to the standard API easier, please use the [bluebird](http://bluebirdjs.com/docs/api-reference.html) promise library. Once Node 0.10 is no longer supported in Lambda, we'll drop the external library and migrate to internal Promises. 
+## Submitting pull requests
 
-# Folder structure
+First of all, thanks very much for spending the time to improve the code! The rest of this file will help you discover where to look for the code you want to change, where to put the changes and how to ensure that we can merge your pull request.
 
-The main body of code is in the [src](./src) directory. Any JS files in the [commands](./src/commands) subdir are automatically loaded as options for the command-line utility. Commands can expect to get a key-value set of options entered from the command line, and need to return a promise for the execution result. If you add or modify a command, please also update the [usage guide](docs). 
+We try to merge pull requests as quickly as possible, so generally if you follow the guidelines outlined below, you can expect the request to be merged within a working day or two.
 
-Sub-tasks directly related to automating and aggregating AWS workflows should go to the [tasks](./src/tasks) directory, and generic reusable utility functions should go to the [util](./src/util) directory.
+Please don't submit a pull request until the code is completely ready. To avoid pull requests becoming a graveyard for half-baked code, we will close all pull requests after a week of inactivity. This isn't a reflection on the quality of your ideas or coding skills, it's just a way to avoid maintenance hell.  
 
-Claudia has extensive unit and integration tests in the [spec](./spec) directory. Ideally, any new code should also be accompanied by a new test, so we can simplify future maintenance and development.  Unless there is a very compelling reason to use something different, please continue using [Jasmine](https://jasmine.github.io) for tests.
+### Where to put new code, and where to find the existing code to change 
 
-# Important tests to add
+* The main code is in the [src](./src) directory, divided into three subdirectories:
+  * Any JS files in the [commands](./src/commands) subdir are automatically loaded as options for the command-line utility. Commands can expect to get a key-value set of options entered from the command line, and need to return a promise for the execution result. 
+  * Sub-tasks directly related to automating and aggregating AWS workflows should go to the [tasks](./src/tasks) directory
+  * Generic reusable utility functions should go to the [util](./src/util) directory.
+* Claudia has extensive unit and integration tests in the [spec](./spec) directory. These aren't organised by folders, so everything is in the same place.
 
-In addition for the tests for the new functionality, if you are adding any configuration arguments or changing any configuration options for API deploument, make sure to add a test to the [validatePackage spec](https://github.com/claudiajs/claudia/blob/master/spec/validate-package-spec.js) to ensure stupid mistakes are stopped before the API even starts deploying. Think of the most common ways users can mistakenly configure the new arguments (such as duplicates, empty values, inconsistent related settings) and provide a helpful error message in [validatePackage](https://github.com/claudiajs/claudia/blob/master/src/tasks/validate-package.js).
+### Before submitting the request
 
-It might also be useful to add a successful fully configured example to the [kitchen sink parsing test](https://github.com/claudiajs/claudia/blob/master/spec/test-projects/api-gw-validation-kitchen-sink/main.js), which is just a smoke test to validate that correct configurations pass validation
+In order to make it easier for you and us to develop together and maintain the code easier, here's what would be ideal:
 
-# Running tests
+* Make sure the code is passing the style guide checks with `eslint`. You can run `npm run pretest` to execute the style guide checks
+* Please supply automated tests for any new functionality you are adding to Claudia. With these in place, people who modify the same code in the future can easily ensure that they've not broken something that is important to you. 
+* If you are adding any configuration arguments or changing any configuration options for API deployment, please help us make Claudia easier to use by trying to validate the configuration for new features before deployment. Troubleshooting misconfigured deployed functions is very difficult with Lambda, so it's best if we can help users avoid stupid mistakes. Here is how you can do that:
+  * Think of the most common ways users can mistakenly configure the new arguments (such as duplicates, empty values, inconsistent related settings) and provide a helpful error message in [validatePackage](https://github.com/claudiajs/claudia/blob/master/src/tasks/validate-package.js)
+  * Make sure to add a test to the [validatePackage spec](https://github.com/claudiajs/claudia/blob/master/spec/validate-package-spec.js) to ensure stupid mistakes are stopped before the API even starts deploying.
+  * It might also be useful to add a successful fully configured example to the [kitchen sink parsing test](https://github.com/claudiajs/claudia/blob/master/spec/test-projects/api-gw-validation-kitchen-sink/main.js), which is just a smoke test to validate that correct configurations pass validation.
+* Please run at least the tests for your new code or the things you change before submitting a pull request. Full tests take about two hours, so you don't have to run everything, but make sure your code at least works. 
 
-## Setting credentials for tests
+### Running tests
+
+#### Setting credentials for tests
 
 See the [Getting Started](getting_started.md) guide for information on how to set up the credentials to run tests. In addition to the ideas there, to allow you to separate out a testing profile from normal operation profiles, you can store additional environment variables or override existing environment values by creating a
 `.env` file in the project root. (This file is ignored by `.gitignore`, so you don't have to worry about uploading it by mistake.) If that file exists, it will be loaded into the environment at the start of a test run.
 
 The easiest way to manage a separate testing profile is probably to define the actual keys in your main `.aws/config` file, and use just the `AWS_PROFILE` key in the `.env` file, like this:
 
-````
+```
 AWS_PROFILE=claudia-test
-````
+```
 
-## Running tests
+* To run all the tests, and show a summary of the results, use the following command: `npm test`
+* To run all the tests, and show individual test names executed, use the following command: `npm test -- full`
+* To run only a selected set of tests, filter them by name: `npm test -- filter=prefix` (note the space between the two dashes and the prefix). 
 
-Run all the test, show a summary of the results:
+For example, if you have a spec starting with: 
 
-````
-npm test
-````
+```js
+describe('Some new feature', function () {
+  it('works well', function () {
+  
+  })
+ })
+ ```
 
-Run the tests, and show individual test names
+You can run just that one test by executing `npm test -- filter="Some new feature works well"`, or execute all the tests in that same spec bloc by using `npm test -- filter="Some new feature"`
 
-````
-npm test -- full
-````
+## General development/contribution policies
 
-Run only a selected set of tests, filtering by name:
+Here are same house rules for Claudia development. Breaking one of these doesn't necessarily mean that your pull request will not be merged, but following the rules will make it easier and faster to do that. If you decide to break one of these, please explain in the pull request why, so we can revise the rules or adjust the code together.
 
-````
-npm test -- filter=prefix
-````
+* AWS Lambda currently supports only Node.js 4.3.2, so we use that one as the baseline for Claudia development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment if you need to.
+* ES6 code is allowed and encouraged, as long as it works on 4.3.2. We don't use babel for transpilation. 
+* We use [Jasmine](https://jasmine.github.io) for tests. 
+* We use `eslint` for linting, with the style guide in [`.eslintrc`](https://github.com/claudiajs/claudia/blob/master/.eslintrc.json)
+  * If a particular line of code needs to relax linting rules, use the `//eslint-disable-line` trick instead of disabling it for the whole file
+* We use Github issues only for bugs. Everything else (questions/suggestions) should go to the [ClaudiaJS chat channel]gitter.im/claudiajs/claudia).
+* We will close all incomplete pull requests after a week of inactivity.
+
