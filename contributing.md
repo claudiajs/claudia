@@ -12,6 +12,10 @@ We try to merge pull requests as quickly as possible, so generally if you follow
 
 Please don't submit a pull request until the code is completely ready. To avoid pull requests becoming a graveyard for half-baked code, we will close all pull requests after a week of inactivity. This isn't a reflection on the quality of your ideas or coding skills, it's just a way to avoid maintenance hell.  
 
+If you're planning to change lots of code, we would prefer if you submitted several smaller pull requests for independent changes, instead of one big batch with everything in it. Smaller changes are easier to validate and discuss, and it's easier to catch unintended changes with those. 
+
+Please make sure your pull request includes only the changes necessary for your code. Don't submit the lines that have only formatting changes, unless this is required by the linter. Don't submit files that are not important for your particular change.
+
 ### Where to put new code, and where to find the existing code to change 
 
 * The main code is in the [src](./src) directory, divided into three subdirectories:
@@ -26,6 +30,7 @@ In order to make it easier for you and us to develop together and maintain the c
 
 * Make sure the code is passing the style guide checks with `eslint`. You can run `npm run pretest` to execute the style guide checks
 * Please supply automated tests for any new functionality you are adding to Claudia. With these in place, people who modify the same code in the future can easily ensure that they've not broken something that is important to you. 
+* If you are adding or removing command line options, please change the documentation at the bottom of the appropriate command source file. The user documentation, command line help and web documentation gets automatically rebuilt from those. 
 * If you are adding any configuration arguments or changing any configuration options for API deployment, please help us make Claudia easier to use by trying to validate the configuration for new features before deployment. Troubleshooting misconfigured deployed functions is very difficult with Lambda, so it's best if we can help users avoid stupid mistakes. Here is how you can do that:
   * Think of the most common ways users can mistakenly configure the new arguments (such as duplicates, empty values, inconsistent related settings) and provide a helpful error message in [validatePackage](https://github.com/claudiajs/claudia/blob/master/src/tasks/validate-package.js)
   * Make sure to add a test to the [validatePackage spec](https://github.com/claudiajs/claudia/blob/master/spec/validate-package-spec.js) to ensure stupid mistakes are stopped before the API even starts deploying.
