@@ -1,7 +1,8 @@
 # Guide for contributors
 
-* **Would you like to report a bug?** Please log an issue [directly in this github repository](https://github.com/claudiajs/claudia/issues).
 * **Would you like to ask a question or discuss feature ideas?** Let's chat in the [ClaudiaJS chat channel](https://gitter.im/claudiajs/claudia). Please don't add an issue to GitHub.
+* **Not sure if something is a bug or the way it's supposed to work?** [Let's chat first](https://gitter.im/claudiajs/claudia), don't log an issue yet. 
+* **Would you like to report a bug?** Please log an issue [directly in this github repository](https://github.com/claudiajs/claudia/issues).
 * **Would you like to contribute code?** Lovely! Please submit a pull request. Check out the rest of this document for guidelines on where to add/change code before doing so.
 
 ## Submitting pull requests
