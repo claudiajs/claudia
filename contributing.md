@@ -1,4 +1,4 @@
-# Developing and contributing to Claudia 
+# Guide for contributors
 
 * **Would you like to report a bug?** Please log an issue [directly in this github repository](https://github.com/claudiajs/claudia/issues).
 * **Would you like to ask a question or discuss feature ideas?** Let's chat in the [ClaudiaJS chat channel](https://gitter.im/claudiajs/claudia). Please don't add an issue to GitHub.
