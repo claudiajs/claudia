@@ -67,6 +67,21 @@ describe('Some new feature', function () {
 
 You can run just that one test by executing `npm test -- filter="Some new feature works well"`, or execute all the tests in that same spec bloc by using `npm test -- filter="Some new feature"`
 
+#### Change the remote operation timeout
+
+By default, tests have 150 seconds to complete before timing out. You might want to change that depending on where you're executing the tests from and what AWS region you're running them in. Do so by changing the TEST_TIMEOUT environment variable before running the tests, and set it to a number of milliseconds. 
+
+#### Managing environment variables for testing
+
+You can create a `.env` file in the root project directory, and store key-value pairs of environment variables there. The test runner will load any variables from that file if it exists before running the tests. The file is ignored by git, so you can be sure that the test initialisation stays on your machine only. Here is an example file:
+
+*.env*
+```bash
+AWS_PROFILE=claudia-test
+AWS_REGION=us-east-1
+TEST_TIMEOUT=300000
+```
+
 ## General development/contribution policies
 
 Here are same house rules for Claudia development. Breaking one of these doesn't necessarily mean that your pull request will not be merged, but following the rules will make it easier and faster to do that. If you decide to break one of these, please explain in the pull request why, so we can revise the rules or adjust the code together.
