@@ -56,14 +56,24 @@ module.exports = function addS3EventSource(options) {
 				eventConfig = {
 					LambdaFunctionArn: lambdaConfig.arn,
 					Events: events
-				};
+				},
+				filterRules = [];
 			if (options.prefix) {
+				filterRules.push({
+					Name: 'prefix',
+					Value: options.prefix
+				});
+			}
+			if (options.suffix) {
+				filterRules.push({
+					Name: 'suffix',
+					Value: options.suffix
+				});
+			}
+			if (filterRules.length) {
 				eventConfig.Filter = {
 					Key: {
-						FilterRules: [{
-							Name: 'prefix',
-							Value: options.prefix
-						}]
+						FilterRules: filterRules
 					}
 				};
 			}
@@ -106,6 +116,12 @@ module.exports.doc = {
 			optional: true,
 			description: 'Prefix filter for S3 keys that will cause the event',
 			example: 'infiles/'
+		},
+		{
+			argument: 'suffix',
+			optional: true,
+			description: 'Suffix filter for S3 keys that will cause the event',
+			example: '.jpg'
 		},
 		{
 			argument: 'version',
