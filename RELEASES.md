@@ -1,6 +1,10 @@
 # Release history
 
-### 2.6.0, 17 January 2016
+### 2.7.0, 11 Feb 2017
+
+- support for `--suffix` when adding S3 event sourcs. (thanks to [Kamil Dybicz](https://github.com/kdybicz))
+
+### 2.6.0, 17 January 2017
 
 - support for API Gateway Binary content handling
 
