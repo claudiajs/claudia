@@ -129,6 +129,50 @@ describe('addS3EventSource', () => {
 			})
 			.then(done, done.fail);
 		});
+		it('adds a suffix if requested', done => {
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
+			.then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			})
+			.then(() => underTest({source: workingdir, bucket: testRunName + bucketSuffix, suffix: '.jpg'}))
+			.then(() => {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			})
+			.then(config => {
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Suffix',
+					Value: '.jpg'
+				});
+			})
+			.then(done, done.fail);
+		});
+		it('adds both a prefix and suffix if requested', done => {
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
+			.then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			})
+			.then(() => underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: 'in/', suffix: '.jpg'}))
+			.then(() => {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			})
+			.then(config => {
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Prefix',
+					Value: 'in/'
+				});
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[1]).toEqual({
+					Name: 'Suffix',
+					Value: '.jpg'
+				});
+			})
+			.then(done, done.fail);
+		});
 		it('adds default event if no events requested', done => {
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {

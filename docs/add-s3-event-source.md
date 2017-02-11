@@ -13,6 +13,8 @@ claudia add-s3-event-source {OPTIONS}
 *  `--bucket`:  S3 Bucket name which will push notifications to Lambda
 *  `--prefix`:  _optional_ Prefix filter for S3 keys that will cause the event
   * _For example_: infiles/
+*  `--suffix`:  _optional_ Suffix filter for S3 keys that will cause the event
+  * _For example_: .jpg
 *  `--version`:  _optional_ Bind to a particular version
   * _For example_: production
   * _Defaults to_: latest version
