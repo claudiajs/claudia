@@ -32,7 +32,7 @@ claudia create {OPTIONS}
   * _Defaults to_: claudia.json
 *  `--policies`:  _optional_ A directory or file pattern for additional IAM policies
   which will automatically be included into the security role for the function
-  * _For example_: policies/*.xml
+  * _For example_: policies/*.json
 *  `--allow-recursion`:  _optional_ Set up IAM permissions so a function can call itself recursively
 *  `--role`:  _optional_ The name or ARN of an existing role to assign to the function. 
   If not supplied, Claudia will create a new role. Supply an ARN to create a function without any IAM access.
