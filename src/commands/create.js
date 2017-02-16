@@ -491,7 +491,7 @@ module.exports.doc = {
 			optional: true,
 			description: 'A directory or file pattern for additional IAM policies\n' +
 				'which will automatically be included into the security role for the function',
-			example: 'policies/*.xml'
+			example: 'policies/*.json'
 		},
 		{
 			argument: 'allow-recursion',
