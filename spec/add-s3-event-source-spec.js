@@ -265,10 +265,36 @@ describe('addS3EventSource', () => {
 			})
 			.then(config => {
 				expect(config.LambdaFunctionConfigurations.length).toEqual(2);
-				expect(/:special$/.test(config.LambdaFunctionConfigurations[0].LambdaFunctionArn)).toBeTruthy();
-				expect(/:crazy$/.test(config.LambdaFunctionConfigurations[1].LambdaFunctionArn)).toBeTruthy();
+				expect(config.LambdaFunctionConfigurations[0].LambdaFunctionArn).toMatch(/:special$/);
+				expect(config.LambdaFunctionConfigurations[1].LambdaFunctionArn).toMatch(/:crazy$/);
 			})
 			.then(done, done.fail);
 		});
+		it('allows adding several events for the same bucket', done => {
+			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
+			.then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			})
+			.then(() => underTest({ source: workingdir, bucket: testRunName + bucketSuffix, events: 's3:ObjectCreated:*', prefix: '/in/' }))
+			.then(() => underTest({ source: workingdir, bucket: testRunName + bucketSuffix, events: 's3:ObjectRemoved:*', prefix: '/out/'}))
+			.then(() => {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			})
+			.then(config => {
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Prefix',
+					Value: '/in/'
+				});
+				expect(config.LambdaFunctionConfigurations[1].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Prefix',
+					Value: '/out/'
+				});
+			})
+			.then(done, done.fail);
+		});
+
 	});
 });

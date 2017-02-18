@@ -7,7 +7,8 @@ module.exports = function addS3EventSource(options) {
 	'use strict';
 	let lambdaConfig,
 		lambda;
-	const getLambda = function (config) {
+	const ts = Date.now(),
+		getLambda = function (config) {
 			lambda = new aws.Lambda({region: config.lambda.region});
 			lambdaConfig = config.lambda;
 			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
@@ -34,7 +35,7 @@ module.exports = function addS3EventSource(options) {
 					const iam = new aws.IAM();
 					return iam.putRolePolicy({
 						RoleName: lambdaConfig.role,
-						PolicyName: iamNameSanitize(`s3-${options.bucket}-access`),
+						PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
 						PolicyDocument: policyContents
 					}).promise();
 				});
@@ -47,7 +48,7 @@ module.exports = function addS3EventSource(options) {
 				Principal: 's3.amazonaws.com',
 				SourceArn: 'arn:aws:s3:::' + options.bucket,
 				Qualifier: options.version,
-				StatementId: iamNameSanitize(`${options.bucket}-access`)
+				StatementId: iamNameSanitize(`${options.bucket}-access-${ts}`)
 			}).promise();
 		},
 		addBucketNotificationConfig = function () {
