@@ -12,6 +12,7 @@ module.exports = function destroyObjects(newObjects) {
 		logs = new aws.CloudWatchLogs({ region: awsRegion }),
 		apiGatewayPromise = retriableWrap(new aws.APIGateway({ region: awsRegion })),
 		s3 = new aws.S3(),
+		iot = new aws.Iot({ region: awsRegion }),
 		sns = new aws.SNS({ region: awsRegion }),
 		events = new aws.CloudWatchEvents({ region: awsRegion }),
 		destroyRule = function (ruleName) {
@@ -50,6 +51,11 @@ module.exports = function destroyObjects(newObjects) {
 			return apiGatewayPromise.deleteRestApiPromise({
 				restApiId: newObjects.restApi
 			});
+		}
+	})
+	.then(() => {
+		if (newObjects.iotTopicRule) {
+			return iot.deleteTopicRule({ruleName: newObjects.iotTopicRule}).promise();
 		}
 	})
 	.then(() => {

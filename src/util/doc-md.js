@@ -35,7 +35,7 @@ const fs = require('fs'),
 				descLines = argDoc.description.split('\n');
 			components.push('*  `--' + argDoc.argument + '`: ');
 			if (argDoc.optional) {
-				components.push('_optional_');
+				components.push('(_optional_)');
 			}
 			components.push(descLines.shift());
 			lines.push(components.join(' '));
