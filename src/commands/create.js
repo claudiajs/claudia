@@ -19,7 +19,7 @@ const path = require('path'),
 	os = require('os'),
 	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
-	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -27,6 +27,7 @@ module.exports = function create(options, optionalLogger) {
 		s3Key,
 		packageArchive,
 		functionDesc,
+		customEnvVars,
 		functionName,
 		packageFileDir;
 	const logger = optionalLogger || new NullLogger(),
@@ -109,11 +110,6 @@ module.exports = function create(options, optionalLogger) {
 					return 'the timeout value provided must be less than or equal to 300';
 				}
 			}
-			try {
-				readEnvVarsFromOptions(options);
-			} catch (e) {
-				return e;
-			}
 		},
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
@@ -140,7 +136,7 @@ module.exports = function create(options, optionalLogger) {
 						Description: functionDesc,
 						MemorySize: options.memory,
 						Timeout: options.timeout,
-						Environment: readEnvVarsFromOptions(options),
+						Environment: customEnvVars,
 						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
@@ -358,7 +354,9 @@ module.exports = function create(options, optionalLogger) {
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-	return getPackageInfo()
+	return initEnvVarsFromOptions(options)
+	.then(opts => customEnvVars = opts)
+	.then(getPackageInfo)
 	.then(packageInfo => {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;

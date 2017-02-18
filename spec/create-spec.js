@@ -1134,5 +1134,12 @@ describe('create', () => {
 			})
 			.then(done, done.fail);
 		});
+		it('loads up the environment variables while validating the package to allow any code that expects them to initialize -- fix for https://github.com/claudiajs/claudia/issues/96', done => {
+			config['set-env'] = 'TEST_VAR=abc';
+			config.handler = undefined;
+			config['api-module'] = 'main';
+			process.env.TEST_VAR = '';
+			createFromDir('throw-if-not-env').then(done, done.fail);
+		});
 	});
 });

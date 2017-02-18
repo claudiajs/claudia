@@ -611,5 +611,12 @@ describe('update', () => {
 				done();
 			});
 		});
+
+		it('loads up the environment variables while validating the package to allow any code that expects them to initialize -- fix for https://github.com/claudiajs/claudia/issues/96', done => {
+			shell.cp('-rf', 'spec/test-projects/throw-if-not-env/*', workingdir);
+			process.env.TEST_VAR = '';
+			underTest({source: workingdir, version: 'new', 'set-env': 'TEST_VAR=abc'}, logger).then(done, done.fail);
+		});
+
 	});
 });

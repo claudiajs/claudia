@@ -13,7 +13,7 @@ const zipdir = require('../tasks/zipdir'),
 	apiGWUrl = require('../util/apigw-url'),
 	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	loggingWrap = require('../util/logging-wrap'),
-	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
 	updateEnvVars = require('../tasks/update-env-vars'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
@@ -105,15 +105,10 @@ module.exports = function update(options, optionalLogger) {
 	if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
 		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 	}
-	try {
-		readEnvVarsFromOptions(options);
-	} catch (e) {
-		return Promise.reject(e);
-	}
-
 
 	logger.logStage('loading Lambda config');
-	return loadConfig(options, {lambda: {name: true, region: true}})
+	return initEnvVarsFromOptions(options)
+	.then(() => loadConfig(options, {lambda: {name: true, region: true}}))
 	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
