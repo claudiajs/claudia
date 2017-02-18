@@ -1,5 +1,12 @@
 # Release history
 
+### 2.8.0, 19 Feb 2017
+
+- support for triggering Lambda functions using IOT topic filters (
+- allows the same lambda version to bind multiple times to the same bucket (fix for https://github.com/claudiajs/claudia/issues/101)
+- allow env variables set on the command line to be set when validating the package (fixes https://github.com/claudiajs/claudia/issues/96)
+- bugfix: `claudia destroy` now uses `--profile` correctly (fix for https://github.com/claudiajs/claudia/issues/100) 
+
 ### 2.7.0, 11 Feb 2017
 
 - support for `--suffix` when adding S3 event sourcs. (thanks to [Kamil Dybicz](https://github.com/kdybicz))
