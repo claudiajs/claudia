@@ -88,6 +88,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						return methodOptions.authorizationType.toUpperCase();
 					} else if (methodOptions.customAuthorizer) {
 						return 'CUSTOM';
+					} else if (methodOptions.cognitoAuthorizer) {
+						return 'COGNITO_USER_POOLS';
 					} else if (methodOptions && validCredentials(methodOptions.invokeWithCredentials)) {
 						return 'AWS_IAM';
 					} else {
@@ -120,10 +122,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 					}));
 				},
 				authorizerId = function () {
-					return methodOptions && methodOptions.customAuthorizer && authorizerIds[methodOptions.customAuthorizer];
+					const authorizerName = methodOptions.customAuthorizer || methodOptions.cognitoAuthorizer;
+					return methodOptions && authorizerName && authorizerIds[authorizerName];
 				},
 				parameters = flattenRequestParameters(methodOptions.requestParameters, path);
-			return apiGateway.putMethodPromise({
+			return apiGateway.putMethodAsync({
 				authorizationType: authorizationType(),
 				authorizerId: authorizerId(),
 				httpMethod: methodName,
