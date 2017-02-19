@@ -1,9 +1,9 @@
 /*global beforeAll, afterAll, beforeEach, afterEach, describe, expect, require, console, it*/
 const create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
+	destroy = require('../src/commands/destroy'),
 	shell = require('shelljs'),
 	path = require('path'),
-	destroyObjects = require('./util/destroy-objects'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	fs = require('../src/util/fs-promise'),
@@ -12,30 +12,7 @@ const create = require('../src/commands/create'),
 
 describe('cognitoAuthorizers', () => {
 	'use strict';
-	let workingdir, testRunName, apiId, newObjects;
-	beforeAll(done => {
-		cognitoUserPool.create().then(done, done.fail);
-	});
-	afterAll(done => {
-		cognitoUserPool.destroy().then(done, done.fail);
-	});
-	beforeEach(done => {
-		workingdir = tmppath();
-		testRunName = 'test' + Date.now();
-		newObjects = { workingdir: workingdir, config: 'claudia-api.json' };
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/cognito-authorizers/*', workingdir);
-		fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
-		.then(content => content.replace('TEST-USER-POOL-ARN', cognitoUserPool.getArn()))
-		.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
-		.then(done, done.fail);
-	});
-	afterEach(done => {
-		destroyObjects(newObjects)
-		.catch(err => console.log('error cleaning up', err))
-		.then(done);
-		done();
-	});
+	let workingdir, testRunName, apiId;
 	const invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -54,9 +31,6 @@ describe('cognitoAuthorizers', () => {
 			})
 			.then(result => {
 				apiId = result.api.id;
-				newObjects.restApi = apiId;
-				newObjects.lambdaRole = result.lambda && result.lambda.role;
-				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			});
 		},
 		setUpTests = function () {
@@ -103,6 +77,29 @@ describe('cognitoAuthorizers', () => {
 				.then(done, done.fail);
 			});
 		};
+
+	beforeAll(done => {
+		cognitoUserPool.create().then(done, done.fail);
+	});
+	afterAll(done => {
+		cognitoUserPool.destroy().then(done, done.fail);
+	});
+
+	beforeEach(done => {
+		workingdir = tmppath();
+		testRunName = 'test' + Date.now();
+		shell.mkdir(workingdir);
+		shell.cp('-r', 'spec/test-projects/cognito-authorizers/*', workingdir);
+		fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
+		.then(content => content.replace('TEST-USER-POOL-ARN', cognitoUserPool.getArn()))
+		.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
+		.then(done, done.fail);
+	});
+	afterEach(done => {
+		destroy({source: workingdir, config: 'claudia-api.json'})
+		.catch(err => console.log('error cleaning up', err))
+		.then(done);
+	});
 
 	describe('create wires up authorizers initially', () => {
 		beforeEach(done => {
