@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, it*/
+/*global beforeAll, afterAll, describe, expect, require, console, it*/
 const create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	setVersion = require('../src/commands/set-version'),
@@ -19,23 +19,51 @@ describe('customAuthorizers', () => {
 			options.retry = 403;
 			return callApi(apiId, awsRegion, url, options);
 		},
+		waitUntilDeployed = function (version) {
+			return invoke(version + '/', {
+				method: 'GET',
+				resolveErrors: false,
+				retryTimeout: process.env.AWS_DEPLOY_RETRY_TIMEOUT || 5000,
+				retries: process.env.AWS_DEPLOY_RETRIES || 5
+			});
+		},
 		createTestFixture = function () {
+			workingdir = tmppath();
+			testRunName = 'test' + Date.now();
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/custom-authorizers/*', workingdir);
 			shell.cd(workingdir);
-			return create({
+			return fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
+			.then(content => content.replace('TEST-AUTH-LAMBDA-NAME', `${testRunName}Auth`))
+			.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
+			.then(() => create({
 				name: `${testRunName}Auth`,
 				version: 'original',
 				region: awsRegion,
 				config: 'claudia-auth.json',
-				handler: 'authorizer.auth'
-			})
-			.then(() => create({ name: testRunName, version: 'original', region: awsRegion, config: 'claudia-api.json', 'api-module': 'api' }))
+				handler: 'authorizer.auth',
+				source: workingdir
+			}))
+			.then(() => create({
+				name: testRunName,
+				version: 'original',
+				region: awsRegion,
+				config: 'claudia-api.json',
+				'api-module': 'api',
+				source: workingdir
+			}))
 			.then(result => {
 				apiId = result.api.id;
 			});
 		},
-		setUpTests = function () {
+		destroyTestFixture = function () {
+			return destroy({ config: path.join(workingdir, 'claudia-auth.json')})
+				.then(() => destroy({config: path.join(workingdir, 'claudia-api.json')}))
+				.catch(err => console.log('error cleaning up', err));
+		},
+		setUpTests = function (version) {
 			it('does not block access to methods without an authorizer', done => {
-				invoke('original/', {
+				invoke(version + '/', {
 					method: 'GET',
 					resolveErrors: false
 				})
@@ -43,7 +71,7 @@ describe('customAuthorizers', () => {
 				.then(done, done.fail);
 			});
 			it('blocks access to methods without an authorizer without authentication headers', done => {
-				invoke('original/locked', {
+				invoke(version + '/locked', {
 					method: 'GET',
 					resolveErrors: true
 				})
@@ -55,7 +83,7 @@ describe('customAuthorizers', () => {
 				.then(done, done.fail);
 			});
 			it('respects IAM policy for unauthorized users', done => {
-				invoke('original/locked', {
+				invoke(version + '/locked', {
 					method: 'GET',
 					headers: {'Authorization': 'Bob-123'},
 					resolveErrors: true
@@ -68,7 +96,7 @@ describe('customAuthorizers', () => {
 				.then(done, done.fail);
 			});
 			it('respects IAM policy for authorized users', done => {
-				invoke('original/unlocked', {
+				invoke(version + '/unlocked', {
 					method: 'GET',
 					headers: {'Authorization': 'Bob-123'},
 					resolveErrors: false
@@ -77,37 +105,44 @@ describe('customAuthorizers', () => {
 				.then(done, done.fail);
 			});
 		};
-	beforeEach(done => {
-		workingdir = tmppath();
-		testRunName = 'test' + Date.now();
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/custom-authorizers/*', workingdir);
-		fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
-		.then(content => content.replace('TEST-AUTH-LAMBDA-NAME', `${testRunName}Auth`))
-		.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
-		.then(done, done.fail);
-	});
-	afterEach(done => {
-		destroy({ source: workingdir, config: 'claudia-auth.json' })
-		.then(() => destroy({source: workingdir, config: 'claudia-api.json'}))
-		.catch(err => console.log('error cleaning up', err))
-		.then(done);
-	});
 
 	describe('create wires up authorizers intially', () => {
-		beforeEach(done => {
+		beforeAll(done => {
+			console.log('creating custom authorizer examples for create');
 			createTestFixture()
-			.then(done, done.fail);
+				.then(() => waitUntilDeployed('original'))
+				.then(() => console.log('created'))
+				.then(done, done.fail);
 		});
-		setUpTests();
+		afterAll(done => {
+			console.log('destroying custom authorizer examples for create');
+			destroyTestFixture()
+				.then(() => console.log('destroyed custom authorizer examples for create'))
+				.then(done);
+		});
+		setUpTests('original');
+
 	});
 	describe('update creates a new version', () => {
-		beforeEach(done => {
+		beforeAll(done => {
+			console.log('creating for custom authorizer examples for update');
 			createTestFixture()
-			.then(() => setVersion({ config: 'claudia-auth.json', version: 'new' }))
-			.then(() => update({ config: 'claudia-api.json', version: 'new' }))
-			.then(done, done.fail);
+				.then(() => waitUntilDeployed('original'))
+				.then(() => setVersion({ config: path.join(workingdir, 'claudia-auth.json'), version: 'new' }))
+				.then(() => update({ config: path.join(workingdir, 'claudia-api.json'), version: 'new' }))
+				.then(() => waitUntilDeployed('new'))
+				.then(() => console.log('created'))
+				.then(done, err => {
+					console.log('failed to set up authorizer example', err);
+					done.fail();
+				});
 		});
-		setUpTests();
+		afterAll(done => {
+			console.log('destroying custom authorizer examples for update');
+			destroyTestFixture()
+				.then(() => console.log('destroyed custom authorizer examples for update'))
+				.then(done);
+		});
+		setUpTests('new');
 	});
 });

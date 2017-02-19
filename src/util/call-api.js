@@ -3,7 +3,9 @@ const retry = require('oh-no-i-insist'),
 
 module.exports = function callApi(apiId, region, path, options) {
 	'use strict';
-	const callOptions = {hostname: `${apiId}.execute-api.${region}.amazonaws.com`, port: 443, path: '/' + path, method: 'GET'};
+	const callOptions = {hostname: `${apiId}.execute-api.${region}.amazonaws.com`, port: 443, path: '/' + path, method: 'GET'},
+		retryTimeout = options && options.retryTimeout || 3000,
+		retries = options && options.retries || 5;
 	if (options) {
 		Object.keys(options).forEach(key => {
 			callOptions[key] = options[key];
@@ -18,6 +20,6 @@ module.exports = function callApi(apiId, region, path, options) {
 	if (!callOptions.retry) {
 		return executeCall(callOptions, Promise);
 	} else {
-		return retry(() => executeCall(callOptions, Promise), 3000, 5, err => err.statusCode === callOptions.retry, undefined, Promise);
+		return retry(() => executeCall(callOptions, Promise), retryTimeout, retries, err => err.statusCode === callOptions.retry, undefined, Promise);
 	}
 };
