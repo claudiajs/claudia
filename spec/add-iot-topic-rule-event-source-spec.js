@@ -99,6 +99,8 @@ describe('addIOTTopicRuleEventSource', () => {
 		});
 
 		it('invokes lambda from IOT when no version is given', done => {
+			const retryTimeout = process.env.AWS_DEPLOY_TIMEOUT || 10000,
+				retries = process.env.AWS_DEPLOY_RETRIES || 5;
 			createLambda()
 			.then(() => underTest(config))
 			.then(result => newObjects.iotTopicRule = result.ruleName)
@@ -115,7 +117,7 @@ describe('addIOTTopicRuleEventSource', () => {
 								return Promise.reject();
 							}
 						});
-				}, 10000, 5, undefined, undefined, Promise);
+				}, retryTimeout, retries, undefined, undefined, Promise);
 			})
 			.then(done, done.fail);
 		});
