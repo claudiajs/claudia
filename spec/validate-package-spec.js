@@ -75,10 +75,10 @@ describe('validatePackage', () => {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'no_authorizers.proxyRouter', 'no_authorizers');
 			}).toThrow('no_authorizers.js GET /echo requests an undefined custom authorizer customA');
 		});
-		it('fails if an authorizer is not configured with either lambda name or arn', () => {
+		it('fails if an authorizer is not configured with either lambda name or arn or providerArn', () => {
 			expect(() => {
 				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorizer-validation'), 'misconfigured_authorizer.proxyRouter', 'misconfigured_authorizer');
-			}).toThrow('misconfigured_authorizer.js authorizer first requires either lambdaName or lambdaArn');
+			}).toThrow('misconfigured_authorizer.js authorizer first requires either lambdaName or lambdaArn or providerARNs');
 		});
 		it('fails if an authorizer is configured with both lambda name and arn', () => {
 			expect(() => {

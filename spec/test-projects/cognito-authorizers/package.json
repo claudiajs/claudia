@@ -1,0 +1,11 @@
+{
+  "name": "custom-authorizers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "claudia-api-builder": "github:claudiajs/claudia-api-builder"
+  }
+}
