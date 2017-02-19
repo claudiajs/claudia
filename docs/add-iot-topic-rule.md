@@ -1,11 +1,11 @@
-#add-iot-topic-rule-event-source
+#add-iot-topic-rule
 
 Creates an IOT topic rule and configures the Lambda to run when a message is published on a matching IOT Gateway topic
 
 ## Usage
 
 ```bash
-claudia add-iot-topic-rule-event-source {OPTIONS}
+claudia add-iot-topic-rule {OPTIONS}
 ```
 
 ## Options
