@@ -23,12 +23,13 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 				restApiId: apiId
 			});
 		},
+		getAuthorizerType = function (authConfig) {
+			return authConfig.type || (authConfig.providerARNs ? 'COGNITO_USER_POOLS' : 'TOKEN');
+		},
 		getAuthorizerArn = function (authConfig) {
-			if (!authConfig.lambdaName && authConfig.providerARNs) {
-				return Promise.resolve(null);
-			} else if (authConfig.lambdaArn) {
+			if (authConfig.lambdaArn) {
 				return Promise.resolve(authConfig.lambdaArn);
-			} else {
+			} else if (authConfig.lambdaName) {
 				return lambda.getFunctionConfiguration({FunctionName: authConfig.lambdaName}).promise()
 				.then(lambdaConfig => {
 					let suffix = '';
@@ -39,22 +40,25 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 					}
 					return lambdaConfig.FunctionArn + suffix;
 				});
+			} else {
+				return Promise.reject('Cannot retrieve lambda arn for authorizer ' + JSON.stringify(authConfig));
 			}
 		},
 		allowInvocation = function (authConfig/*, authorizerId */) {
 			let authLambdaQualifier;
-			if (authConfig.lambdaVersion && typeof authConfig.lambdaVersion === 'string') {
+			if (authConfig.lambdaVersion && (typeof authConfig.lambdaVersion === 'string')) {
 				authLambdaQualifier = authConfig.lambdaVersion;
 			} else if (authConfig.lambdaVersion === true) {
 				authLambdaQualifier = functionVersion;
 			}
 			if (authConfig.lambdaName) {
 				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerId, awsRegion, 'authorizers/*');
+			} else {
+				return Promise.resolve();
 			}
 		},
 		configureAuthorizer = function (authConfig, lambdaArn, authName) {
-
-			const type = authConfig.type || (authConfig.providerARNs ? 'COGNITO_USER_POOLS' : 'TOKEN'),
+			const type = getAuthorizerType(authConfig),
 				params = {
 					identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
 					name: authName,
@@ -63,8 +67,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 				};
 			if (type === 'TOKEN') {
 				params.authorizerUri = 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
-			}
-			if (type === 'COGNITO_USER_POOLS') {
+			} else if (type === 'COGNITO_USER_POOLS') {
 				params.providerARNs = authConfig.providerARNs;
 			}
 			if (authConfig.validationExpression) {
@@ -78,27 +81,27 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			}
 			return params;
 		},
-		addAuthorizer = function (authName) {
+		initializeAuthorizerConfiguration = function (authName) {
 			const authConfig = authorizerMap[authName];
-			let lambdaArn;
-			return getAuthorizerArn(authConfig)
-			.then(functionArn => {
-				lambdaArn = functionArn;
-			})
-			.then(() => allowInvocation(authConfig))
-			.then(() => apiGateway.createAuthorizerPromise(configureAuthorizer(authConfig, lambdaArn, authName)))
-			.then(result => result.id);
+			if (getAuthorizerType(authConfig) === 'COGNITO_USER_POOLS') {
+				return Promise.resolve(configureAuthorizer(authConfig, null, authName));
+			} else {
+				return allowInvocation(authConfig)
+					.then(() => getAuthorizerArn(authConfig))
+					.then(lambdaArn => configureAuthorizer(authConfig, lambdaArn, authName));
+			}
+		},
+		addAuthorizer = function (authName) {
+			return initializeAuthorizerConfiguration(authName)
+				.then(configuration => apiGateway.createAuthorizerPromise(configuration))
+				.then(result => result.id);
 		},
 		authorizerNames = Object.keys(authorizerMap);
 
-	return apiGateway.getAuthorizersPromise({
-		restApiId: apiId
-	})
+	return apiGateway.getAuthorizersPromise({restApiId: apiId})
 	.then(existingAuthorizers => sequentialPromiseMap(existingAuthorizers.items, removeAuthorizer))
-	.then(() => getOwnerId())
-	.then(accountId => {
-		ownerId = accountId;
-	})
+	.then(getOwnerId)
+	.then(accountId => ownerId = accountId)
 	.then(() => sequentialPromiseMap(authorizerNames, addAuthorizer))
 	.then(creationResults => {
 		let index;

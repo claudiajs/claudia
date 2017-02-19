@@ -8,6 +8,7 @@ const underTest = require('../src/tasks/register-authorizers'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
 	retriableWrap = require('../src/util/retriable-wrap'),
+	cognitoUserPool = require('./util/cognito-user-pool'),
 	awsRegion = require('./util/test-aws-region');
 
 describe('registerAuthorizers', () => {
@@ -280,6 +281,42 @@ describe('registerAuthorizers', () => {
 			checkAuthUriWithVersion(authorizers.items[0].authorizerUri, '${stageVariables.lambdaVersion}');
 		})
 		.then(done, done.fail);
+	});
+	describe('creates cognito authorizers', () => {
+		beforeEach(done => {
+			cognitoUserPool.create().then(done, done.fail);
+		});
+		afterEach(done => {
+			cognitoUserPool.destroy().then(done, done.fail);
+		});
+		it('configures an authorizer using providerArns', done => {
+			const authorizerConfig = {
+				first: { providerARNs: [cognitoUserPool.getArn()]}
+			};
+			let result;
+			underTest(authorizerConfig, apiId, awsRegion)
+			.then(createResult => {
+				result = createResult;
+			})
+			.then(() => apiGateway.getAuthorizersPromise({ restApiId: apiId }))
+			.then(authorizers => {
+				expect(authorizers.items.length).toEqual(1);
+				expect(authorizers.items[0]).toEqual({
+					id: result.first,
+					name: 'first',
+					type: 'COGNITO_USER_POOLS',
+					providerARNs: [
+						cognitoUserPool.getArn()
+					],
+					authType: 'cognito_user_pools',
+					identitySource: 'method.request.header.Authorization'
+
+				});
+			})
+			.then(done, done.fail);
+		});
+
+
 	});
 	it('creates authorizers qualified by a specific value', done => {
 		const authorizerConfig = {
