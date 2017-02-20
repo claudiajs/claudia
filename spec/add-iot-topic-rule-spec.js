@@ -4,14 +4,14 @@ const underTest = require('../src/commands/add-iot-topic-rule'),
 	destroyObjects = require('./util/destroy-objects'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
-	retry = require('oh-no-i-insist'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
+	pollForLogEvents = require('./util/poll-for-log-events'),
 	awsRegion = require('./util/test-aws-region');
 describe('addIOTTopicRuleEventSource', () => {
 	'use strict';
-	let workingdir, testRunName, newObjects, config, logs, lambda, iot;
+	let workingdir, testRunName, newObjects, config, lambda, iot;
 	const postToEndpoint = function (endpoint, topic, message) {
 			const iotdata = new aws.IotData({region: awsRegion, endpoint: endpoint});
 			return iotdata.publish({
@@ -24,7 +24,6 @@ describe('addIOTTopicRuleEventSource', () => {
 		};
 	beforeEach(() => {
 		workingdir = tmppath();
-		logs = new aws.CloudWatchLogs({ region: awsRegion });
 		lambda = new aws.Lambda({ region: awsRegion });
 		iot = new aws.Iot({region: awsRegion});
 		testRunName = 'test' + Date.now();
@@ -99,25 +98,13 @@ describe('addIOTTopicRuleEventSource', () => {
 		});
 
 		it('invokes lambda from IOT when no version is given', done => {
-			const retryTimeout = process.env.AWS_DEPLOY_TIMEOUT || 10000,
-				retries = process.env.AWS_DEPLOY_RETRIES || 5;
 			createLambda()
 			.then(() => underTest(config))
 			.then(result => newObjects.iotTopicRule = result.ruleName)
 			.then(() => postToDefaultEndpoint('iot/987', JSON.stringify({message: 'Hello From ' + testRunName})))
-			.then(() => {
-				return retry(() => {
-					console.log(`trying to get events from /aws/lambda/${testRunName}`);
-					return logs.filterLogEvents({ logGroupName: '/aws/lambda/' + testRunName, filterPattern: 'Hello From ' + testRunName })
-						.promise()
-						.then(logEvents => {
-							if (logEvents.events.length) {
-								return logEvents.events;
-							} else {
-								return Promise.reject();
-							}
-						});
-				}, retryTimeout, retries, undefined, undefined, Promise);
+			.then(() => pollForLogEvents(`/aws/lambda/${testRunName}`,  `Hello From ${testRunName}`, awsRegion))
+			.then(events => {
+				expect(events.length).toEqual(1);
 			})
 			.then(done, done.fail);
 		});

@@ -11,6 +11,7 @@ const underTest = require('../src/commands/create'),
 	path = require('path'),
 	os = require('os'),
 	aws = require('aws-sdk'),
+	pollForLogEvents = require('./util/poll-for-log-events'),
 	awsRegion = require('./util/test-aws-region');
 describe('create', () => {
 	'use strict';
@@ -268,10 +269,10 @@ describe('create', () => {
 					})
 				}).promise();
 			})
-			.then(() => logs.getLogEvents({ logGroupName: `${testRunName}-group`, logStreamName: `${testRunName}-stream` }).promise())
-			.then(logEvents => {
-				expect(logEvents.events.length).toEqual(1);
-				expect(logEvents.events[0].message).toEqual(`hello ${testRunName}`);
+			.then(() => pollForLogEvents(`${testRunName}-group`, `hello ${testRunName}`, awsRegion))
+			.then(events => {
+				expect(events.length).toEqual(1);
+				expect(events[0].message).toEqual(`hello ${testRunName}`);
 			})
 			.then(done, done.fail);
 		});
