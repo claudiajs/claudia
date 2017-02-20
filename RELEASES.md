@@ -1,8 +1,12 @@
 # Release history
 
+### 2.9.0, 20 Feb 2017
+
+- Cognito Authorizers now finally work with Claudia Api Builder, thanks to [Andrew Gits](https://github.com/thekiwi), [Paul Korzhyk](https://github.com/paulftw) and [David Hooper](https://github.com/DavidHooper).
+
 ### 2.8.0, 19 Feb 2017
 
-- support for triggering Lambda functions using IOT topic filters (
+- support for triggering Lambda functions using IOT topic filters
 - allows the same lambda version to bind multiple times to the same bucket (fix for https://github.com/claudiajs/claudia/issues/101)
 - allow env variables set on the command line to be set when validating the package (fixes https://github.com/claudiajs/claudia/issues/96)
 - bugfix: `claudia destroy` now uses `--profile` correctly (fix for https://github.com/claudiajs/claudia/issues/100) 
