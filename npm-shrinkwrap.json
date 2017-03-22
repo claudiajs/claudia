@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "dependencies": {
     "archiver": {
       "version": "0.21.0",
