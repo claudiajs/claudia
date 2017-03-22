@@ -1,5 +1,9 @@
 # Release history
 
+### 2.10.0, 23 March 2017
+
+- Use the new node6.10 runtime by default when creating functions. You can still use the older 4.3 runtime by supplying the --runtime flag
+
 ### 2.9.0, 20 Feb 2017
 
 - Cognito Authorizers now finally work with Claudia Api Builder, thanks to [Andrew Gits](https://github.com/thekiwi), [Paul Korzhyk](https://github.com/paulftw) and [David Hooper](https://github.com/DavidHooper).

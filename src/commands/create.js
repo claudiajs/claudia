@@ -507,7 +507,7 @@ module.exports.doc = {
 			argument: 'runtime',
 			optional: true,
 			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html',
-			default: 'node4.3'
+			default: 'node6.10'
 		},
 		{
 			argument: 'description',
