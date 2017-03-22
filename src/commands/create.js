@@ -140,7 +140,7 @@ module.exports = function create(options, optionalLogger) {
 						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
-						Runtime: options.runtime || 'nodejs4.3',
+						Runtime: options.runtime || 'nodejs6.10',
 						Publish: true,
 						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
 							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),

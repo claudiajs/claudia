@@ -430,7 +430,14 @@ describe('create', () => {
 		});
 	});
 	describe('runtime support', () => {
-		it('creates node 4.3 deployments by default', done => {
+		it('creates node 6.10 deployments by default', done => {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
+			.then(done, done.fail);
+		});
+		it('can create nodejs4.3 when requested', done => {
+			config.runtime = 'nodejs4.3';
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
