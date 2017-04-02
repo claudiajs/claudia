@@ -8,6 +8,7 @@ const underTest = require('../src/commands/add-s3-event-source'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
+	genericRole = require('./util/generic-role'),
 	awsRegion = require('./util/test-aws-region');
 describe('addS3EventSource', () => {
 	'use strict';
@@ -17,7 +18,6 @@ describe('addS3EventSource', () => {
 			setTimeout(() => resolve(), delay)
 		);
 	};
-
 	beforeEach(() => {
 		workingdir = tmppath();
 		s3 = new aws.S3();
@@ -113,6 +113,33 @@ describe('addS3EventSource', () => {
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			})
+			.then(() => underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: 'in/'}))
+			.then(() => {
+				return s3.getBucketNotificationConfiguration({
+					Bucket: testRunName + bucketSuffix
+				}).promise();
+			})
+			.then(config => {
+				expect(config.LambdaFunctionConfigurations[0].Filter.Key.FilterRules[0]).toEqual({
+					Name: 'Prefix',
+					Value: 'in/'
+				});
+			})
+			.then(done, done.fail);
+		});
+		it('can use functions created using a role ARN', done => {
+			genericRole.create(testRunName + '-exec').then(roleResult => {
+				newObjects.lambdaRole = roleResult.Role.RoleName;
+				return roleResult.Role.Arn;
+			}).then(roleArn => create({
+				role: roleArn,
+				name: testRunName,
+				region: awsRegion,
+				source: workingdir,
+				handler: 'main.handler'
+			})).then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			})
 			.then(() => underTest({source: workingdir, bucket: testRunName + bucketSuffix, prefix: 'in/'}))

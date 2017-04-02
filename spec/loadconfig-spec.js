@@ -96,11 +96,18 @@ describe('loadConfig', () => {
 		.then(done.fail, err => expect(err).toEqual('invalid configuration -- lambda.role missing from claudia.json'))
 		.then(done);
 	});
-	it('passes region validation if name is provided', done => {
-		exampleConfig = { lambda: { role: 'us-east-1' } };
+	it('passes role validation if name is provided', done => {
+		exampleConfig = { lambda: { role: 'function-executor' } };
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
 		underTest(workingdir, { lambda: { role: true } })
-		.then(config => expect(config).toEqual(exampleConfig))
+		.then(config => expect(config.lambda.role).toEqual('function-executor'))
+		.then(done, done.fail);
+	});
+	it('converts a role from an ARN to a name if ARN is specified', done => {
+		exampleConfig = { lambda: { role: 'arn:aws:iam::333333333333:role/abcde-cli' } };
+		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
+		underTest(workingdir, { lambda: { role: true } })
+		.then(config => expect(config.lambda.role).toEqual('abcde-cli'))
 		.then(done, done.fail);
 	});
 });

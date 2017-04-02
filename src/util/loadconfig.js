@@ -17,6 +17,13 @@ const path = require('path'),
 			return `${options.config} does not exist`;
 		}
 		return 'claudia.json does not exist in the source folder';
+	},
+	toRoleName = function (roleNameOrArn) {
+		'use strict';
+		if (/^arn:aws:iam:.*/.test(roleNameOrArn)) {
+			return roleNameOrArn.replace(/.*\//, '');
+		}
+		return roleNameOrArn;
 	};
 
 
@@ -34,6 +41,9 @@ module.exports = function loadConfig(options, validate) {
 			const name = config && config.lambda && config.lambda.name,
 				region = config && config.lambda && config.lambda.region,
 				role = config && config.lambda && config.lambda.role;
+			if (role) {
+				config.lambda.role = toRoleName(role);
+			}
 			if (validate.lambda && validate.lambda.name && !name) {
 				return Promise.reject('invalid configuration -- lambda.name missing from ' + path.basename(fileName));
 			}

@@ -6,12 +6,12 @@ const aws = require('aws-sdk'),
 	fs = require('../../src/util/fs-promise.js'),
 	genericRoleName = 'test-generic-role-' + Date.now();
 
-module.exports.create = function create() {
+module.exports.create = function create(name) {
 	'use strict';
 	return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 		.then(lambdaRolePolicy => {
 			return iam.createRole({
-				RoleName: genericRoleName,
+				RoleName: name || genericRoleName,
 				AssumeRolePolicyDocument: lambdaRolePolicy
 			}).promise();
 		});
