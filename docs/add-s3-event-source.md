@@ -1,4 +1,4 @@
-#add-s3-event-source
+# add-s3-event-source
 
 Add a notification event to Lambda when a file is added to a S3 bucket, and set up access permissions
 

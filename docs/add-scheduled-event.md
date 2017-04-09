@@ -1,4 +1,4 @@
-#add-scheduled-event
+# add-scheduled-event
 
 Add a recurring notification event
 

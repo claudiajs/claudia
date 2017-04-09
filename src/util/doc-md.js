@@ -18,7 +18,7 @@ const fs = require('fs'),
 			pushLines = function (arr) {
 				arr.forEach(line => lines.push(line));
 			};
-		lines.push('#' + command.command);
+		lines.push('# ' + command.command);
 		lines.push('');
 		lines.push(command.doc.description);
 		lines.push('');

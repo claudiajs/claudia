@@ -1,4 +1,4 @@
-#generate-serverless-express-proxy
+# generate-serverless-express-proxy
 
 Create a lambda proxy API wrapper for an express app using aws-serverless-express
 

@@ -1,4 +1,4 @@
-#update
+# update
 
 Deploy a new version of the Lambda function using project files, update any associated web APIs
 

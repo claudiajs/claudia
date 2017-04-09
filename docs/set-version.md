@@ -1,4 +1,4 @@
-#set-version
+# set-version
 
 Create or update a lambda alias/api stage to point to the latest deployed version
 

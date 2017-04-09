@@ -1,4 +1,4 @@
-#add-iot-topic-rule
+# add-iot-topic-rule
 
 Creates an IOT topic rule and configures the Lambda to run when a message is published on a matching IOT Gateway topic
 

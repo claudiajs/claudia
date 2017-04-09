@@ -1,5 +1,10 @@
 # Release history
 
+### 2.11.0, 9 April 2017
+
+- support for Cognito User Pool triggers (eg `claudia add-cognito-user-pool-trigger --user-pool-id POOLID --events PreSignUp`)
+- bugfix for add-s3-event-source, when claudia was created with a role given as an ARN
+
 ### 2.10.0, 23 March 2017
 
 - Use the new node6.10 runtime by default when creating functions. You can still use the older 4.3 runtime by supplying the --runtime flag

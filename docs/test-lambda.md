@@ -1,4 +1,4 @@
-#test-lambda
+# test-lambda
 
 Execute the lambda function and print out the response
 

@@ -1,4 +1,4 @@
-#add-sns-event-source
+# add-sns-event-source
 
 Add a notification event to Lambda when a message is published on a SNS topic
 

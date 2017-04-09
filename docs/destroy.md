@@ -1,4 +1,4 @@
-#destroy
+# destroy
 
 Undeploy the lambda function and destroy the API and security roles
 
