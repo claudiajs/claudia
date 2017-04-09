@@ -40,13 +40,13 @@ const fs = require('fs'),
 			components.push(descLines.shift());
 			lines.push(components.join(' '));
 			if (descLines.length) {
-				pushLines(indent(descLines, 2));
+				pushLines(indent(descLines, 4));
 			}
 			if (argDoc.example) {
-				pushLines(indent('* _For example_: ' + argDoc.example, 2));
+				pushLines(indent('* _For example_: ' + argDoc.example, 4));
 			}
 			if (argDoc.default) {
-				pushLines(indent('* _Defaults to_: ' + argDoc.default, 2));
+				pushLines(indent('* _Defaults to_: ' + argDoc.default, 4));
 			}
 		});
 		lines.push('');

@@ -11,6 +11,6 @@ claudia destroy {OPTIONS}
 ## Options
 
 *  `--source`:  (_optional_) Directory with project files
-  * _Defaults to_: current directory
+    * _Defaults to_: current directory
 *  `--config`:  (_optional_) Config file containing the resource names
-  * _Defaults to_: claudia.json
+    * _Defaults to_: claudia.json
