@@ -15,6 +15,7 @@ module.exports = function destroyObjects(newObjects) {
 		iot = new aws.Iot({ region: awsRegion }),
 		sns = new aws.SNS({ region: awsRegion }),
 		events = new aws.CloudWatchEvents({ region: awsRegion }),
+		cognitoIdentityServiceProvider = new aws.CognitoIdentityServiceProvider({ region: awsRegion }),
 		destroyRule = function (ruleName) {
 			return events.listTargetsByRule({ Rule: ruleName }).promise()
 			.then(config => {
@@ -94,6 +95,11 @@ module.exports = function destroyObjects(newObjects) {
 	.then(() => {
 		if (newObjects.s3Bucket) {
 			return destroyBucket(newObjects.s3Bucket);
+		}
+	})
+	.then(() => {
+		if (newObjects.userPoolId) {
+			return cognitoIdentityServiceProvider.deleteUserPool({ UserPoolId: newObjects.userPoolId }).promise();
 		}
 	})
 	.catch(e => console.log('error cleaning up', e.stack || e.message || e));
