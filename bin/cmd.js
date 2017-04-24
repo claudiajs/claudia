@@ -48,10 +48,12 @@ const minimist = require('minimist'),
 			AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: args.profile});
 		}
 		if (args['aws-client-timeout']) {
-			AWS.config.httpOptions = { timeout: args['aws-client-timeout'] };
+			AWS.config.httpOptions = AWS.config.httpOptions || {};
+			AWS.config.httpOptions.timeout = args['aws-client-timeout'];
 		}
-		if (args['proxy']) {
-			AWS.config.httpOptions = { agent: proxy(args['proxy']) };
+		if (args.proxy) {
+			AWS.config.httpOptions = AWS.config.httpOptions || {};
+			AWS.config.httpOptions.agent = proxy(args.proxy);
 		}
 		commands[command](args, logger).then(result => {
 			if (result) {
