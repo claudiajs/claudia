@@ -1,5 +1,9 @@
 # Release history
 
+### 2.11.1, 24 April 2017 
+
+- bugfix for `AliasAttributes` removal when creating cognito user pool triggers, thanks [@matsnow](https://github.com/matsnow)
+
 ### 2.11.0, 9 April 2017
 
 - support for Cognito User Pool triggers (eg `claudia add-cognito-user-pool-trigger --user-pool-id POOLID --events PreSignUp`)
