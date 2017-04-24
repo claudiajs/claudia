@@ -6,6 +6,7 @@ const minimist = require('minimist'),
 	ConsoleLogger = require('../src/util/console-logger'),
 	docTxt = require('../src/util/doc-txt'),
 	AWS = require('aws-sdk'),
+	proxy = require('proxy-agent'),
 	readArgs = function () {
 		'use strict';
 		return minimist(process.argv.slice(2), {
@@ -48,6 +49,9 @@ const minimist = require('minimist'),
 		}
 		if (args['aws-client-timeout']) {
 			AWS.config.httpOptions = { timeout: args['aws-client-timeout'] };
+		}
+		if (args['proxy']) {
+			AWS.config.httpOptions = { agent: proxy(args['proxy']) };
 		}
 		commands[command](args, logger).then(result => {
 			if (result) {
