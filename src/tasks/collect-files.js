@@ -42,7 +42,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			fsUtil.ensureCleanDir(packDir);
 			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger)
 			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
-			.then(() => fs.renameAsync(path.join(packDir, 'package'), targetDir))
+			.then(() => fsUtil.copy(path.join(packDir, 'package','*'), targetDir))
 			.then(() => {
 				fsUtil.rmDir(packDir);
 				return targetDir;
