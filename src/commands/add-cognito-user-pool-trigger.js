@@ -47,7 +47,7 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 				data.UserPoolId = data.Id;
 				data.LambdaConfig = data.LambdaConfig || {};
 				options.events.split(',').forEach(name => data.LambdaConfig[name] = lambdaConfig.arn);
-				['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers'].forEach(n => delete data[n]);
+				['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers','AliasAttributes'].forEach(n => delete data[n]);
 				return cognito.updateUserPool(data).promise();
 			});
 		};
