@@ -1,10 +1,11 @@
 const	path = require('path'),
-	fs = require('../util/fs-promise'),
+	fs = require('fs'),
+	fsPromise = require('../util/fs-promise'),
 	loggingWrap = require('../util/logging-wrap'),
 	aws = require('aws-sdk'),
 	readFromDisk = function (packageArchive) {
 		'use strict';
-		return fs.readFileAsync(packageArchive)
+		return fsPromise.readFileAsync(packageArchive)
 		.then(fileContents => ({ ZipFile: fileContents }));
 	},
 	uploadToS3 = function (filePath, bucket, logger) {

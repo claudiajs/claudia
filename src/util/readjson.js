@@ -1,4 +1,4 @@
-const fs = require('./fs-promise'),
+const fsPromise = require('./fs-promise'),
 	fsUtil = require('./fs-util');
 module.exports = function readJSON(fileName) {
 	'use strict';
@@ -8,7 +8,7 @@ module.exports = function readJSON(fileName) {
 	if (!fsUtil.fileExists(fileName)) {
 		return Promise.reject(fileName + ' is missing');
 	}
-	return fs.readFileAsync(fileName, {encoding: 'utf8'})
+	return fsPromise.readFileAsync(fileName, {encoding: 'utf8'})
 	.then(content => {
 		try {
 			return JSON.parse(content);

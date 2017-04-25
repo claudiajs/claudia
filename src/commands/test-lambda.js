@@ -1,6 +1,6 @@
 const aws = require('aws-sdk'),
 	loadConfig = require('../util/loadconfig'),
-	fs = require('../util/fs-promise');
+	fsPromise = require('../util/fs-promise');
 module.exports = function testLambda(options) {
 	'use strict';
 	let lambdaConfig;
@@ -8,7 +8,7 @@ module.exports = function testLambda(options) {
 		if (!options.event) {
 			return Promise.resolve('');
 		} else {
-			return fs.readFileAsync(options.event, 'utf-8');
+			return fsPromise.readFileAsync(options.event, 'utf-8');
 		}
 	};
 

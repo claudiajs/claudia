@@ -5,6 +5,7 @@ const os = require('os'),
 	shell = require('shelljs'),
 	readjson = require('../src/util/readjson'),
 	fs = require('fs'),
+	fsPromise = require('../src/util/fs-promise'),
 	localizeDependencies = require('../src/tasks/localize-dependencies');
 describe('localizeDependencies', () => {
 	'use strict';
@@ -38,7 +39,7 @@ describe('localizeDependencies', () => {
 			return readjson(path.join(__dirname, '..', 'package.json'))
 			.then(content => {
 				content[overrideKey] = value;
-				return fs.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), { encoding: 'utf8' });
+				return fsPromise.writeFileAsync(path.join(workdir, 'package.json'), JSON.stringify(content), { encoding: 'utf8' });
 			});
 		};
 		it(`does not modify remote dependencies in ${depType}`, done => {

@@ -1,5 +1,5 @@
 const loadConfig = require('../util/loadconfig'),
-	fs = require('../util/fs-promise'),
+	fsPromise = require('../util/fs-promise'),
 	aws = require('aws-sdk');
 
 module.exports = function addScheduledEvent(options) {
@@ -69,7 +69,7 @@ module.exports = function addScheduledEvent(options) {
 	if (!options.schedule) {
 		return Promise.reject('event schedule not specified. please provide it with --schedule');
 	}
-	return fs.readFileAsync(options.event, 'utf8')
+	return fsPromise.readFileAsync(options.event, 'utf8')
 		.then(contents => {
 			eventData = contents;
 		})

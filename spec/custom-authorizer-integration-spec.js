@@ -8,7 +8,7 @@ const create = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	fsUtil = require('../src/util/fs-util'),
-	fs = require('../src/util/fs-promise'),
+	fsPromise = require('../src/util/fs-promise'),
 	awsRegion = require('./util/test-aws-region');
 describe('customAuthorizers', () => {
 	'use strict';
@@ -33,9 +33,9 @@ describe('customAuthorizers', () => {
 			testRunName = 'test' + Date.now();
 			shell.mkdir(workingdir);
 			shell.cp('-r', 'spec/test-projects/custom-authorizers/*', workingdir);
-			return fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
+			return fsPromise.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
 			.then(content => content.replace('TEST-AUTH-LAMBDA-NAME', `${testRunName}Auth`))
-			.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
+			.then(content => fsPromise.writeFileAsync(path.join(workingdir, 'api.js'), content))
 			.then(() => create({
 				name: `${testRunName}Auth`,
 				version: 'original',

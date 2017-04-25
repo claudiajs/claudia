@@ -1,5 +1,5 @@
 const path = require('path'),
-	fs = require('../util/fs-promise'),
+	fsPromise = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),
 	NullLogger = require('../util/null-logger'),
 	runNpm = require('../util/run-npm');
@@ -36,7 +36,7 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 			'const server = awsServerlessExpress.createServer(app)',
 			'exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)'].join('\n');
 
-		return fs.writeFileAsync(proxyModulePath, contents, 'utf8');
+		return fsPromise.writeFileAsync(proxyModulePath, contents, 'utf8');
 	})
 	.then(() => ({
 		'lambda-handler': proxyModuleName + '.handler'

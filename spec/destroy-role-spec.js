@@ -1,7 +1,7 @@
 /*global describe, it, expect, beforeEach */
 const underTest = require('../src/util/destroy-role'),
 	addPolicy = require('../src/tasks/add-policy'),
-	fs = require('../src/util/fs-promise'),
+	fsPromise = require('../src/util/fs-promise'),
 	aws = require('aws-sdk'),
 	templateFile = require('../src/util/template-file');
 describe('destroyRole', () => {
@@ -11,7 +11,7 @@ describe('destroyRole', () => {
 		testRunName = `test${Date.now()}-executor`;
 		iam = new aws.IAM();
 
-		fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+		fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 		.then(lambdaRolePolicy => {
 			return iam.createRole({
 				RoleName: testRunName,

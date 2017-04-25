@@ -6,7 +6,8 @@ const underTest = require('../src/commands/update'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
-	fs = require('../src/util/fs-promise'),
+	fs = require('fs'),
+	fsPromise = require('../src/util/fs-promise'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
@@ -77,14 +78,14 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('fails if the lambda no longer exists', done => {
-			fs.readFileAsync(path.join(workingdir, 'claudia.json'), 'utf8')
+			fsPromise.readFileAsync(path.join(workingdir, 'claudia.json'), 'utf8')
 			.then(JSON.parse)
 			.then(contents => {
 				contents.lambda.name = contents.lambda.name + '-xxx';
 				return contents;
 			}).then(JSON.stringify)
 			.then(contents => {
-				return fs.writeFileAsync(path.join(workingdir, 'claudia.json'), contents, 'utf8');
+				return fsPromise.writeFileAsync(path.join(workingdir, 'claudia.json'), contents, 'utf8');
 			}).then(() => {
 				return underTest({source: workingdir});
 			}).then(done.fail, reason => {
@@ -255,14 +256,14 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('fails if the api no longer exists', done => {
-			fs.readFileAsync(path.join(updateddir, 'claudia.json'), 'utf8')
+			fsPromise.readFileAsync(path.join(updateddir, 'claudia.json'), 'utf8')
 			.then(JSON.parse)
 			.then(contents => {
 				contents.api.id = contents.api.id + '-xxx';
 				return contents;
 			}).then(JSON.stringify)
 			.then(contents => {
-				return fs.writeFileAsync(path.join(updateddir, 'claudia.json'), contents, 'utf8');
+				return fsPromise.writeFileAsync(path.join(updateddir, 'claudia.json'), contents, 'utf8');
 			}).then(() => {
 				return underTest({source: updateddir});
 			}).then(done.fail, reason => {

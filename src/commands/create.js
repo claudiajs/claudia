@@ -15,7 +15,8 @@ const path = require('path'),
 	apiGWUrl = require('../util/apigw-url'),
 	lambdaNameSanitize = require('../util/lambda-name-sanitize'),
 	retry = require('oh-no-i-insist'),
-	fs = require('../util/fs-promise'),
+	fs = require('fs'),
+	fsPromise = require('../util/fs-promise'),
 	os = require('os'),
 	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
@@ -258,7 +259,7 @@ module.exports = function create(options, optionalLogger) {
 			if (lambdaMetaData.api) {
 				config.api =  { id: lambdaMetaData.api.id, module: lambdaMetaData.api.module };
 			}
-			return fs.writeFileAsync(
+			return fsPromise.writeFileAsync(
 				configFile,
 				JSON.stringify(config, null, 2),
 				'utf8'
@@ -297,7 +298,7 @@ module.exports = function create(options, optionalLogger) {
 				}
 				return iam.getRole({RoleName: options.role}).promise();
 			} else {
-				return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+				return fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 					.then(lambdaRolePolicy => {
 						return iam.createRole({
 							RoleName: functionName + '-executor',

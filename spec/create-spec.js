@@ -6,7 +6,8 @@ const underTest = require('../src/commands/create'),
 	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
 	shell = require('shelljs'),
-	fs = require('../src/util/fs-promise'),
+	fs = require('fs'),
+	fsPromise = require('../src/util/fs-promise'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
 	os = require('os'),
@@ -203,7 +204,7 @@ describe('create', () => {
 			beforeEach(done => {
 				roleName = `${testRunName}-manual`;
 				logger = new ArrayLogger();
-				fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+				fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 				.then(lambdaRolePolicy => {
 					return iam.createRole({
 						RoleName: roleName,

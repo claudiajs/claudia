@@ -1,7 +1,7 @@
 const removeKeysWithPrefix = require('./remove-keys-with-prefix'),
 	execPromise = require('./exec-promise'),
 	fsUtil = require('./fs-util'),
-	fs = require('./fs-promise'),
+	fsPromise = require('./fs-promise'),
 	tmppath = require('./tmppath');
 module.exports = function runNpm(dir, options, logger) {
 	'use strict';
@@ -15,7 +15,7 @@ module.exports = function runNpm(dir, options, logger) {
 		env = removeKeysWithPrefix(process.env, 'npm_');
 	}
 	return execPromise(command + ' > ' + npmlog + ' 2>&1', {env: env})
-	.then(() => fs.unlinkAsync(npmlog))
+	.then(() => fsPromise.unlinkAsync(npmlog))
 	.then(() => {
 		process.chdir(cwd);
 		return dir;

@@ -3,12 +3,12 @@ const aws = require('aws-sdk'),
 	iam = new aws.IAM(),
 	templateFile = require('../../src/util/template-file'),
 	destroyRole = require('../../src/util/destroy-role'),
-	fs = require('../../src/util/fs-promise.js'),
+	fsPromise = require('../../src/util/fs-promise.js'),
 	genericRoleName = 'test-generic-role-' + Date.now();
 
 module.exports.create = function create(name) {
 	'use strict';
-	return fs.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+	return fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 		.then(lambdaRolePolicy => {
 			return iam.createRole({
 				RoleName: name || genericRoleName,

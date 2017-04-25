@@ -1,4 +1,4 @@
-const fs = require('../util/fs-promise'),
+const fsPromise = require('../util/fs-promise'),
 	path = require('path'),
 	fsUtil = require('../util/fs-util'),
 	readjson = require('../util/readjson');
@@ -25,7 +25,7 @@ module.exports = function (workdir, referencedir) {
 		['dependencies', 'devDependencies', 'optionalDependencies'].forEach(depType => localize(content[depType]));
 		return content;
 	})
-	.then(content => fs.writeFileAsync(packagePath, JSON.stringify(content), {encoding: 'utf8'}))
+	.then(content => fsPromise.writeFileAsync(packagePath, JSON.stringify(content), {encoding: 'utf8'}))
 	.then(() => {
 		const npmRcPath = path.join(referencedir, '.npmrc');
 		if (fsUtil.fileExists(npmRcPath)) {

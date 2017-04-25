@@ -2,7 +2,8 @@ const tmppath = require('../util/tmppath'),
 	readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),
 	fsUtil = require('../util/fs-util'),
-	fs = require('../util/fs-promise'),
+	fs = require('fs'),
+	fsPromise = require('../util/fs-promise'),
 	path = require('path'),
 	localizeDependencies = require('./localize-dependencies'),
 	expectedArchiveName = require('../util/expected-archive-name'),
@@ -42,7 +43,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			fsUtil.ensureCleanDir(packDir);
 			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger)
 			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
-			.then(() => fs.renameAsync(path.join(packDir, 'package'), targetDir))
+			.then(() => fsPromise.renameAsync(path.join(packDir, 'package'), targetDir))
 			.then(() => {
 				fsUtil.rmDir(packDir);
 				return targetDir;

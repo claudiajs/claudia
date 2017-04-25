@@ -6,7 +6,7 @@ const create = require('../src/commands/create'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
-	fs = require('../src/util/fs-promise'),
+	fsPromise = require('../src/util/fs-promise'),
 	fsUtil = require('../src/util/fs-util'),
 	awsRegion = require('./util/test-aws-region'),
 	cognitoUserPool = require('./util/cognito-user-pool');
@@ -34,9 +34,9 @@ describe('cognitoAuthorizers', () => {
 			workingdir = tmppath();
 			shell.mkdir(workingdir);
 			shell.cp('-r', 'spec/test-projects/cognito-authorizers/*', workingdir);
-			return fs.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
+			return fsPromise.readFileAsync(path.join(workingdir, 'api.js'), 'utf-8')
 				.then(content => content.replace('TEST-USER-POOL-ARN', cognitoUserPool.getArn()))
-				.then(content => fs.writeFileAsync(path.join(workingdir, 'api.js'), content))
+				.then(content => fsPromise.writeFileAsync(path.join(workingdir, 'api.js'), content))
 				.then(() => create({
 					name: testRunName,
 					version: 'original',
