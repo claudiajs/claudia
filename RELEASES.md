@@ -1,5 +1,10 @@
 # Release history
 
+### 2.12.0, 26 April 2017
+
+- support `--proxy` in claudia to specify a HTTP proxy when working behind corporate firewalls (thanks to [Jason Riddle](https://github.com/jason-riddle))
+- isolate claudia filesystem additions better to avoid clashes with third party libraries that also change fs objects, such as Nuxt (thanks to [Paweł Barszcz](https://github.com/nkoder))
+
 ### 2.11.1, 24 April 2017 
 
 - bugfix for `AliasAttributes` removal when creating cognito user pool triggers, thanks [@matsnow](https://github.com/matsnow)
