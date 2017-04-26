@@ -1149,7 +1149,7 @@ describe('rebuildWebApi', () => {
 			}).then(done, done.fail);
 		});
 	});
-	describe('configuration cashing', () => {
+	describe('configuration caching', () => {
 		let logger;
 		beforeEach(done => {
 			logger = new ArrayLogger();
@@ -1185,7 +1185,7 @@ describe('rebuildWebApi', () => {
 				expect(logger.getStageLog(true)).not.toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
 		});
-		it('runs throough the whole deployment if there was no config hash in the previous stage with the same name', done => {
+		it('runs through the whole deployment if there was no config hash in the previous stage with the same name', done => {
 			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, undefined).then(() => {
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion, logger, 'configHash');
 			}).then(result => {

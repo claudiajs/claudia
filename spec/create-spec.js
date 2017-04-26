@@ -575,7 +575,7 @@ describe('create', () => {
 				});
 			})
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world' }).promise())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
 			.then(done, done.fail);
 		});
 		it('renames scoped NPM packages to a sanitized Lambda name', done => {
@@ -589,7 +589,7 @@ describe('create', () => {
 				});
 			})
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'test_hello-world' }).promise())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
 			.then(done, done.fail);
 		});
 		it('uses the package.json description field if --description is not provided', done => {
@@ -1033,13 +1033,7 @@ describe('create', () => {
 		};
 		beforeEach(() => {
 			logger = new ArrayLogger();
-			standardEnvKeys = [
-				'PATH', 'LANG', 'LD_LIBRARY_PATH', 'LAMBDA_TASK_ROOT', 'LAMBDA_RUNTIME_DIR', 'AWS_REGION',
-				'AWS_DEFAULT_REGION', 'AWS_LAMBDA_LOG_GROUP_NAME', 'AWS_LAMBDA_LOG_STREAM_NAME',
-				'AWS_LAMBDA_FUNCTION_NAME', 'AWS_LAMBDA_FUNCTION_MEMORY_SIZE', 'AWS_LAMBDA_FUNCTION_VERSION',
-				'NODE_PATH', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN',
-				'AWS_EXECUTION_ENV'
-			].sort();
+			standardEnvKeys = require('./util/standard-env-keys');
 		});
 		it('does not add any additional environment variables if set-env not provided', done => {
 			createFromDir('env-vars')
