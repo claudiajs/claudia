@@ -16,12 +16,15 @@ describe('update', () => {
 	'use strict';
 	let workingdir, testRunName,  lambda, newObjects;
 	const invoke = function (url, options) {
-		if (!options) {
-			options = {};
-		}
-		options.retry = 403;
-		return callApi(newObjects.restApi, awsRegion, url, options);
-	};
+			if (!options) {
+				options = {};
+			}
+			options.retry = 403;
+			return callApi(newObjects.restApi, awsRegion, url, options);
+		},
+		getLambdaConfiguration = function (qualifier) {
+			return lambda.getFunctionConfiguration({ FunctionName: testRunName, Qualifier: qualifier }).promise();
+		};
 	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
@@ -495,6 +498,123 @@ describe('update', () => {
 				'apigateway.createDeployment'
 			]);
 		}).then(done, done.fail);
+	});
+	describe('timeout option support', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		it('does not change the timeout if not provided', done => {
+			underTest({source: workingdir, version: 'new'})
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => expect(configuration.Timeout).toEqual(10))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Timeout).toEqual(10))
+			.then(done, done.fail);
+		});
+		it('fails if timeout value is < 1', done => {
+			underTest({source: workingdir, timeout: 0})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the timeout value provided must be greater than or equal to 1'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Timeout).toEqual(10))
+			.then(done, done.fail);
+		});
+		it('fails if timeout value is > 300', done => {
+			underTest({source: workingdir, version: 'new', timeout: 301})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the timeout value provided must be less than or equal to 300'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Timeout).toEqual(10))
+			.then(done, done.fail);
+		});
+		it('can specify timeout using the --timeout argument', done => {
+			underTest({source: workingdir, version: 'new', timeout: 40})
+			.then(() => getLambdaConfiguration())
+			.then(lambdaResult => expect(lambdaResult.Timeout).toEqual(40))
+			.then(() => getLambdaConfiguration('new'))
+			.then(lambdaResult => expect(lambdaResult.Timeout).toEqual(40))
+			.then(done, done.fail);
+		});
+	});
+	describe('runtime', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, runtime: 'nodejs4.3', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		it('does not change the runtime if not provided', done => {
+			underTest({source: workingdir, version: 'new'})
+			.then(() => getLambdaConfiguration('new'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
+			.then(() => getLambdaConfiguration())
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
+			.then(done, done.fail);
+		});
+		it('can update the runtime when requested', done => {
+			underTest({source: workingdir, version: 'new', runtime: 'nodejs6.10'})
+			.then(() => getLambdaConfiguration('new'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
+			.then(() => getLambdaConfiguration())
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
+			.then(done, done.fail);
+		});
+	});
+	describe('memory', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, memory: 256, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		it('does not change the memory if not provided', done => {
+			underTest({source: workingdir, version: 'new'})
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(done, done.fail);
+		});
+		it('fails if memory value is < 128', done => {
+			underTest({source: workingdir, version: 'new', memory: 64})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(done, done.fail);
+		});
+		it('fails if memory value is 0', done => {
+			underTest({source: workingdir, version: 'new', memory: 0})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(done, done.fail);
+		});
+		it('fails if memory value is > 1536', done => {
+			underTest({source: workingdir, version: 'new', memory: 1536 + 64})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be less than or equal to 1536'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(done, done.fail);
+		});
+		it('fails if memory value is not a multiple of 64', done => {
+			underTest({source: workingdir, version: 'new', memory: 130})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be a multiple of 64'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(256))
+			.then(done, done.fail);
+		});
+		it('can specify memory size using the --memory argument', done => {
+			underTest({source: workingdir, version: 'new', memory: 1536})
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(done, done.fail);
+		});
 	});
 	describe('environment variables', () => {
 		let standardEnvKeys, logger;

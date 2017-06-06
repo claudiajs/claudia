@@ -87,6 +87,26 @@ module.exports = function update(options, optionalLogger) {
 				}
 			}
 		},
+		updateConfiguration = function (newHandler) {
+			const configurationPatch = {};
+			logger.logStage('updating configuration');
+			if (newHandler) {
+				configurationPatch.Handler = newHandler;
+			}
+			if (options.timeout) {
+				configurationPatch.Timeout = options.timeout;
+			}
+			if (options.runtime) {
+				configurationPatch.Runtime = options.runtime;
+			}
+			if (options.memory) {
+				configurationPatch.MemorySize = options.memory;
+			}
+			if (Object.keys(configurationPatch).length > 0) {
+				configurationPatch.FunctionName = lambdaConfig.name;
+				return lambda.updateFunctionConfiguration(configurationPatch).promise();
+			}
+		},
 		cleanup = function () {
 			if (!options.keep) {
 				fs.unlinkSync(packageArchive);
@@ -94,20 +114,45 @@ module.exports = function update(options, optionalLogger) {
 				updateResult.archive = packageArchive;
 			}
 			return updateResult;
+		},
+		validateOptions = function () {
+			if (!options.source) {
+				options.source = process.cwd();
+			}
+			if (options.source === os.tmpdir()) {
+				return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
+			}
+			if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
+				return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+			}
+			if (options.timeout || options.timeout === 0) {
+				if (options.timeout < 1) {
+					return Promise.reject('the timeout value provided must be greater than or equal to 1');
+				}
+				if (options.timeout > 300) {
+					return Promise.reject('the timeout value provided must be less than or equal to 300');
+				}
+			}
+			if (options.memory || options.memory === 0) {
+				if (options.memory < 128) {
+					return Promise.reject('the memory value provided must be greater than or equal to 128');
+				}
+				if (options.memory > 1536) {
+					return Promise.reject('the memory value provided must be less than or equal to 1536');
+				}
+				if (options.memory % 64 !== 0) {
+					return Promise.reject('the memory value provided must be a multiple of 64');
+				}
+			}
+			return Promise.resolve();
 		};
 	options = options || {};
-	if (!options.source) {
-		options.source = process.cwd();
-	}
-	if (options.source === os.tmpdir()) {
-		return Promise.reject('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
-	}
-	if (options['optional-dependencies'] === false && options['use-local-dependencies']) {
-		return Promise.reject('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
-	}
 
-	logger.logStage('loading Lambda config');
-	return initEnvVarsFromOptions(options)
+	return validateOptions()
+	.then(() => {
+		logger.logStage('loading Lambda config');
+		return initEnvVarsFromOptions(options);
+	})
 	.then(() => loadConfig(options, {lambda: {name: true, region: true}}))
 	.then(config => {
 		lambdaConfig = config.lambda;
@@ -144,12 +189,9 @@ module.exports = function update(options, optionalLogger) {
 		return cleanUpPackage(dir, options, logger);
 	})
 	.then(() => {
-		if (requiresHandlerUpdate) {
-			return lambda.updateFunctionConfiguration({FunctionName: lambdaConfig.name, Handler: functionConfig.Handler}).promise();
-		}
+		return updateConfiguration(requiresHandlerUpdate && functionConfig.Handler);
 	})
 	.then(() => {
-		logger.logStage('updating configuration');
 		return updateEnvVars(options, lambda, lambdaConfig.name);
 	})
 	.then(() => {
@@ -204,6 +246,21 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'timeout',
+			optional: true,
+			description: 'The function execution time, in seconds, at which AWS Lambda should terminate the function'
+		},
+		{
+			argument: 'runtime',
+			optional: true,
+			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html'
+		},
+		{
+			argument: 'memory',
+			optional: true,
+			description: 'The amount of memory, in MB, your Lambda function is given.\nThe value must be a multiple of 64 MB.'
 		},
 		{
 			argument: 'no-optional-dependencies',
