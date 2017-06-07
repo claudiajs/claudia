@@ -18,12 +18,7 @@ module.exports = function zipdir(path) {
 			resolve(targetFile);
 		});
 		archive.pipe(zipStream);
-		archive.bulk([{
-			expand: true,
-			src: ['**/*'],
-			dot: true,
-			cwd: path
-		}]);
+		archive.directory(path, '');
 		archive.on('error', e => reject(e));
 		archive.finalize();
 	});
