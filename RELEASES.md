@@ -1,6 +1,6 @@
 # Release history
 
-### 2.13.0, XXX
+### 2.13.0, 7 June 2017 
 
 - `update` and `set-version` can now patch existing environment variables without replacing the entire set. use `--update-env` or `--update-env-from-json`
 - `update` can now reconfigure several commonly requested options: `--timeout`, `--memory`, `--runtime` and `--handler`
