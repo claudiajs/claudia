@@ -1,5 +1,6 @@
-const readEnvVarsFromOptions = require('../util/read-env-vars-from-options');
-module.exports = function updateEnvVars(options, lambdaAPI, functionName) {
+const readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	mergeProperties = require('../util/merge-properties');
+module.exports = function updateEnvVars(options, lambdaAPI, functionName, existingVars) {
 	'use strict';
 	const kmsKey = options['env-kms-key-arn'],
 		envVars = readEnvVarsFromOptions(options),
@@ -7,7 +8,11 @@ module.exports = function updateEnvVars(options, lambdaAPI, functionName) {
 	let shouldUpdate = false;
 	if (envVars) {
 		shouldUpdate = true;
-		configUpdate.Environment = envVars;
+		configUpdate.Environment = { Variables: {} };
+		if ((options['update-env'] || options['update-env-from-json']) && existingVars) {
+			mergeProperties(configUpdate.Environment.Variables, existingVars);
+		}
+		mergeProperties(configUpdate.Environment.Variables, envVars);
 	}
 	if (kmsKey || kmsKey === '') {
 		shouldUpdate = true;

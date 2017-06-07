@@ -192,7 +192,7 @@ module.exports = function update(options, optionalLogger) {
 		return updateConfiguration(requiresHandlerUpdate && functionConfig.Handler);
 	})
 	.then(() => {
-		return updateEnvVars(options, lambda, lambdaConfig.name);
+		return updateEnvVars(options, lambda, lambdaConfig.name, functionConfig.Environment && functionConfig.Environment.Variables);
 	})
 	.then(() => {
 		logger.logStage('zipping package');
@@ -294,16 +294,29 @@ module.exports.doc = {
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
 		},
 		{
+			argument: 'update-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set, merging with old variables'
+		},
+		{
 			argument: 'set-env',
 			optional: true,
 			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
-			description: 'comma-separated list of VAR=VALUE environment variables to set'
+			description: 'comma-separated list of VAR=VALUE environment variables to set. replaces the whole set, removing old variables.'
 		},
+		{
+			argument: 'update-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set, merging with old variables'
+		},
+
 		{
 			argument: 'set-env-from-json',
 			optional: true,
 			example: 'production-env.json',
-			description: 'file path to a JSON file containing environment variables to set'
+			description: 'file path to a JSON file containing environment variables to set. replaces the whole set, removing old variables.'
 		},
 		{
 			argument: 'env-kms-key-arn',
