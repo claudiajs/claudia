@@ -24,7 +24,14 @@ module.exports = function setVersion(options, optionalLogger) {
 				}
 			}))
 			.then(() => ({ url: apiGWUrl(apiConfig.id, lambdaConfig.region, options.version) }));
+		},
+		updateConfiguration = function () {
+			logger.logStage('updating configuration');
+			return Promise.resolve()
+				.then(() => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise())
+				.then(functionConfiguration => updateEnvVars(options, lambda, lambdaConfig.name, functionConfiguration.Environment && functionConfiguration.Environment.Variables));
 		};
+
 	if (!options.version) {
 		return Promise.reject('version misssing. please provide using --version');
 	}
@@ -47,10 +54,7 @@ module.exports = function setVersion(options, optionalLogger) {
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
 		);
 	})
-	.then(() => {
-		logger.logStage('updating configuration');
-		return updateEnvVars(options, lambda, lambdaConfig.name);
-	})
+	.then(updateConfiguration)
 	.then(() => {
 		logger.logStage('updating versions');
 		return lambda.publishVersion({FunctionName: lambdaConfig.name}).promise();
@@ -84,16 +88,29 @@ module.exports.doc = {
 			default: 'claudia.json'
 		},
 		{
+			argument: 'update-env',
+			optional: true,
+			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
+			description: 'comma-separated list of VAR=VALUE environment variables to set, merging with old variables'
+		},
+		{
 			argument: 'set-env',
 			optional: true,
 			example: 'S3BUCKET=testbucket,SNSQUEUE=testqueue',
-			description: 'comma-separated list of VAR=VALUE environment variables to set'
+			description: 'comma-separated list of VAR=VALUE environment variables to set. replaces the whole set, removing old variables.'
 		},
+		{
+			argument: 'update-env-from-json',
+			optional: true,
+			example: 'production-env.json',
+			description: 'file path to a JSON file containing environment variables to set, merging with old variables'
+		},
+
 		{
 			argument: 'set-env-from-json',
 			optional: true,
 			example: 'production-env.json',
-			description: 'file path to a JSON file containing environment variables to set'
+			description: 'file path to a JSON file containing environment variables to set. replaces the whole set, removing old variables.'
 		},
 		{
 			argument: 'env-kms-key-arn',

@@ -300,6 +300,35 @@ describe('setVersion', () => {
 				expect(env.ZPATH).toEqual('/usr');
 			}).then(done, done.fail);
 		});
+		it('updates environment variables if update-env is provided', done => {
+			return underTest({source: workingdir, version: 'new', 'update-env': 'XPATH=/opt,ZPATH=/usr'}, logger).then(() => {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: 'new'
+				}).promise();
+			}).then(configuration => {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/opt',
+						'YPATH': '/var/lib',
+						'ZPATH': '/usr'
+					}
+				});
+			}).then(() => {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					Qualifier: 'new',
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(result => {
+				const env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH', 'ZPATH']);
+				expect(env.XPATH).toEqual('/opt');
+				expect(env.YPATH).toEqual('/var/lib');
+				expect(env.ZPATH).toEqual('/usr');
+			}).then(done, done.fail);
+		});
+
 		it('changes env variables specified in a JSON file', done => {
 			const envpath = path.join(workingdir, 'env.json');
 			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
@@ -329,6 +358,37 @@ describe('setVersion', () => {
 				expect(env.ZPATH).toEqual('/usr');
 			}).then(done, done.fail);
 		});
+		it('updates env variables specified in a JSON file', done => {
+			const envpath = path.join(workingdir, 'env.json');
+			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
+			return underTest({source: workingdir, version: 'new', 'update-env-from-json': envpath}, logger).then(() => {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: 'new'
+				}).promise();
+			}).then(configuration => {
+				expect(configuration.Environment).toEqual({
+					Variables: {
+						'XPATH': '/opt',
+						'YPATH': '/var/lib',
+						'ZPATH': '/usr'
+					}
+				});
+			}).then(() => {
+				return lambda.invoke({
+					FunctionName: testRunName,
+					Qualifier: 'new',
+					InvocationType: 'RequestResponse'
+				}).promise();
+			}).then(result => {
+				const env = JSON.parse(result.Payload);
+				expect(Object.keys(env).filter(nonStandard).sort()).toEqual(['XPATH', 'YPATH', 'ZPATH']);
+				expect(env.XPATH).toEqual('/opt');
+				expect(env.YPATH).toEqual('/var/lib');
+				expect(env.ZPATH).toEqual('/usr');
+			}).then(done, done.fail);
+		});
+
 		it('refuses to work if reading the variables fails', done => {
 			return underTest({source: workingdir, version: 'new', 'set-env': 'XPATH,ZPATH=/usr'}, logger).then(done.fail, message => {
 				expect(message).toEqual('Cannot read variables from set-env, Invalid CSV element XPATH');
