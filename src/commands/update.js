@@ -172,6 +172,9 @@ module.exports = function update(options, optionalLogger) {
 		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
 		if (requiresHandlerUpdate) {
 			functionConfig.Handler = functionConfig.Handler.replace(/\.router$/, '.proxyRouter');
+		} else if (options.handler) {
+			functionConfig.Handler = options.handler;
+			requiresHandlerUpdate = true;
 		}
 	})
 	.then(() => {

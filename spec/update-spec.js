@@ -499,6 +499,41 @@ describe('update', () => {
 			]);
 		}).then(done, done.fail);
 	});
+	describe('handler option support', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(done, done.fail);
+		});
+		it('does not change the handler if not provided', done => {
+			underTest({source: workingdir, version: 'new'})
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => expect(configuration.Handler).toEqual('main.handler'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Handler).toEqual('main.handler'))
+			.then(done, done.fail);
+		});
+		it('can specify the new handler --handler argument', done => {
+			shell.cp('-rf', 'spec/test-projects/api-gw-echo/*', workingdir);
+			underTest({source: workingdir, version: 'new', handler: 'main.proxyRouter'})
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Handler).toEqual('main.proxyRouter'))
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => expect(configuration.Handler).toEqual('main.proxyRouter'))
+			.then(done, done.fail);
+		});
+		it('fails if the lambda code does not export the handler', done => {
+			underTest({source: workingdir, version: 'new', handler: 'main.proxyRouter'})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('main.js does not export method proxyRouter'))
+			.then(() => getLambdaConfiguration())
+			.then(configuration => expect(configuration.Handler).toEqual('main.handler'))
+			.then(done, done.fail);
+		});
+
+	});
+
 	describe('timeout option support', () => {
 		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);

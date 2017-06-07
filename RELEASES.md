@@ -1,5 +1,10 @@
 # Release history
 
+### 2.13.0, XXX
+
+- `update` and `set-version` can now patch existing environment variables without replacing the entire set. use `--update-env` or `--update-env-from-json`
+- `update` can now reconfigure several commonly requested options: `--timeout`, `--memory`, `--runtime` and `--handler`
+
 ### 2.12.0, 26 April 2017
 
 - support `--proxy` in claudia to specify a HTTP proxy when working behind corporate firewalls (thanks to [Jason Riddle](https://github.com/jason-riddle))
