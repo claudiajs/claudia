@@ -480,7 +480,7 @@ describe('update', () => {
 				'updating REST API'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
-				'lambda.getFunctionConfiguration', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
+				'lambda.getFunctionConfiguration', 'lambda.setupRequestListeners', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);

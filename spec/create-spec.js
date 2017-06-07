@@ -1006,7 +1006,7 @@ describe('create', () => {
 				'saving configuration'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
-				'lambda.createFunction', 'lambda.updateAlias', 'lambda.createAlias'
+				'lambda.createFunction',  'lambda.setupRequestListeners', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole']);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
