@@ -22,24 +22,31 @@ describe('allowAlexaSkillTrigger', () => {
 		destroyObjects(newObjects).then(done, done.fail);
 	});
 	it('allows Alexa Skill to trigger Lambda', done => {
-		const createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'dev' }, config = {
+		const createConfig = {
+				name: testRunName,
+				region: awsRegion,
+				source: workingdir,
+				handler: 'main.handler',
+				version: 'dev'
+			},
+			config = {
 				source: workingdir,
 				version: 'dev'
 			};
 		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
 		create(createConfig)
-      .then(result => {
-	newObjects.lambdaRole = result.lambda && result.lambda.role;
-	newObjects.lambdaFunction = result.lambda && result.lambda.name;
-})
-      .then(() => underTest(config))
-      .then(() => lambda.getPolicy({ FunctionName: testRunName, Qualifier: 'dev' }).promise())
-      .then(result => JSON.parse(result.Policy).Statement[0])
-      .then(statement => {
-	expect(statement.Effect).toEqual('Allow');
-	expect(statement.Principal.Service).toEqual('alexa-appkit.amazon.com');
-	expect(statement.Action).toEqual('lambda:InvokeFunction');
-})
-      .then(done, done.fail);
+			.then(result => {
+				newObjects.lambdaRole = result.lambda && result.lambda.role;
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			})
+			.then(() => underTest(config))
+			.then(() => lambda.getPolicy({ FunctionName: testRunName, Qualifier: 'dev' }).promise())
+			.then(result => JSON.parse(result.Policy).Statement[0])
+			.then(statement => {
+				expect(statement.Effect).toEqual('Allow');
+				expect(statement.Principal.Service).toEqual('alexa-appkit.amazon.com');
+				expect(statement.Action).toEqual('lambda:InvokeFunction');
+			})
+			.then(done, done.fail);
 	});
 });

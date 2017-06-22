@@ -29,7 +29,7 @@ module.exports = function allowAlexaSkillTrigger(options) {
 		};
 	return readConfig()
 		.then(addInvokePermission)
-    .then(result => JSON.parse(result.Statement));
+		.then(result => JSON.parse(result.Statement));
 };
 module.exports.doc = {
 	description: 'Allow Alexa Skill triggers',
