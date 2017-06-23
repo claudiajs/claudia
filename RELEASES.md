@@ -1,5 +1,9 @@
 # Release history
 
+### 2.14.0 23 June 2017
+
+- support for `allow-alexa-skill-trigger` (thanks to [Slobodan Stojanovic](https://github.com/stojanovic))
+
 ### 2.13.0, 7 June 2017 
 
 - `update` and `set-version` can now patch existing environment variables without replacing the entire set. use `--update-env` or `--update-env-from-json`
