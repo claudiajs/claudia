@@ -31,7 +31,7 @@ describe('localizeDependencies', () => {
 	});
 	it('complains if the working directory does not contain package.json', done => {
 		localizeDependencies(workdir, referencedir)
-		.then(done.fail, err => expect(err).toEqual(workdir + '/package.json is missing'))
+		.then(done.fail, err => expect(err).toEqual(path.join(workdir, 'package.json') + ' is missing'))
 		.then(done);
 	});
 	['dependencies', 'devDependencies', 'optionalDependencies'].forEach(depType => {
