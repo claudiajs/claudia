@@ -45,7 +45,7 @@
   },
   "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
   "dependencies": {
-    "archiver": "^1.3.0",
+    "archiver": "^2.0.0",
     "aws-sdk": "^2.62.0",
     "gunzip-maybe": "^1.4.0",
     "minimal-request-promise": "^1.1.0",
