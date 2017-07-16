@@ -1,4 +1,5 @@
 const path = require('path'),
+	sequentialPromiseMap = require('sequential-promise-map'),
 	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
@@ -18,7 +19,6 @@ const path = require('path'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
 	os = require('os'),
-	sequentialPromiseMap = require('../util/sequential-promise-map'),
 	lambdaCode = require('../tasks/lambda-code'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');

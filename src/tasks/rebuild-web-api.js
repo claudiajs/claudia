@@ -1,6 +1,6 @@
 const aws = require('aws-sdk'),
 	validAuthType = require('../util/valid-auth-type'),
-	sequentialPromiseMap = require('../util/sequential-promise-map'),
+	sequentialPromiseMap = require('sequential-promise-map'),
 	validCredentials = require('../util/valid-credentials'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	pathSplitter = require('../util/path-splitter'),

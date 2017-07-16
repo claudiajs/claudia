@@ -3,7 +3,7 @@ const aws = require('aws-sdk'),
 	retriableWrap = require('../util/retriable-wrap'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	NullLogger = require('../util/null-logger'),
-	sequentialPromiseMap = require('../util/sequential-promise-map'),
+	sequentialPromiseMap = require('sequential-promise-map'),
 	getOwnerId = require('./get-owner-account-id');
 module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, functionVersion, optionalLogger) {
 	'use strict';
