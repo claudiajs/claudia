@@ -56,7 +56,7 @@ const minimist = require('minimist'),
 			AWS.config.httpOptions.agent = proxy(args.proxy);
 		}
 		commands[command](args, logger).then(result => {
-			if (result) {
+			if (result && !args.quiet) {
 				console.log(JSON.stringify(result, null, 2));
 			}
 			process.exit();
