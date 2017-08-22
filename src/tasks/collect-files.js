@@ -14,17 +14,17 @@ const tmppath = require('../util/tmppath'),
 module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
-		checkPreconditions = function () {
-			if (!sourcePath) {
+		checkPreconditions = function (providedSourcePath) {
+			if (!providedSourcePath) {
 				return 'source directory not provided';
 			}
-			if (!fsUtil.fileExists(sourcePath)) {
+			if (!fsUtil.fileExists(providedSourcePath)) {
 				return 'source directory does not exist';
 			}
-			if (!fsUtil.isDir(sourcePath)) {
+			if (!fsUtil.isDir(providedSourcePath)) {
 				return 'source path must be a directory';
 			}
-			if (!fsUtil.fileExists(path.join(sourcePath, 'package.json'))) {
+			if (!fsUtil.fileExists(path.join(providedSourcePath, 'package.json'))) {
 				return 'source directory does not contain package.json';
 			}
 		},
