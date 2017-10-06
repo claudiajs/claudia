@@ -1,5 +1,11 @@
 # Articles, tutorials and reviews 
 
+## Book by the core Claudia.js team
+
+* [Serverless Apps with Node and Claudia.js](https://www.manning.com/books/serverless-apps-with-node-and-claudiajs), by Slobodan Stojanovic and Aleksandar Simovic, 2017
+
+## Great articles, tutorials
+
 * [A single language for backend and frontend from AngularJS to cloud with Claudia.js](http://www.slideshare.net/wdalmut/a-single-language-for-backend-and-frontend-from-angularjs-to-cloud-with-claudiajs), Walter Dal Mut, November 10, 2016
 * [TNS Guide to Serverless Technologies: The Best Frameworks, Platforms and Tools](http://thenewstack.io/tns-guide-serverless-technologies-best-frameworks-platforms-tools/), 26 Oct 2016, by Lawrence Hecht
 * [Introduction to Claudia.js](https://blog.jayway.com/2016/11/06/introduction-to-claudia-js/), November 6, 2016 by Mattias Severson
