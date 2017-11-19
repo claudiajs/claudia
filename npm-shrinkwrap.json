@@ -62,7 +62,7 @@
     },
     "aws-sdk": {
       "version": "2.62.0",
-      "from": "aws-sdk@^2.62.0",
+      "from": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.62.0.tgz",
       "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.62.0.tgz",
       "dependencies": {
         "uuid": {
@@ -78,9 +78,9 @@
       "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-0.4.2.tgz"
     },
     "base64-js": {
-      "version": "1.2.0",
-      "from": "base64-js@^1.0.2",
-      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.2.0.tgz"
+      "version": "1.2.1",
+      "from": "base64-js@>=1.0.2 <2.0.0",
+      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.2.1.tgz"
     },
     "bl": {
       "version": "1.2.1",
@@ -848,14 +848,7 @@
     "xmlbuilder": {
       "version": "4.2.1",
       "from": "xmlbuilder@4.2.1",
-      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-4.2.1.tgz",
-      "dependencies": {
-        "lodash": {
-          "version": "4.17.4",
-          "from": "lodash@^4.0.0",
-          "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.4.tgz"
-        }
-      }
+      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-4.2.1.tgz"
     },
     "xregexp": {
       "version": "2.0.0",

@@ -17,7 +17,9 @@ describe('addCognitoUserPoolTrigger', () => {
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
 		shell.mkdir(workingdir);
-		cognitoIdentityServiceProvider.createUserPool({ PoolName: testRunName }).promise().then(result => {
+		cognitoIdentityServiceProvider.createUserPool({
+			PoolName: testRunName
+		}).promise().then(result => {
 			newObjects.userPoolId = result.UserPool.Id;
 			config = {
 				'user-pool-id': result.UserPool.Id,
@@ -52,7 +54,7 @@ describe('addCognitoUserPoolTrigger', () => {
 		});
 	});
 	describe('when params are valid', () => {
-		let createConfig;
+		let createConfig, functionArn;
 		const createLambda = function () {
 			return create(createConfig)
 			.then(result => {
@@ -65,7 +67,6 @@ describe('addCognitoUserPoolTrigger', () => {
 			shell.cp('-r', 'spec/test-projects/cognito-trigger-reject/*', workingdir);
 		});
 		it('wires up the unqualified lambda function if no version requested', done => {
-			let functionArn;
 			config.events = 'PreAuthentication';
 			createLambda()
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: testRunName }).promise())
@@ -77,8 +78,27 @@ describe('addCognitoUserPoolTrigger', () => {
 			})
 			.then(done, done.fail);
 		});
+		it('keeps other user pool attributes (aws bug workaround check)', done => {
+			config.events = 'PreAuthentication';
+			createLambda()
+			.then(() => lambda.getFunctionConfiguration({ FunctionName: testRunName }).promise())
+			.then(lambdaResult => functionArn = lambdaResult.FunctionArn)
+			.then(() => cognitoIdentityServiceProvider.updateUserPool({
+				UserPoolId: newObjects.userPoolId,
+				EmailVerificationMessage: 'Hi there token {####}',
+				EmailVerificationSubject: 'email-subject'
+			}).promise())
+			.then(() => underTest(config))
+			.then(() => cognitoIdentityServiceProvider.describeUserPool({UserPoolId: newObjects.userPoolId}).promise())
+			.then(result => {
+				expect(result.UserPool.EmailVerificationSubject).toEqual('email-subject');
+				expect(result.UserPool.EmailVerificationMessage).toEqual('Hi there token {####}');
+				expect(result.UserPool.LambdaConfig).toEqual({PreAuthentication: functionArn});
+			})
+			.then(done, done.fail);
+
+		});
 		it('adds multiple events if specified', done => {
-			let functionArn;
 			config.events = 'PreAuthentication,PreSignUp';
 			createLambda()
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: testRunName }).promise())
@@ -92,10 +112,8 @@ describe('addCognitoUserPoolTrigger', () => {
 				});
 			})
 			.then(done, done.fail);
-
 		});
 		it('binds to an alias, if the version is provided', done => {
-			let functionArn;
 			config.events = 'PreAuthentication';
 			createConfig.version = 'special';
 			config.version = 'special';
