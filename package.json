@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.14.2",
+  "version": "2.14.3",
   "description": "Deploy Node.js projects to AWS Lambda and API Gateway easily.",
   "license": "MIT",
   "repository": {
