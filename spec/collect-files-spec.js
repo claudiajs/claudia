@@ -219,9 +219,8 @@ describe('collectFiles', () => {
 				.then(done, done.fail);
 			});
 		});
-		it(`ignores using .npmignore over .gitignore`, done => {
+		it('empty .npmignore files do not cause .gitignore to be ignored', done => {
 			fs.writeFileSync(path.join(sourcedir, '.gitignore'), 'root.txt\nsubdir', 'utf8');
-			// empty npmignore, it should include everything
 			fs.writeFileSync(path.join(sourcedir, '.npmignore'), '', 'utf8');
 			configurePackage({});
 			underTest(sourcedir)
