@@ -8,6 +8,10 @@ exports.rmDir = function (dirPath) {
 	'use strict';
 	shell.rm('-rf', dirPath);
 };
+exports.renameFile = function (currentFilePath, newFilePath) {
+	'use strict';
+	shell.mv(currentFilePath, newFilePath);
+};
 exports.fileExists = function (filePath) {
 	'use strict';
 	return shell.test('-e', filePath);
@@ -27,4 +31,19 @@ exports.copy = function (from, to) {
 exports.recursiveList = function (dirPath) {
 	'use strict';
 	return shell.ls('-R', dirPath);
+};
+exports.makeDir = function (dirPath) {
+	'use strict';
+	shell.mkdir('-p', dirPath);
+	return Promise.resolve();
+};
+exports.forceCopy = function (from, to) {
+	'use strict';
+	shell.cp('-rf', from, to);
+	return Promise.resolve();
+};
+exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
+	'use strict';
+	shell.sed('-i', searchPattern, replacePattern, filePath);
+	return Promise.resolve();
 };
