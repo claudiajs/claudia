@@ -5,8 +5,7 @@ const path = require('path'),
   commandUtil = require('../util/generate-util')
 
 module.exports = function generate(options, optionalLogger) {
-  console.log('generating?')
-  console.log(options)
+  console.log('Generating...')
   let apiArguments = options['api'] || options['claudia-api']
   apiArguments = apiArguments.split('')
 
@@ -68,7 +67,7 @@ module.exports = function generate(options, optionalLogger) {
         return commandUtil.genPackage(projectDirectoryName, projectPath);
       })
       .then(() => {
-        return 'success';
+        return 'Generating boring overhead successful';
       })
     };
 

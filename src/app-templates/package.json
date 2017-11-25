@@ -1,0 +1,19 @@
+{
+  "name": "#{projectName}",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create": "claudia create --region us-east-1 --api-module index",
+    "deploy": "claudia update"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.135.0",
+    "claudia-api-builder": "^2.5.1",
+    "uuid": "^3.1.0"
+  }
+}
