@@ -3,7 +3,7 @@ const parseKeyValueCSV = require('./parse-key-value-csv'),
 	fs = require('fs');
 module.exports = function readEnvVarsFromOptions(options) {
 	'use strict';
-	let envVars, fileContents;
+	let envVars, fileContents, newFileContents;
 	if (!options) {
 		return undefined;
 	}
@@ -20,9 +20,18 @@ module.exports = function readEnvVarsFromOptions(options) {
 			}
 		}
 		if (options[method + '-env-from-json']) {
-			fileContents = fs.readFileSync(options[method + '-env-from-json'], 'utf8');
+			const fileName = options[method + '-env-from-json'],
+				regex = /\${env\.(.*?)}/gi;
+			fileContents = fs.readFileSync(fileName, 'utf8');
+			newFileContents = fileContents.replace(regex, (match, envVarName) => {
+				const val = process.env[envVarName];
+				if (val !== undefined && val !== null) { // 0, false, and '' are ok.
+					return val;
+				}
+				throw new Error(`Couldn't find expected env var '` + match + `' in file ` + fileName);
+			});
 			try {
-				envVars = JSON.parse(fileContents);
+				envVars = JSON.parse(newFileContents);
 			} catch (e) {
 				throw options[method + '-env-from-json'] + ' is not a valid JSON file';
 			}

@@ -60,6 +60,22 @@ describe('readEnvVarsFromOptions', () => {
 		});
 	});
 
+	it('converts a valid JSON file containing environment vars into variables from set-env-from-json', () => {
+		const envpath = tmppath();
+		process.env.ENV_TEST_PATH = '/path/to/test';
+		fs.writeFileSync(envpath, JSON.stringify({ 'XPATH': '${env.ENV_TEST_PATH}', 'YPATH': '/var/lib' }), 'utf8');
+		expect(readEnvVarsFromOptions({ 'set-env-from-json': envpath })).toEqual({
+			'XPATH': '/path/to/test',
+			'YPATH': '/var/lib'
+		});
+	});
+	it('throws an error when set-env-from-json is set but the file containes a reference to an invalid env.var', () => {
+		const envpath = tmppath();
+		fs.writeFileSync(envpath, JSON.stringify({ 'XPATH': '${env.ENV_MISSING}', 'YPATH': '/var/lib' }), 'utf8');
+		expect(() => {
+			readEnvVarsFromOptions({ 'set-env-from-json': envpath });
+		}).toThrowError(/Couldn't find expected env var/);
+	});
 	it('throws an error when update-env-from-json is set but the file does not exist', () => {
 		expect(() => {
 			readEnvVarsFromOptions({
@@ -94,5 +110,21 @@ describe('readEnvVarsFromOptions', () => {
 			'XPATH': '/var/www',
 			'YPATH': '/var/lib'
 		});
+	});
+	it('converts a valid JSON file containing environment vars into variables from update-env-from-json', () => {
+		const envpath = tmppath();
+		process.env.ENV_TEST_PATH = '/path/to/test';
+		fs.writeFileSync(envpath, JSON.stringify({ 'XPATH': '${env.ENV_TEST_PATH}', 'YPATH': '/var/lib' }), 'utf8');
+		expect(readEnvVarsFromOptions({ 'update-env-from-json': envpath })).toEqual({
+			'XPATH': '/path/to/test',
+			'YPATH': '/var/lib'
+		});
+	});
+	it('throws an error when update-env-from-json is set but the file containes a reference to an invalid env.var', () => {
+		const envpath = tmppath();
+		fs.writeFileSync(envpath, JSON.stringify({ 'XPATH': '${env.ENV_MISSING}', 'YPATH': '/var/lib' }), 'utf8');
+		expect(() => {
+			readEnvVarsFromOptions({ 'update-env-from-json': envpath });
+		}).toThrowError(/Couldn't find expected env var/);
 	});
 });

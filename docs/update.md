@@ -29,6 +29,6 @@ claudia update {OPTIONS}
     * _For example_: claudia-uploads
 *  `--set-env`:  (_optional_) comma-separated list of VAR=VALUE environment variables to set
     * _For example_: S3BUCKET=testbucket,SNSQUEUE=testqueue
-*  `--set-env-from-json`:  (_optional_) file path to a JSON file containing environment variables to set
+*  `--set-env-from-json`:  (_optional_) file path to a JSON file containing environment variables to set.  Variable values can reference environment variables via ${env.} syntax (e.g. "DB_PSWD"="${env.DB_PSWD}" ).
     * _For example_: production-env.json
 *  `--env-kms-key-arn`:  (_optional_) KMS Key ARN to encrypt/decrypt environment variables
