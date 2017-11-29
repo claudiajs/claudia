@@ -26,7 +26,8 @@ exports.isFile = function (filePath) {
 };
 exports.copy = function (from, to) {
 	'use strict';
-	return shell.cp('-r', from, to);
+	shell.cp('-r', from, to);
+	return Promise.resolve();
 };
 exports.recursiveList = function (dirPath) {
 	'use strict';
@@ -35,15 +36,5 @@ exports.recursiveList = function (dirPath) {
 exports.makeDir = function (dirPath) {
 	'use strict';
 	shell.mkdir('-p', dirPath);
-	return Promise.resolve();
-};
-exports.forceCopy = function (from, to) {
-	'use strict';
-	shell.cp('-rf', from, to);
-	return Promise.resolve();
-};
-exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
-	'use strict';
-	shell.sed('-i', searchPattern, replacePattern, filePath);
 	return Promise.resolve();
 };
