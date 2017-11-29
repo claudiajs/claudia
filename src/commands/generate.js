@@ -58,6 +58,12 @@ module.exports.doc = {
 		{
 			argument: 'api',
 			description: 'A Claudia API Builder project template for your Lambda function'
+		},
+		{
+			argument: 'source',
+			optional: true,
+			description: 'Directory with project files',
+			'default': 'current directory'
 		}
 	]
 };
