@@ -1,8 +1,7 @@
 
 const path = require('path'),
 	fs = require('fs'),
-	fsUtil = require('../util/fs-util'),
-	commandUtil = require('../util/generate-util');
+	fsUtil = require('../util/fs-util');
 
 module.exports = function generate(args) {
 	'use strict';
@@ -23,55 +22,22 @@ module.exports = function generate(args) {
 				return 'A file with the same name exists at the provided location.';
 			}
 		},
+		generatePackage = function (commandTarget, projectPath) {
+			const projectDirectoryName = path.basename(path.dirname(path.join(projectPath, `${commandTarget}.js`)));
+			return fsUtil.copy(path.join(__dirname, '../../app-templates/package.json'), path.join(projectPath))
+				.then(() => fsUtil.replaceStringInFile(/#{projectName}/g, projectDirectoryName, path.join(projectPath, 'package.json')));
+		},
 		generateTemplate = function (commandTarget, projectPath) {
 			return fsUtil.copy(path.join(__dirname, `../../app-templates/${commandTarget}.js`), projectPath)
 			.then(() => {
 				if (fsUtil.fileExists(path.join(source, 'package.json'))) {
 					return Promise.resolve();
 				}
-				const projectDirectoryName = path.basename(path.dirname(path.join(projectPath, `${commandTarget}.js`)));
-				return fsUtil.copy(path.join(__dirname, '../../app-templates/package.json'), path.join(projectPath))
-				.then(() => fsUtil.replaceStringInFile(/#{projectName}/g, projectDirectoryName, path.join(projectPath, 'package.json')));
+				return generatePackage(commandTarget, projectPath);
 			}).then(() => {
 				console.log('Generating boring overhead successful');
 				return;
 			});
-
-			/*return prepareFolder
-				.then(() => fsUtil.forceCopy(path.join(__dirname, `../app-templates/${templateFile}`), projectPath))
-				.then(() => {
-					return fsUtil.renameFile(path.join(projectPath, 'claudia-api.js'), path.join(projectPath, 'index.js'));
-				})
-				.then(() => {
-					return apiArguments.indexOf('c') === -1 ? Promise.resolve() :
-					commandUtil.genRoute('../app-templates/dynamo/api-create.js', endpoints[0], projectPath);
-				})
-				.then(() => {
-					return apiArguments.indexOf('r') === -1 ? Promise.resolve() :
-					commandUtil.genRoute('../app-templates/dynamo/api-read.js', endpoints[0], projectPath);
-				})
-				.then(() => {
-					return apiArguments.indexOf('u') === -1 ? Promise.resolve() :
-					commandUtil.genRoute('../app-templates/dynamo/api-update.js', endpoints[0], projectPath);
-				})
-					.then(() => {
-					return apiArguments.indexOf('d') === -1 ? Promise.resolve() :
-					commandUtil.genRoute('../app-templates/dynamo/api-delete.js', endpoints[0], projectPath);
-				})
-					.then(() => {
-					const policiesDir = path.join(projectPath, '/policies');
-					fsUtil.makeDir(policiesDir);
-					return fsUtil.forceCopy(path.join(__dirname, '../app-templates/dynamo/policies.json'), policiesDir);
-				})
-					.then(() => commandUtil.createTable(endpoints[0]))
-					.then(() => {
-					const projectDirectoryName = path.basename(path.dirname(path.join(projectPath, 'index.js')));
-					return commandUtil.genPackage(projectDirectoryName, projectPath);
-				})
-				.then(() => {
-					console.log('Generating boring overhead successful');
-					return;
-				});*/
 		};
 
 	if (validationError()) {

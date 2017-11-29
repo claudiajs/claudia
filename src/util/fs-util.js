@@ -38,3 +38,8 @@ exports.makeDir = function (dirPath) {
 	shell.mkdir('-p', dirPath);
 	return Promise.resolve();
 };
+exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
+	'use strict';
+	shell.sed('-i', searchPattern, replacePattern, filePath);
+	return Promise.resolve();
+};
