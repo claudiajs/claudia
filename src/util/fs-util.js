@@ -1,4 +1,5 @@
-const shell = require('shelljs');
+const shell = require('shelljs'),
+	fs = require('fs');
 exports.ensureCleanDir = function (dirPath) {
 	'use strict';
 	shell.rm('-rf', dirPath);
@@ -42,4 +43,13 @@ exports.replaceStringInFile = function (searchPattern, replacePattern, filePath)
 	'use strict';
 	shell.sed('-i', searchPattern, replacePattern, filePath);
 	return Promise.resolve();
+};
+exports.copyFile = function (fromFile, toFile) {
+	'use strict';
+	const readStream = fs.createReadStream(fromFile);
+	readStream.pipe(fs.createWriteStream(toFile));
+	return new Promise((resolve, reject) => {
+		readStream.once('error', (err) => reject(err));
+		readStream.once('end', () => resolve());
+	});
 };

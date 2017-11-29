@@ -22,18 +22,17 @@ module.exports = function generate(args) {
 				return 'A file with the same name exists at the provided location.';
 			}
 		},
-		generatePackage = function (commandTarget, projectPath) {
-			const projectDirectoryName = path.basename(path.dirname(path.join(projectPath, `${commandTarget}.js`)));
-			return fsUtil.copy(path.join(__dirname, '../../app-templates/package.json'), path.join(projectPath))
-				.then(() => fsUtil.replaceStringInFile(/#{projectName}/g, projectDirectoryName, path.join(projectPath, 'package.json')));
+		generatePackage = function (projectPath) {
+			return fsUtil.copyFile(path.join(__dirname, '../../app-templates/package.json'), path.join(projectPath, 'package.json'))
+				.then(() => fsUtil.replaceStringInFile(/#{projectName}/g, path.basename(projectPath), path.join(projectPath, 'package.json')));
 		},
 		generateTemplate = function (commandTarget, projectPath) {
-			return fsUtil.copy(path.join(__dirname, `../../app-templates/${commandTarget}.js`), projectPath)
+			return fsUtil.copyFile(path.join(__dirname, `../../app-templates/${commandTarget}.js`), path.join(projectPath, `${commandTarget}.js`))
 			.then(() => {
 				if (fsUtil.fileExists(path.join(source, 'package.json'))) {
 					return Promise.resolve();
 				}
-				return generatePackage(commandTarget, projectPath);
+				return generatePackage(projectPath);
 			}).then(() => {
 				console.log('Generating boring overhead successful');
 				return;
