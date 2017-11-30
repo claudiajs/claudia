@@ -4,5 +4,6 @@ const ApiBuilder = require('claudia-api-builder'),
 module.exports = api;
 
 api.get('/hello', () => {
+	'use strict';
 	return 'hello world';
 });

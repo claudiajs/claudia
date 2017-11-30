@@ -5,16 +5,18 @@ const path = require('path'),
 module.exports = function generate(args) {
 	'use strict';
 	console.log('Generating...');
+	console.log(args);
 	const commandTarget = args._ && args._.length && args._[1],
 		supportedTemplates = ['hello-world', 'api'],
 		source = (args && args.source) || process.cwd(),
 		validationError = function () {
+
 			if (!commandTarget) {
-				return 'Generate template is missing. If not familiar with the command, run claudia help';
+				return 'Generate template is missing. If not familiar with the command, run claudia help.';
 			}
 
 			if (supportedTemplates.indexOf(commandTarget) === -1) {
-				return 'Specified template is not supported. If not familiar with the command, run claudia help';
+				return 'Specified template is not supported. If not familiar with the command, run claudia help.';
 			}
 
 			if (fsUtil.fileExists(path.join(source, `${commandTarget}.js`))) {
