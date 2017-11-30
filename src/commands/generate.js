@@ -5,7 +5,6 @@ const path = require('path'),
 module.exports = function generate(args) {
 	'use strict';
 	console.log('Generating...');
-	console.log(args);
 	const commandTarget = args._ && args._.length && args._[1],
 		supportedTemplates = ['hello-world', 'api'],
 		source = (args && args.source) || process.cwd(),
