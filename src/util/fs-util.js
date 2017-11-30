@@ -30,11 +30,6 @@ exports.recursiveList = function (dirPath) {
 	'use strict';
 	return shell.ls('-R', dirPath);
 };
-exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
-	'use strict';
-	shell.sed('-i', searchPattern, replacePattern, filePath);
-	return Promise.resolve();
-};
 exports.copyFile = function (fromFile, toFile) {
 	'use strict';
 	const readStream = fs.createReadStream(fromFile);
