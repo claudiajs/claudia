@@ -1,6 +1,5 @@
 
 const path = require('path'),
-	fs = require('fs'),
 	fsUtil = require('../util/fs-util');
 
 module.exports = function generate(args) {
@@ -23,13 +22,14 @@ module.exports = function generate(args) {
 			}
 		},
 		generatePackage = function (projectPath) {
-			return fsUtil.copyFile(path.join(__dirname, '../../app-templates/package.json'), path.join(projectPath, 'package.json'))
-				.then(() => fsUtil.replaceStringInFile(/#{projectName}/g, path.basename(projectPath), path.join(projectPath, 'package.json')));
+			const srcPath = path.join(__dirname, '../../app-templates/package.json'),
+				destPath = path.join(projectPath, 'package.json');
+			return fsUtil.copyAndReplaceInFile(/#{projectName}/g, path.basename(projectPath), srcPath, destPath);
 		},
 		generateTemplate = function (commandTarget, projectPath) {
 			return fsUtil.copyFile(path.join(__dirname, `../../app-templates/${commandTarget}.js`), path.join(projectPath, `${commandTarget}.js`))
 			.then(() => {
-				if (fsUtil.fileExists(path.join(source, 'package.json'))) {
+				if (fsUtil.fileExists(path.join(projectPath, 'package.json'))) {
 					return Promise.resolve();
 				}
 				return generatePackage(projectPath);
@@ -42,7 +42,6 @@ module.exports = function generate(args) {
 	if (validationError()) {
 		return Promise.reject(validationError());
 	}
-
 	return generateTemplate(commandTarget, source);
 };
 

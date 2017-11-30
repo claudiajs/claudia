@@ -53,3 +53,20 @@ exports.copyFile = function (fromFile, toFile) {
 		readStream.once('end', () => resolve());
 	});
 };
+exports.copyAndReplaceInFile = function (searchFor, replaceWith, fromFile, toFile) {
+	'use strict';
+	const readStream = fs.createReadStream(fromFile, 'utf8'),
+		writeStream = fs.createWriteStream(toFile);
+	let fileContents = '';
+	readStream.once('data', (chunk) => {
+		fileContents += chunk.toString().replace(searchFor, replaceWith);
+		writeStream.write(fileContents);
+	});
+	return new Promise((resolve, reject) => {
+		readStream.once('error', (err) => reject(err));
+		readStream.once('end', () => {
+			writeStream.end();
+			resolve();
+		});
+	});
+};
