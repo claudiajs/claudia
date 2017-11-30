@@ -23,8 +23,7 @@ exports.isFile = function (filePath) {
 };
 exports.copy = function (from, to) {
 	'use strict';
-	shell.cp('-r', from, to);
-	return Promise.resolve();
+	return shell.cp('-r', from, to);
 };
 exports.recursiveList = function (dirPath) {
 	'use strict';
