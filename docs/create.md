@@ -12,7 +12,7 @@ claudia create {OPTIONS}
 
 *  `--region`:  AWS region where to create the lambda
     * _For example_: us-east-1
-*  `--handler`:  (_optional_) Main function for Lambda to execute, as module.function
+*  `--handler`:  (_optional_) Main function for Lambda to execute, as filename.function
     * _For example_: if it is in the main.js file and exported as router, this would be main.router
 *  `--api-module`:  (_optional_) The main module to use when creating Web APIs. 
     If you provide this parameter, do not set the handler option.
