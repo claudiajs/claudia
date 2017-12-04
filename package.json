@@ -30,6 +30,7 @@
     "logo.png",
     "*.md",
     "*.js",
+    "app-templates",
     "json-templates",
     "bin",
     "docs"
