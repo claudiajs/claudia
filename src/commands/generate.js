@@ -9,6 +9,9 @@ module.exports = function generate(args) {
 		supportedTemplates = ['hello-world', 'api'],
 		source = (args && args.source) || process.cwd(),
 		validationError = function () {
+			if (!args.region) {
+				return 'AWS region is missing. please specify with --region';
+			}
 
 			if (!commandTarget) {
 				return 'Generate template is missing. If not familiar with the command, run claudia help.';
@@ -22,10 +25,11 @@ module.exports = function generate(args) {
 				return 'A file with the same name exists at the provided location.';
 			}
 		},
-		generatePackage = function (projectPath) {
+		generatePackage = function (projectPath, region) {
 			const srcPath = path.join(__dirname, '../../app-templates/package.json'),
 				destPath = path.join(projectPath, 'package.json');
-			return fsUtil.copyAndReplaceInFile(/#{projectName}/g, path.basename(projectPath), srcPath, destPath);
+			return fsUtil.copyAndReplaceInFile(/#{projectName}/g, path.basename(projectPath), srcPath, destPath)
+			.then(() => fsUtil.replaceStringInFile('#{region}', region, destPath));
 		},
 		generateTemplate = function (commandTarget, projectPath) {
 			return fsUtil.copyFile(path.join(__dirname, `../../app-templates/${commandTarget}.js`), path.join(projectPath, `${commandTarget}.js`))
@@ -33,7 +37,7 @@ module.exports = function generate(args) {
 				if (fsUtil.fileExists(path.join(projectPath, 'package.json'))) {
 					return Promise.resolve();
 				}
-				return generatePackage(projectPath);
+				return generatePackage(projectPath, args.region);
 			}).then(() => {
 				console.log('Generating boring overhead successful');
 				return;
@@ -57,6 +61,11 @@ module.exports.doc = {
 		{
 			argument: 'api',
 			description: 'A Claudia API Builder project template for your Lambda function'
+		},
+		{
+			argument: 'region',
+			description: 'AWS region where to create the lambda',
+			example: 'us-east-1'
 		},
 		{
 			argument: 'source',
