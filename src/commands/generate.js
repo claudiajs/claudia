@@ -10,7 +10,7 @@ module.exports = function generate(args) {
 		source = (args && args.source) || process.cwd(),
 		validationError = function () {
 			if (!args.region) {
-				return 'AWS region is missing. please specify with --region';
+				return 'AWS region is missing. please specify with --region.';
 			}
 
 			if (!commandTarget) {
@@ -39,7 +39,7 @@ module.exports = function generate(args) {
 				}
 				return generatePackage(projectPath, args.region);
 			}).then(() => {
-				console.log('Generating boring overhead successful');
+				console.log('Generating template successful');
 				return;
 			});
 		};
@@ -51,7 +51,7 @@ module.exports = function generate(args) {
 };
 
 module.exports.doc = {
-	description: 'Create a lambda project template that you can immediatelly deploy',
+	description: 'Create a lambda project template that you can immediately deploy',
 	priority: 21,
 	args: [
 		{

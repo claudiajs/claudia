@@ -14,12 +14,19 @@ describe('generate', () => {
 		shell.mkdir(workingdir);
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		config = { name: testRunName, source: workingdir, _: ['generate', 'api'] };
+		config = { name: testRunName, source: workingdir, _: ['generate', 'api'], region: 'us-east-1' };
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
 	});
 	describe('config validation', () => {
+
+		it('fails if the region is not provided', done => {
+			config.region = '';
+			underTest(config)
+				.then(done.fail, message => expect(message).toEqual('AWS region is missing. please specify with --region.'))
+				.then(done);
+		});
 
 		it('fails if the generate template target is not provided', done => {
 			config._ = ['generate'];
