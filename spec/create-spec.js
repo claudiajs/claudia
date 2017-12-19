@@ -1,5 +1,6 @@
 /*global describe, it, expect, beforeAll, beforeEach, afterAll, afterEach*/
 const underTest = require('../src/commands/create'),
+	limits = require('../src/util/limits.json'),
 	tmppath = require('../src/util/tmppath'),
 	destroyObjects = require('./util/destroy-objects'),
 	callApi = require('../src/util/call-api'),
@@ -453,41 +454,41 @@ describe('create', () => {
 		});
 	});
 	describe('memory option support', () => {
-		it('fails if memory value is < 128', done => {
-			config.memory = 128 - 64;
+		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {
+			config.memory = limits.LAMBDA.MEMORY.MIN - 64;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is 0', done => {
 			config.memory = 0;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is > 1536', done => {
-			config.memory = 1536 + 64;
+		it(`fails if memory value is > ${limits.LAMBDA.MEMORY.MAX}`, done => {
+			config.memory = limits.LAMBDA.MEMORY.MAX + 64;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be less than or equal to 1536'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is not a multiple of 64', done => {
-			config.memory = 128 + 2;
+			config.memory = limits.LAMBDA.MEMORY.MIN + 2;
 			createFromDir('hello-world')
 			.then(done.fail, error => expect(error).toEqual('the memory value provided must be a multiple of 64'))
 			.then(done, done.fail);
 		});
-		it('creates memory size of 128 MB by default', done => {
+		it(`creates memory size of ${limits.LAMBDA.MEMORY.MIN} MB by default`, done => {
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(128))
+			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(limits.LAMBDA.MEMORY.MIN))
 			.then(done, done.fail);
 		});
 		it('can specify memory size using the --memory argument', done => {
-			config.memory = 1536;
+			config.memory = limits.LAMBDA.MEMORY.MAX;
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(1536))
+			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(done, done.fail);
 		});
 	});

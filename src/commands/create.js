@@ -1,4 +1,5 @@
 const path = require('path'),
+	limits = require('../util/limits.json'),
 	sequentialPromiseMap = require('sequential-promise-map'),
 	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
@@ -93,11 +94,11 @@ module.exports = function create(options, optionalLogger) {
 				return 'no files match additional policies (' + options.policies + ')';
 			}
 			if (options.memory || options.memory === 0) {
-				if (options.memory < 128) {
-					return 'the memory value provided must be greater than or equal to 128';
+				if (options.memory < limits.LAMBDA.MEMORY.MIN) {
+					return `the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`;
 				}
-				if (options.memory > 1536) {
-					return 'the memory value provided must be less than or equal to 1536';
+				if (options.memory > limits.LAMBDA.MEMORY.MAX) {
+					return `the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`;
 				}
 				if (options.memory % 64 !== 0) {
 					return 'the memory value provided must be a multiple of 64';

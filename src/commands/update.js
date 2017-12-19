@@ -1,4 +1,5 @@
 const zipdir = require('../tasks/zipdir'),
+	limits = require('../util/limits.json'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
@@ -134,11 +135,11 @@ module.exports = function update(options, optionalLogger) {
 				}
 			}
 			if (options.memory || options.memory === 0) {
-				if (options.memory < 128) {
-					return Promise.reject('the memory value provided must be greater than or equal to 128');
+				if (options.memory < limits.LAMBDA.MEMORY.MIN) {
+					return Promise.reject(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`);
 				}
-				if (options.memory > 1536) {
-					return Promise.reject('the memory value provided must be less than or equal to 1536');
+				if (options.memory > limits.LAMBDA.MEMORY.MAX) {
+					return Promise.reject(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`);
 				}
 				if (options.memory % 64 !== 0) {
 					return Promise.reject('the memory value provided must be a multiple of 64');

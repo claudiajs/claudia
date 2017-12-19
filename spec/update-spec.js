@@ -1,5 +1,6 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname */
 const underTest = require('../src/commands/update'),
+	limits = require('../src/util/limits.json'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -614,23 +615,23 @@ describe('update', () => {
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is < 128', done => {
+		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {
 			underTest({source: workingdir, version: 'new', memory: 64})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is 0', done => {
 			underTest({source: workingdir, version: 'new', memory: 0})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+				.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is > 1536', done => {
-			underTest({source: workingdir, version: 'new', memory: 1536 + 64})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be less than or equal to 1536'))
+		it(`fails if memory value is > ${limits.LAMBDA.MEMORY.MAX}`, done => {
+			underTest({source: workingdir, version: 'new', memory: limits.LAMBDA.MEMORY.MAX + 64})
+			.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
@@ -643,11 +644,11 @@ describe('update', () => {
 			.then(done, done.fail);
 		});
 		it('can specify memory size using the --memory argument', done => {
-			underTest({source: workingdir, version: 'new', memory: 1536})
+			underTest({source: workingdir, version: 'new', memory: limits.LAMBDA.MEMORY.MAX})
 			.then(() => getLambdaConfiguration('new'))
-			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(configuration => expect(configuration.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(() => getLambdaConfiguration())
-			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(configuration => expect(configuration.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(done, done.fail);
 		});
 	});
