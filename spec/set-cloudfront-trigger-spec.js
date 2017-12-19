@@ -1,6 +1,7 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/set-cloudfront-trigger'),
 	create = require('../src/commands/create'),
+	findCloudfrontBehavior = require('../src/tasks/find-cloudfront-behavior'),
 	destroyObjects = require('./util/destroy-objects'),
 	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
@@ -67,8 +68,9 @@ describe('setCloudfrontTrigger', () => {
 					newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				});
 			},
-			extractLambdaAssociations = function (distributionConfig) {
-				const lambdaAssociationArray = distributionConfig.DefaultCacheBehavior.LambdaFunctionAssociations.Items,
+			extractLambdaAssociations = function (distributionConfig, behaviorPath) {
+				const behavior = findCloudfrontBehavior(distributionConfig, behaviorPath),
+					lambdaAssociationArray = behavior.LambdaFunctionAssociations.Items,
 					associations = {};
 				lambdaAssociationArray.forEach(item => associations[item.EventType] = item.LambdaFunctionARN);
 				return associations;
@@ -84,24 +86,12 @@ describe('setCloudfrontTrigger', () => {
 					.then(() => underTest(config))
 					.then(done, done.fail);
 			});
-			it('assigns the events', done => {
+			it('assigns the events for the actual numeric version', done => {
 				cloudfront.getDistributionConfig({Id: distributionId}).promise()
 					.then(result => extractLambdaAssociations(result.DistributionConfig))
 					.then(associations => {
 						expect(associations['viewer-request']).toMatch(new RegExp(`${testRunName}:1$`));
 						expect(associations['origin-request']).toMatch(new RegExp(`${testRunName}:1$`));
-					})
-					.then(done, done.fail);
-			});
-			it('allows function to assume role lambda@edge', done => {
-				iam.getRole({RoleName: newObjects.lambdaRole}).promise()
-					.then(result => {
-						const policyDocument = unescape((result.Role.AssumeRolePolicyDocument)),
-							policy = JSON.parse(policyDocument);
-						expect(policy.Statement.length).toEqual(2);
-						expect(policy.Statement[1].Effect).toEqual('Allow');
-						expect(policy.Statement[1].Action).toEqual('sts:AssumeRole');
-						expect(policy.Statement[1].Principal.Service).toEqual('edgelambda.amazonaws.com');
 					})
 					.then(done, done.fail);
 			});
@@ -113,13 +103,21 @@ describe('setCloudfrontTrigger', () => {
 					.then(() => underTest(config))
 					.then(done, done.fail);
 			});
-			it('assigns the events', done => {
+			it('assigns the events for the given version', done => {
 				cloudfront.getDistributionConfig({Id: distributionId}).promise()
 					.then(result => extractLambdaAssociations(result.DistributionConfig))
 					.then(associations => {
 						expect(associations['viewer-request']).toMatch(new RegExp(`${testRunName}:1$`));
 						expect(associations['origin-request']).toMatch(new RegExp(`${testRunName}:1$`));
 					})
+					.then(done, done.fail);
+			});
+		});
+		describe('role assignment', () => {
+			beforeEach(done => {
+				config.version = 'dev';
+				createLambda(createConfig)
+					.then(() => underTest(config))
 					.then(done, done.fail);
 			});
 			it('allows function to assume role lambda@edge', done => {
@@ -134,6 +132,60 @@ describe('setCloudfrontTrigger', () => {
 					})
 					.then(done, done.fail);
 			});
+			it('does not change the policy if it already supports lambda@edge', done => {
+				underTest(config)
+					.then(() =>	iam.getRole({RoleName: newObjects.lambdaRole}).promise())
+					.then(result => {
+						const policyDocument = unescape((result.Role.AssumeRolePolicyDocument)),
+							policy = JSON.parse(policyDocument);
+						expect(policy.Statement.length).toEqual(2);
+					})
+					.then(done, done.fail);
+			});
 		});
+		describe('matching distribution behaviors by path', () => {
+			beforeEach(done => {
+				config.version = 1;
+				createLambda(createConfig)
+					.then(done, done.fail);
+			});
+
+			it('assigns the events to a specific behavior when the path is set', done => {
+				let distributionConfig;
+				config['path-pattern'] = '/dev';
+				underTest(config)
+					.then(() => cloudfront.getDistributionConfig({Id: distributionId}).promise())
+					.then(result => distributionConfig = result.DistributionConfig)
+					.then(() => extractLambdaAssociations(distributionConfig, '/dev'))
+					.then(associations => {
+						expect(associations['viewer-request']).toMatch(new RegExp(`${testRunName}:1$`));
+						expect(associations['origin-request']).toMatch(new RegExp(`${testRunName}:1$`));
+					})
+					.then(() => extractLambdaAssociations(distributionConfig))
+					.then(associations => {
+						expect(associations['viewer-request']).not.toMatch(new RegExp(`${testRunName}:1$`));
+						expect(associations['origin-request']).not.toMatch(new RegExp(`${testRunName}:1$`));
+					})
+					.then(done, done.fail);
+			});
+			it('blows up if no behavior matches the path pattern', done => {
+				let distributionConfig;
+				config['path-pattern'] = '/not-exists';
+				underTest(config)
+					.then(done.fail)
+					.catch(e => {
+						expect(e).toEqual(`Distribution ${distributionId} does not contain a behavior matching path pattern /not-exists`);
+					})
+					.then(() => cloudfront.getDistributionConfig({Id: distributionId}).promise())
+					.then(result => distributionConfig = result.DistributionConfig)
+					.then(() => extractLambdaAssociations(distributionConfig))
+					.then(associations => {
+						expect(associations['viewer-request']).not.toMatch(new RegExp(`${testRunName}:1$`));
+						expect(associations['origin-request']).not.toMatch(new RegExp(`${testRunName}:1$`));
+					})
+					.then(done, done.fail);
+			});
+		});
+
 	});
 });

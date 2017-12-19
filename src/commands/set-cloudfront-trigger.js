@@ -3,6 +3,7 @@ const loadConfig = require('../util/loadconfig'),
 	loggingWrap = require('../util/logging-wrap'),
 	appendServiceToRole = require('../tasks/append-service-to-role'),
 	retry = require('oh-no-i-insist'),
+	findCloudfrontBehavior = require('../tasks/find-cloudfront-behavior'),
 	patchLambdaFunctionAssociations = require('../tasks/patch-lambda-function-associations'),
 	aws = require('aws-sdk');
 
@@ -60,9 +61,6 @@ to propagate changes to Lambda@Edge.
 					}
 				});
 		},
-		findBehaviour = function (config, pathPattern) {
-			return config.CacheBehaviors && config.CacheBehaviors.Items && config.CacheBehaviors.Items.find(beh => beh.PathPattern === pathPattern);
-		},
 		setEventTriggers = function () {
 
 			return cloudFront.getDistributionConfig({
@@ -71,7 +69,7 @@ to propagate changes to Lambda@Edge.
 			.then(result => {
 				const config = result.DistributionConfig,
 					etag = result.ETag,
-					behavior = pathPattern ? findBehaviour(config, pathPattern) : config.DefaultCacheBehavior;
+					behavior = findCloudfrontBehavior(config, pathPattern);
 				if (!behavior) {
 					throw `Distribution ${distributionId} does not contain a behavior matching path pattern ${pathPattern}`;
 				}
@@ -94,7 +92,7 @@ to propagate changes to Lambda@Edge.
 		},
 		formatResult = function (r) {
 			const config = r.Distribution.DistributionConfig,
-				behavior = pathPattern ? findBehaviour(config, pathPattern) : config.DefaultCacheBehavior;
+				behavior = findCloudfrontBehavior(config, pathPattern);
 			return behavior.LambdaFunctionAssociations;
 		};
 	if (!distributionId) {
@@ -122,7 +120,7 @@ module.exports.doc = {
 		{
 			argument: 'distribution-id',
 			description: 'CloudFront distribution ID',
-			example: 'E17XW3PVVSPSO9'
+			example: 'E17XW3PXPSO9'
 		},
 		{
 			argument: 'event-types',
@@ -130,18 +128,17 @@ module.exports.doc = {
 			example: 'viewer-request,origin-response'
 		},
 		{
+			argument: 'version',
+			optional: false,
+			description: 'Alias or numerical version of the lambda function to execute the trigger',
+			example: 'production'
+		},
+		{
 			argument: 'path-pattern',
 			optional: true,
 			description: 'The path pattern matching the distribution cache behavior you want to change',
 			default: 'change is applied to the default distribution cache behavior',
 			example: '/dev'
-		},
-		{
-			argument: 'version',
-			optional: true,
-			description: 'Bind to a particular version',
-			example: 'production',
-			default: 'latest version'
 		},
 		{
 			argument: 'source',
