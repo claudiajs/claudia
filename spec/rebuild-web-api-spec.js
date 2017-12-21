@@ -22,13 +22,18 @@ describe('rebuildWebApi', () => {
 			}
 			options.retry = 403;
 			return callApi(apiId, awsRegion, url, options);
+		},
+		getCustomGatewayResponses = function () {
+			return apiGateway.getGatewayResponsesPromise({ restApiId: apiId })
+			.then(result => result.items.filter(f => !f.defaultResponse));
 		};
+
 	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
-		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
+		apiRouteConfig = {version: 4, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
@@ -552,6 +557,150 @@ describe('rebuildWebApi', () => {
 			});
 		});
 	});
+	describe('custom gateway response support', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(() => {
+				return apiGateway.createRestApiPromise({
+					name: testRunName
+				});
+			}).then(result => {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+			apiRouteConfig.corsHandlers = false;
+		});
+		it('does not add any custom responses by default', done => {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result).toEqual([]))
+			.then(done, done.fail);
+		});
+		it('adds new custom gateway responses if required', done => {
+			apiRouteConfig.customResponses = {'DEFAULT_4XX': {statusCode: 411}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => {
+				expect(result.length).toEqual(1);
+				expect(result[0].responseType).toEqual('DEFAULT_4XX');
+				expect(result[0].statusCode).toEqual('411');
+			})
+			.then(() => {
+				return invoke('original/non-existing', {resolveErrors: true});
+			}).then(response => {
+				expect(response.statusCode).toEqual(411);
+			}).then(done, done.fail);
+		});
+		it('adds multiple custom gateway responses', done => {
+			const sortByResponseType = function (a, b) {
+				if (a.responseType < b.responseType) {
+					return -1;
+				}
+				if (a.responseType > b.responseType) {
+					return 1;
+				}
+				return 0;
+			};
+			apiRouteConfig.customResponses = {'DEFAULT_4XX': {statusCode: 411}, 'DEFAULT_5XX': {statusCode: 511}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => {
+				result.sort(sortByResponseType);
+				expect(result.length).toEqual(2);
+				expect(result[0].responseType).toEqual('DEFAULT_4XX');
+				expect(result[0].statusCode).toEqual('411');
+				expect(result[1].responseType).toEqual('DEFAULT_5XX');
+				expect(result[1].statusCode).toEqual('511');
+			})
+			.then(() => {
+				return invoke('original/non-existing', {resolveErrors: true});
+			}).then(response => {
+				expect(response.statusCode).toEqual(411);
+			}).then(done, done.fail);
+		});
+		it('adds response parameters', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					responseParameters: {
+						'gatewayresponse.header.x-response-claudia': '\'yes\'',
+						'gatewayresponse.header.x-name': 'method.request.header.name',
+						'gatewayresponse.header.Access-Control-Allow-Origin': '\'a.b.c\'',
+						'gatewayresponse.header.Content-Type': '\'application/json\''
+					},
+					statusCode: 411,
+					responseTemplates: {
+						'application/json': '{"custom": true, "message":$context.error.messageString}'
+					}
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing?key=tom', {
+				headers: {'name': 'tom'},
+				resolveErrors: true
+			}))
+			.then(response => {
+				const bodyJson = JSON.parse(response.body);
+				expect(bodyJson.custom).toEqual(true);
+				expect(bodyJson.message).toEqual('Missing Authentication Token');
+				expect(response.statusCode).toEqual(411);
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('yes');
+				expect(response.headers['x-name']).toEqual('tom');
+			})
+			.then(done, done.fail);
+		});
+		it('works with a headers shortcut', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					headers: {
+						'x-response-claudia': 'yes',
+						'Content-Type': 'application/json',
+						'Access-Control-Allow-Origin': 'a.b.c'
+					}
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing', { resolveErrors: true }))
+			.then(response => {
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('yes');
+			})
+			.then(done, done.fail);
+		});
+		it('can combine responseParameters and headers', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					responseParameters: {
+						'gatewayresponse.header.x-response-claudia': '\'yes\'',
+						'gatewayresponse.header.x-name': 'method.request.header.name'
+					},
+					headers: {
+						'x-response-claudia': 'no',
+						'Content-Type': 'application/json',
+						'Access-Control-Allow-Origin': 'a.b.c'
+					},
+					statusCode: 411
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing?key=tom', {
+				headers: {'name': 'tom'},
+				resolveErrors: true
+			}))
+			.then(response => {
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('no');
+				expect(response.headers['x-name']).toEqual('tom');
+
+			})
+			.then(done, done.fail);
+		});
+	});
 	describe('binary media type support', () => {
 		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/api-gw-binary/*', workingdir);
@@ -827,6 +976,18 @@ describe('rebuildWebApi', () => {
 					expect(contents.headers['access-control-max-age']).toBeUndefined();
 				}).then(done, done.fail);
 			});
+			it('adds CORS even to non-configured routes so failures contain CORS headers', done => {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => {
+					return invoke('original/i-dont-exist', {method: 'OPTIONS'});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
+				}).then(done, done.fail);
+			});
 		});
 		describe('when corsHeaders are set', () => {
 			beforeEach(() => {
@@ -857,8 +1018,17 @@ describe('rebuildWebApi', () => {
 					expect(response.headers['access-control-allow-headers']).toBeFalsy();
 					expect(response.headers['access-control-allow-origin']).toBeFalsy();
 					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
-
-				}).then(done, done.fail);
+					expect(response.headers['access-control-max-age']).toBeUndefined();
+				})
+				.then(() => invoke('original/i-dont-exist', {method: 'OPTIONS', resolveErrors: true}))
+				.then(response => {
+					expect(response.headers['access-control-allow-methods']).toBeFalsy();
+					expect(response.headers['access-control-allow-headers']).toBeFalsy();
+					expect(response.headers['access-control-allow-origin']).toBeFalsy();
+					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
+					expect(response.headers['access-control-max-age']).toBeUndefined();
+				})
+				.then(done, done.fail);
 			});
 		});
 		describe('when corsHandlers are set to true', () => {
@@ -926,6 +1096,25 @@ describe('rebuildWebApi', () => {
 				apiRouteConfig.routes['sub/mapped/sub2'] = {GET: {}, PUT: {}};
 				apiRouteConfig.corsHandlers = false;
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
+			}).then(done, done.fail);
+		});
+		it('removes all previous custom gateway responses', done => {
+			apiGateway.putGatewayResponsePromise({
+				restApiId: apiId,
+				responseType: 'DEFAULT_4XX',
+				statusCode: '411'
+			})
+			.then(() => underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion))
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result).toEqual([]))
+			.then(done, done.fail);
+		});
+		it('adds new custom gateway responses', done => {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}, customResponses: {'DEFAULT_4XX': {statusCode: 411}}}, awsRegion)
+			.then(() => {
+				return invoke('original/non-existing', {resolveErrors: true});
+			}).then(response => {
+				expect(response.statusCode).toEqual(411);
 			}).then(done, done.fail);
 		});
 		it('adds extra paths from the new definition', done => {

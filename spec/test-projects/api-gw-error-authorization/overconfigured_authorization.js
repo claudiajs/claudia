@@ -2,7 +2,7 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
+		version: 4,
 		authorizers: { customA: { lambdaName: 'nnn' } },
 		routes: { echo: { 'GET': { authorizationType: 'AWS_IAM', customAuthorizer: 'customA' } }}
 	};

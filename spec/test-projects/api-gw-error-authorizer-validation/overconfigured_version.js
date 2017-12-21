@@ -2,7 +2,7 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
+		version: 4,
 		authorizers: { first: { lambdaArn: 'ln', lambdaVersion: 'x' } },
 		routes: { echo: { 'GET': { customAuthorizer: 'first' } }}
 	};

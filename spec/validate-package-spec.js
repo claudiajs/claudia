@@ -36,15 +36,15 @@ describe('validatePackage', () => {
 				underTest(path.join(__dirname, 'test-projects/empty-api'), 'main.proxyRouter', 'main');
 			}).toThrow('main.js does not configure any API methods');
 		});
-		it('fails if the api version is not supported', () => {
+		it('fails if the api version is too old', () => {
 			expect(() => {
 				underTest(path.join(__dirname, 'test-projects/old-api'), 'main.proxyRouter', 'main');
-			}).toThrow('main.js uses an unsupported API version. Upgrade your claudia installation');
+			}).toThrow('main.js uses an unsupported API version. Upgrade your claudia-api-builder or claudia-bot-builder dependency');
 		});
-		it('fails if the api version is not supported', () => {
+		it('fails if the api version is more recent than claudia', () => {
 			expect(() => {
 				underTest(path.join(__dirname, 'test-projects/future-api'), 'main.proxyRouter', 'main');
-			}).toThrow('main.js uses an unsupported API version. Upgrade your claudia installation');
+			}).toThrow('main.js requires a newer version of claudia. Upgrade your claudia installation');
 		});
 		it('returns package dir if the handler corresponds to the exported method', () => {
 			const dir = path.join(__dirname, 'test-projects/api-gw-echo');

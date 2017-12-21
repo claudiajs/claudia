@@ -274,6 +274,43 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			}
 			return -1;
 		},
+		getCustomGatewayResponses = function () {
+			return apiGateway.getGatewayResponsesPromise({ restApiId: restApiId })
+			.then(result => result.items.filter(f => !f.defaultResponse));
+		},
+		configureGatewayResponse = function (responseType, responseConfig) {
+			const params = {
+				restApiId: restApiId,
+				responseType: responseType
+			};
+			if (responseConfig.statusCode) {
+				params.statusCode = String(responseConfig.statusCode);
+			};
+			if (responseConfig.responseParameters) {
+				params.responseParameters = responseConfig.responseParameters;
+			};
+			if (responseConfig.responseTemplates) {
+				params.responseTemplates = responseConfig.responseTemplates;
+			};
+			if (responseConfig.headers) {
+				params.responseParameters = params.responseParameters || {};
+				Object.keys(responseConfig.headers).forEach(header => {
+					params.responseParameters[`gatewayresponse.header.${header}`] = `'${responseConfig.headers[header]}'`;
+				});
+			}
+			return apiGateway.putGatewayResponsePromise(params);
+
+		},
+		dropGatewayResponse = function (gatewayResponse) {
+			return apiGateway.deleteGatewayResponsePromise({
+				responseType: gatewayResponse.responseType,
+				restApiId: restApiId
+			});
+		},
+		dropCustomGatewayResponses = function () {
+			return getCustomGatewayResponses()
+			.then(responses => sequentialPromiseMap(responses, dropGatewayResponse));
+		},
 		removeExistingResources = function () {
 			return getExistingResources()
 			.then(resources => {
@@ -282,11 +319,17 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return existingResources;
 			})
 			.then(findRoot)
-			.then(dropSubresources);
+			.then(dropSubresources)
+			.then(dropCustomGatewayResponses);
 		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
-			.then(() => sequentialPromiseMap(Object.keys(apiConfig.routes), configurePath));
+			.then(() => sequentialPromiseMap(Object.keys(apiConfig.routes), configurePath))
+			.then(() => {
+				if (apiConfig.customResponses) {
+					return sequentialPromiseMap(Object.keys(apiConfig.customResponses), responseType => configureGatewayResponse(responseType, apiConfig.customResponses[responseType]));
+				}
+			});
 		},
 		deployApi = function () {
 			const stageVars = {
@@ -312,10 +355,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizerIds = {};
 			}
 		},
+		configureCors = function () {
+			if (!supportsCors()) {
+				return;
+			}
+			return findResourceByPath('/{proxy+}')
+			.then(resourceId => createCorsHandler(resourceId));
+		},
 		uploadApiConfig = function () {
 			return removeExistingResources()
 				.then(configureAuthorizers)
 				.then(rebuildApi)
+				.then(configureCors)
 				.then(deployApi)
 				.then(() => ({ cacheReused: false }));
 		},

@@ -47,7 +47,7 @@
   "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
   "dependencies": {
     "archiver": "^2.0.0",
-    "aws-sdk": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.62.0.tgz",
+    "aws-sdk": "^2.173.0",
     "gunzip-maybe": "^1.4.0",
     "minimal-request-promise": "^1.1.0",
     "minimist": "^1.2.0",

@@ -5,7 +5,7 @@ if (!process.env.TEST_VAR) {
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
+		version: 4,
 		routes: { hello: { 'GET': {} }}
 	};
 };

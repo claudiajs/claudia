@@ -2,7 +2,7 @@
 exports.apiConfig = function () {
 	'use strict';
 	return {
-		version: 3,
+		version: 4,
 		authorizers: {
 			first: { lambdaName: 'nameOnly' },
 			second: { lambdaName: 'name', lambdaVersion: 'version' },
@@ -21,6 +21,20 @@ exports.apiConfig = function () {
 			passingOnlyCredentials: { 'GET': {invokeWithCredentials: true }},
 			withAuthorizer: { customAuthorizer: 'first' },
 			withAuthorizerAndAuthType: {  customAuthorizer: 'first', authorizationType: 'CUSTOM' }
+		},
+		customResponses: {
+			'DEFAULT_4XX': {
+				responseParameters: {
+					'gatewayresponse.header.x-response-claudia': '\'yes\'',
+					'gatewayresponse.header.x-name': 'method.request.header.name'
+				},
+				headers: {
+					'x-response-claudia': 'no',
+					'Content-Type': 'application/json',
+					'Access-Control-Allow-Origin': 'a.b.c'
+				},
+				statusCode: 411
+			}
 		}
 	};
 };
