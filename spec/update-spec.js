@@ -191,7 +191,7 @@ describe('update', () => {
 			}).then(fileResult => {
 				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
 			}).then(() => {
-				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
 			}).then(() => {
 				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(lambdaResult => {
@@ -490,6 +490,7 @@ describe('update', () => {
 				'apigateway.setupRequestListeners',
 				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
+				'apigateway.getGatewayResponses',
 				'apigateway.deleteResource',
 				'apigateway.createResource',
 				'apigateway.putMethod',
