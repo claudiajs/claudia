@@ -570,12 +570,12 @@ describe('create', () => {
 			createFromDir('hello-world')
 			.then(creationResult => {
 				expect(creationResult.lambda).toEqual({
-					role: 'hello-world-executor',
+					role: 'hello-world2-executor',
 					region: awsRegion,
-					name: 'hello-world'
+					name: 'hello-world2'
 				});
 			})
-			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world' }).promise())
+			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world2' }).promise())
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
 			.then(done, done.fail);
 		});
@@ -737,7 +737,7 @@ describe('create', () => {
 				}).promise();
 			})
 			.then(fileResult => expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size))
-			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']))
+			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']))
 			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
 			.then(lambdaResult => {
 				expect(lambdaResult.StatusCode).toEqual(200);
@@ -924,7 +924,7 @@ describe('create', () => {
 			.then(params => {
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'latest',
-					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					claudiaConfig: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			})
 			.then(done, done.fail);
@@ -1017,6 +1017,7 @@ describe('create', () => {
 				'apigateway.setAcceptHeader',
 				'apigateway.getRestApi',
 				'apigateway.getResources',
+				'apigateway.getGatewayResponses',
 				'apigateway.createResource',
 				'apigateway.putMethod',
 				'apigateway.putIntegration',
