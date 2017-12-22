@@ -221,12 +221,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			.then(r => {
 				resourceId = r;
 			})
-			.then(() => sequentialPromiseMap(supportedMethods, createMethodMapper))
-			.then(() => {
-				if (supportsCors()) {
-					return createCorsHandler(resourceId);
-				}
-			});
+			.then(() => sequentialPromiseMap(supportedMethods, createMethodMapper));
 		},
 		dropMethods = function (resource) {
 			const dropMethodMapper = function (method) {
@@ -359,7 +354,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			if (!supportsCors()) {
 				return;
 			}
-			return findResourceByPath('/{proxy+}')
+			return findResourceByPath('{proxy+}')
 			.then(resourceId => createCorsHandler(resourceId));
 		},
 		uploadApiConfig = function () {
