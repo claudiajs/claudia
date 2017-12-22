@@ -4,7 +4,7 @@ module.exports = function appendServiceToRole(roleText, service) {
 		allowStatement = {Effect: 'Allow', Principal: {Service: service}, Action: 'sts:AssumeRole'},
 		matchesService = function (statement) {
 			return statement.Principal.Service === service ||
-			(Array.isArray(statement.Principal.Service) && statement.Principal.Service.includes(service));
+			(Array.isArray(statement.Principal.Service) && statement.Principal.Service.indexOf(service) >= 0);
 		},
 		matchesStatement = function (statement) {
 			return statement.Effect === allowStatement.Effect
