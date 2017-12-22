@@ -1111,11 +1111,9 @@ describe('rebuildWebApi', () => {
 		});
 		it('adds new custom gateway responses', done => {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}, customResponses: {'DEFAULT_4XX': {statusCode: 411}}}, awsRegion)
-			.then(() => {
-				return invoke('original/non-existing', {resolveErrors: true});
-			}).then(response => {
-				expect(response.statusCode).toEqual(411);
-			}).then(done, done.fail);
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result.map(r => r.responseType)).toEqual(['DEFAULT_4XX']))
+			.then(done, done.fail);
 		});
 		it('adds extra paths from the new definition', done => {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion)
@@ -1327,6 +1325,7 @@ describe('rebuildWebApi', () => {
 					'apigateway.setupRequestListeners',
 					'apigateway.setAcceptHeader',
 					'apigateway.getResources',
+					'apigateway.getGatewayResponses',
 					'apigateway.createResource',
 					'apigateway.putMethod',
 					'apigateway.putIntegration',
@@ -1361,7 +1360,7 @@ describe('rebuildWebApi', () => {
 				const params = JSON.parse(contents.body);
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'original',
-					configHash: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					configHash: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			}).then(done, done.fail);
 		});
