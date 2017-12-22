@@ -4,43 +4,43 @@ PROJECT_DIR=`dirname $SCRIPT_DIR`
 
 echo using $AWS_PROFILE in region $AWS_REGION
 
-functions=`aws lambda list-functions --query 'Functions[?starts_with(FunctionName,\`test\`)].FunctionName' --output text --profile $AWS_PROFILE`
+functions=`aws lambda list-functions --query 'Functions[?starts_with(FunctionName,\`test\`)].FunctionName' --output text --profile $AWS_PROFILE --region $AWS_REGION`
 for fun in $functions; do
   echo deleting function $fun
-  aws lambda delete-function --function-name $fun --profile $AWS_PROFILE
+  aws lambda delete-function --function-name $fun --profile $AWS_PROFILE --region $AWS_REGION
 done
 
-apis=`aws apigateway get-rest-apis --query 'items[?starts_with(name,\`test\`)].id' --output text --profile $AWS_PROFILE`
+apis=`aws apigateway get-rest-apis --query 'items[?starts_with(name,\`test\`)].id' --output text --profile $AWS_PROFILE --region $AWS_REGION --region $AWS_REGION`
 for api in $apis; do
   echo deleting API $api
   sleep 10 
-  aws apigateway delete-rest-api --rest-api-id $api --profile $AWS_PROFILE
+  aws apigateway delete-rest-api --rest-api-id $api --profile $AWS_PROFILE --region $AWS_REGION
 done
 
-roles=`aws iam list-roles --query 'Roles[?starts_with(RoleName, \`test\`)].RoleName' --output text --profile $AWS_PROFILE`
+roles=`aws iam list-roles --query 'Roles[?starts_with(RoleName, \`test\`)].RoleName' --output text --profile $AWS_PROFILE --region $AWS_REGION`
 
 for role in $roles; do
   echo deleting policies for role $role
-  policies=`aws iam list-role-policies --role-name=$role --query PolicyNames --output text --profile $AWS_PROFILE`
+  policies=`aws iam list-role-policies --role-name=$role --query PolicyNames --output text --profile $AWS_PROFILE --region $AWS_REGION`
   for policy in $policies; do 
     echo deleting policy $policy for role $role
-    aws iam delete-role-policy --policy-name $policy --role-name $role --profile $AWS_PROFILE;
+    aws iam delete-role-policy --policy-name $policy --role-name $role --profile $AWS_PROFILE --region $AWS_REGION;
   done
   echo deleting role $role
-  aws iam delete-role --role-name $role --profile $AWS_PROFILE
+  aws iam delete-role --role-name $role --profile $AWS_PROFILE  --region $AWS_REGION
 done
 
 
-lambdaLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`/aws/lambda/test\`)].logGroupName' --output text --profile $AWS_PROFILE`
+lambdaLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`/aws/lambda/test\`)].logGroupName' --output text --profile $AWS_PROFILE  --region $AWS_REGION`
 for log in $lambdaLogs; do
   echo deleting log $log
-  aws logs delete-log-group --log-group-name $log --profile $AWS_PROFILE
+  aws logs delete-log-group --log-group-name $log --profile $AWS_PROFILE  --region $AWS_REGION
 done
 
-apiLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`API-Gateway-Execution-Logs\`)].logGroupName' --output text --profile $AWS_PROFILE`
+apiLogs=`aws logs describe-log-groups --query 'logGroups[?starts_with(logGroupName,\`API-Gateway-Execution-Logs\`)].logGroupName' --output text --profile $AWS_PROFILE  --region $AWS_REGION`
 for log in $apiLogs; do
   echo deleting log $log
-  aws logs delete-log-group --log-group-name $log --profile $AWS_PROFILE
+  aws logs delete-log-group --log-group-name $log --profile $AWS_PROFILE  --region $AWS_REGION
 done
 
 buckets=`aws s3api list-buckets --output text --query 'Buckets[?starts_with(Name,\`test\`)].Name'`
