@@ -12,7 +12,6 @@ const zipdir = require('../tasks/zipdir'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
-	sequentialPromiseMap = require('sequential-promise-map'),
 	loggingWrap = require('../util/logging-wrap'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
@@ -52,7 +51,6 @@ module.exports = function update(options, optionalLogger) {
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
 				.then(rebuildResult => {
 					if (apiModule.postDeploy) {
-						Promise.map = sequentialPromiseMap;
 						return apiModule.postDeploy(
 							options,
 							{
@@ -65,8 +63,7 @@ module.exports = function update(options, optionalLogger) {
 							},
 							{
 								apiGatewayPromise: apiGateway,
-								aws: aws,
-								Promise: Promise
+								aws: aws
 							}
 						);
 					}

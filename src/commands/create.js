@@ -1,6 +1,5 @@
 const path = require('path'),
 	limits = require('../util/limits.json'),
-	sequentialPromiseMap = require('sequential-promise-map'),
 	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
@@ -199,7 +198,6 @@ module.exports = function create(options, optionalLogger) {
 			})
 			.then(() => {
 				if (apiModule.postDeploy) {
-					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
 						options,
 						{
@@ -211,8 +209,7 @@ module.exports = function create(options, optionalLogger) {
 						},
 						{
 							apiGatewayPromise: apiGatewayPromise,
-							aws: aws,
-							Promise: Promise
+							aws: aws
 						}
 					);
 				}

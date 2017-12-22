@@ -19,8 +19,7 @@ exports.postDeploy = function (options, lambdaDetails, utils) {
 			'postinstallregion': lambdaDetails.region,
 			'postinstalloption': options.postcheck,
 			'lambdaVersion': lambdaDetails.alias,
-			'hasAWS': (!!utils.aws).toString(),
-			'hasPromise': (!!utils.Promise).toString()
+			'hasAWS': (!!utils.aws).toString()
 		}
 	};
 	return utils.apiGatewayPromise.createDeploymentPromise(deployment).then(() => {

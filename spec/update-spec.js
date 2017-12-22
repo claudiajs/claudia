@@ -380,7 +380,7 @@ describe('update', () => {
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'development',
-					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					claudiaConfig: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			}).then(done, done.fail);
 		});
@@ -424,7 +424,6 @@ describe('update', () => {
 					'postinstallfname': testRunName,
 					'postinstallalias': 'development',
 					'postinstallapiid': newObjects.restApi,
-					'hasPromise': 'true',
 					'postinstallapiUrl': 'https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development',
 					'hasAWS': 'true',
 					'postinstallregion': awsRegion,

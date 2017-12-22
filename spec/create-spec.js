@@ -969,7 +969,6 @@ describe('create', () => {
 					'postinstallalias': 'development',
 					'postinstallapiid': apiId,
 					'postinstallregion': awsRegion,
-					'hasPromise': 'true',
 					'postinstallapiUrl': `https://${apiId}.execute-api.${awsRegion}.amazonaws.com/development`,
 					'hasAWS': 'true',
 					'postinstalloption': 'option-123',
