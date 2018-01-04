@@ -19,6 +19,7 @@ const path = require('path'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
 	os = require('os'),
+	isRoleArn = require('../util/is-role-arn'),
 	lambdaCode = require('../tasks/lambda-code'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');
@@ -110,6 +111,9 @@ module.exports = function create(options, optionalLogger) {
 				if (options.timeout > 300) {
 					return 'the timeout value provided must be less than or equal to 300';
 				}
+			}
+			if (options['allow-recursion'] && options.role && isRoleArn(options.role)) {
+				return 'incompatible arguments allow-recursion and role. When specifying a role ARN, Claudia does not patch IAM policies.';
 			}
 		},
 		getPackageInfo = function () {
@@ -280,9 +284,6 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
-		isRoleArn = function (string) {
-			return /^arn:aws:iam:/.test(string);
-		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
@@ -310,24 +311,6 @@ module.exports = function create(options, optionalLogger) {
 				const policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
-		},
-		vpcPolicy = function () {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Sid': 'VPCAccessExecutionPermission',
-					'Effect': 'Allow',
-					'Action': [
-						'logs:CreateLogGroup',
-						'logs:CreateLogStream',
-						'logs:PutLogEvents',
-						'ec2:CreateNetworkInterface',
-						'ec2:DeleteNetworkInterface',
-						'ec2:DescribeNetworkInterfaces'
-					],
-					'Resource': '*'
-				}]
-			});
 		},
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
@@ -391,12 +374,13 @@ module.exports = function create(options, optionalLogger) {
 		}
 	})
 	.then(() => {
-		if (options['security-group-ids']) {
-			return iam.putRolePolicy({
+		if (options['security-group-ids'] && !isRoleArn(options.role)) {
+			return fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
+			.then(vpcPolicy => iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'vpc-access-execution',
-				PolicyDocument: vpcPolicy()
-			}).promise();
+				PolicyDocument: vpcPolicy
+			}).promise());
 		}
 	})
 	.then(() => {

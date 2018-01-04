@@ -185,6 +185,13 @@ describe('create', () => {
 			.then(getLambdaConfiguration)
 			.then(() => done.fail('function was created'), done);
 		});
+		it('refuses to allow recursion to IAM ARN roles', done => {
+			config['allow-recursion'] = true;
+			config.role = 'arn:aws:iam::123456789012:role/S3Access';
+			createFromDir('hello-world')
+			.then(done.fail, message => expect(message).toMatch(/incompatible arguments allow-recursion and role/))
+			.then(done);
+		});
 	});
 
 	describe('role management', () => {
@@ -240,7 +247,7 @@ describe('create', () => {
 				config.role = createdRole.Arn;
 				createFromDir('hello-world', logger)
 				.then(() => {
-					newObjects.lambdaRole = false;
+					newObjects.lambdaRole = roleName;
 					expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
 				})
 				.then(getLambdaConfiguration)
@@ -303,7 +310,7 @@ describe('create', () => {
 				done.fail();
 			});
 		});
-		describe('when VPC access is desired', () => {
+		describe('VPC setup', () => {
 			let vpc, subnet, securityGroup;
 			const securityGroupName = `${testRunName}SecurityGroup`,
 				CidrBlock = '10.0.0.0/16',
@@ -323,6 +330,10 @@ describe('create', () => {
 				})
 				.then(done, done.fail);
 			});
+			beforeEach(() => {
+				config['security-group-ids'] = securityGroup.GroupId;
+				config['subnet-ids'] = subnet.SubnetId;
+			});
 			afterAll(done => {
 				ec2.deleteSubnet({ SubnetId: subnet.SubnetId }).promise()
 				.then(() => ec2.deleteSecurityGroup({ GroupId: securityGroup.GroupId }).promise())
@@ -331,8 +342,6 @@ describe('create', () => {
 				.catch(done.fail);
 			});
 			it('adds subnet and security group membership to the function', done => {
-				config['security-group-ids'] = securityGroup.GroupId;
-				config['subnet-ids'] = subnet.SubnetId;
 				createFromDir('hello-world')
 				.then(getLambdaConfiguration)
 				.then(result => {
@@ -345,8 +354,6 @@ describe('create', () => {
 				});
 			});
 			it('adds VPC Access IAM role', done => {
-				config['security-group-ids'] = securityGroup.GroupId;
-				config['subnet-ids'] = subnet.SubnetId;
 				createFromDir('hello-world')
 				.then(() => iam.listRolePolicies({ RoleName: `${testRunName}-executor` }).promise())
 				.then(result => expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']))
@@ -370,11 +377,69 @@ describe('create', () => {
 							}]
 						});
 				})
-				.then(done, e => {
-					console.log(e);
-					done.fail();
+				.then(done, done.fail);
+			});
+			describe('when a role is provided', () => {
+				let createdRoleArn, roleName;
+				beforeEach(done => {
+					roleName = `${testRunName}-manual`;
+					fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+					.then(lambdaRolePolicy => {
+						return iam.createRole({
+							RoleName: roleName,
+							AssumeRolePolicyDocument: lambdaRolePolicy
+						}).promise();
+					})
+					.then(result => {
+						createdRoleArn = result.Role.Arn;
+					})
+					.then(done, done.fail);
+				});
+				afterEach(() => {
+					newObjects.lambdaRole = roleName;
+				});
+				it('patches IAM policies when the role is specified with a name', done => {
+					config.role = roleName;
+					createFromDir('hello-world')
+					.then(() => iam.listRolePolicies({ RoleName: roleName }).promise())
+					.then(result => expect(result.PolicyNames).toEqual(['vpc-access-execution']))
+					.then(() => iam.getRolePolicy({ PolicyName: 'vpc-access-execution', RoleName: roleName }).promise())
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+							{
+								'Version': '2012-10-17',
+								'Statement': [{
+									'Sid': 'VPCAccessExecutionPermission',
+									'Effect': 'Allow',
+									'Action': [
+										'logs:CreateLogGroup',
+										'logs:CreateLogStream',
+										'logs:PutLogEvents',
+										'ec2:CreateNetworkInterface',
+										'ec2:DeleteNetworkInterface',
+										'ec2:DescribeNetworkInterfaces'
+									],
+									'Resource': '*'
+								}]
+							});
+					})
+					.then(done, done.fail);
+				});
+				it('does not try to patch IAM policies if the role is specified with an ARN', done => {
+					config.role = createdRoleArn;
+					fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
+					.then(vpcPolicy => iam.putRolePolicy({
+						RoleName: roleName,
+						PolicyName: 'test-vpc-access',
+						PolicyDocument: vpcPolicy
+					}).promise())
+					.then(() => createFromDir('hello-world'))
+					.then(() => iam.listRolePolicies({ RoleName: roleName }).promise())
+					.then(result => expect(result.PolicyNames).toEqual(['test-vpc-access']))
+					.then(done, done.fail);
 				});
 			});
+
 		});
 
 		it('loads additional policies from a policies directory recursively, if provided', done => {
