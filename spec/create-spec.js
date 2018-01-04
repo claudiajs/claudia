@@ -510,13 +510,6 @@ describe('create', () => {
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
 			.then(done, done.fail);
 		});
-		it('can create nodejs4.3-edge deployments using the --runtime argument', done => {
-			config.runtime = 'nodejs4.3-edge';
-			createFromDir('hello-world')
-			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3-edge'))
-			.then(done, done.fail);
-		});
 	});
 	describe('memory option support', () => {
 		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {

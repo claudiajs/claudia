@@ -1,14 +1,15 @@
 # Release history
 
-### 2.15.0 XXXXX 
+### 3.0.0 4 January 2018
 
 - support for deploying to Lambda@Edge with [`set-cloudfront-trigger`](docs/set-cloudfront-trigger.md)
-- support for generating projects for quick start with [`generate`](docs/generate.md)
+- support for generating quick start projects with [`generate`](docs/generate.md)
 - support for configuring 3GB Lambda functions using `--memory`
 - support for deploying custom [API Gateway Responses](https://github.com/claudiajs/claudia-api-builder/blob/master/docs/customise-responses.md#api-gateway-responses)
 - speed up API GW deployments by using a single handler for CORS OPTIONS instead of replicating it for each supported route
+- fix for deploying lambdas with a VPC configuration and manually specified roles
 
-This release requires Claudia API Builder 2.6.
+This release is fully backwards compatible with 2.0 in terms of client code, but changes internal protocols between claudia API Builder and claudia, which is why we increased the major version. For API and bot deployments, this release requires Claudia API Builder 3.0.
 
 ### 2.14.0 23 June 2017
 
