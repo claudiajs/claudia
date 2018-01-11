@@ -1,5 +1,9 @@
 # Release history
 
+### 3.0.1 11 January 2018
+
+- support for request based custom API Gateway Authorisers
+
 ### 3.0.0 4 January 2018
 
 - support for deploying to Lambda@Edge with [`set-cloudfront-trigger`](docs/set-cloudfront-trigger.md)
