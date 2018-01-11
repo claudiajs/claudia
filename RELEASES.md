@@ -1,6 +1,6 @@
 # Release history
 
-### 3.0.1 11 January 2018
+### 3.1.0 11 January 2018
 
 - support for request based custom API Gateway Authorisers
 
