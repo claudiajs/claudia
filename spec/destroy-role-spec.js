@@ -33,4 +33,14 @@ describe('destroyRole', () => {
 		.catch(expectedException => expect(expectedException.message).toContain(testRunName))
 		.then(done, done.fail);
 	});
+	it('destroys a role with attached policies', done => {
+		iam.attachRolePolicy({
+			RoleName: testRunName,
+			PolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole'
+		}).promise()
+		.then(() => underTest(testRunName))
+		.then(() => iam.getRole({ RoleName: testRunName }).promise())
+		.catch(expectedException => expect(expectedException.code).toEqual('NoSuchEntity'))
+		.then(done, done.fail);
+	});
 });

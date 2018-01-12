@@ -1,5 +1,9 @@
 # Release history
 
+### 3.2.0 12 January 2018
+
+- support for Kinesis Data Stream triggers with [`add-kinesis-event-source`](docs/add-kinesis-event-source.md)
+
 ### 3.1.0 11 January 2018
 
 - support for request based custom API Gateway Authorisers
