@@ -1,5 +1,9 @@
 # Release history
 
+### 3.3.0 27 January 2018
+
+- support for using server-side encryption for code uploads to s3, thanks to [Ricky Blaha](https://github.com/rickyblaha)
+
 ### 3.2.0 12 January 2018
 
 - support for Kinesis Data Stream triggers with [`add-kinesis-event-source`](docs/add-kinesis-event-source.md)
