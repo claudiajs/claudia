@@ -24,7 +24,12 @@ for role in $roles; do
   policies=`aws iam list-role-policies --role-name=$role --query PolicyNames --output text --profile $AWS_PROFILE --region $AWS_REGION`
   for policy in $policies; do 
     echo deleting policy $policy for role $role
-    aws iam delete-role-policy --policy-name $policy --role-name $role --profile $AWS_PROFILE --region $AWS_REGION;
+    aws iam delete-role-policy --policy-name $policy --role-name $role --profile $AWS_PROFILE --region $AWS_REGION
+  done
+  attached=`aws iam list-attached-role-policies  --role-name=$role --query AttachedPolicies[].PolicyArn --output text --profile $AWS_PROFILE --region $AWS_REGION`
+  for policy in $attached; do 
+    echo detaching policy $policy for role $role
+    aws iam detach-role-policy --policy-arn $policy --role-name $role --profile $AWS_PROFILE --region $AWS_REGION
   done
   echo deleting role $role
   aws iam delete-role --role-name $role --profile $AWS_PROFILE  --region $AWS_REGION
