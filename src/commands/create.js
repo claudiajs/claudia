@@ -392,7 +392,7 @@ module.exports = function create(options, optionalLogger) {
 			}).promise();
 		}
 	})
-	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], logger))
+	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger))
 	.then(functionCode => {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
@@ -538,8 +538,14 @@ module.exports.doc = {
 			optional: true,
 			example: 'claudia-uploads',
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
-				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
-				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+			'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+			'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 's3-sse',
+			optional: true,
+			example: 'AES256',
+			description: 'The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`'
 		},
 		{
 			argument: 'aws-delay',

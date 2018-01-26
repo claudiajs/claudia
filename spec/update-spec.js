@@ -200,6 +200,72 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 
+		it('uses a s3 bucket with server side encryption if provided', done => {
+			const s3 = new aws.S3(),
+				logger = new ArrayLogger(),
+				bucketName = testRunName + '-bucket',
+				serverSideEncryption = 'AES256';
+			let archivePath;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise().then(() => {
+				newObjects.s3bucket = bucketName;
+			}).then(() => {
+				return s3.putBucketEncryption({
+					Bucket: bucketName,
+					ServerSideEncryptionConfiguration: {
+						Rules: [
+							{
+								ApplyServerSideEncryptionByDefault: {
+									SSEAlgorithm: 'AES256'
+								}
+							}
+						]
+					}
+				}).promise();
+			}).then(() => {
+				return s3.putBucketPolicy({
+					Bucket: bucketName,
+					Policy: `{
+						"Version": "2012-10-17",
+						"Statement":  [
+							{
+								"Sid": "S3Encryption",
+								"Action": [ "s3:PutObject" ],
+								"Effect": "Deny",
+								"Resource": "arn:aws:s3:::${bucketName}/*",
+								"Principal": "*",
+								"Condition": {
+									"Null": {
+										"s3:x-amz-server-side-encryption": true
+									}
+								}
+							}
+						]
+					}`
+				}).promise();
+			}).then(() => {
+				return underTest({keep: true, 'use-s3-bucket': bucketName, 's3-sse': serverSideEncryption, source: workingdir}, logger);
+			}).then(result => {
+				const expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			}).then(fileResult => {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(() => {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
+			}).then(() => {
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
+			}).then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+
 		it('adds the version alias if supplied', done => {
 			underTest({source: workingdir, version: 'great'}).then(() => {
 				return lambda.getAlias({FunctionName: testRunName, Name: 'great'}).promise();

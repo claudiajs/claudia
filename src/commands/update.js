@@ -201,7 +201,7 @@ module.exports = function update(options, optionalLogger) {
 	})
 	.then(zipFile => {
 		packageArchive = zipFile;
-		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+		return lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger);
 	})
 	.then(functionCode => {
 		logger.logStage('updating Lambda');
@@ -293,6 +293,12 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 's3-sse',
+			optional: true,
+			example: 'AES256',
+			description: 'The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`'
 		},
 		{
 			argument: 'update-env',
