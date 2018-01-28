@@ -26,7 +26,17 @@ describe('rebuildWebApi', () => {
 		getCustomGatewayResponses = function () {
 			return apiGateway.getGatewayResponsesPromise({ restApiId: apiId })
 			.then(result => result.items.filter(f => !f.defaultResponse));
+		},
+		getResourceForPath = function (path) {
+			return apiGateway.getResourcesPromise({
+				restApiId: apiId
+			})
+			.then(resources => {
+				const resource = resources.items.find(resource => (resource.path === path));
+				return resource && resource.id;
+			});
 		};
+
 
 	beforeEach(() => {
 		workingdir = tmppath();
@@ -953,7 +963,6 @@ describe('rebuildWebApi', () => {
 			}).then(done, done.fail);
 
 		});
-
 		describe('without custom CORS options', () => {
 			it('creates OPTIONS handlers for CORS', done => {
 				apiRouteConfig.routes.hello = {POST: {}, GET: {}};
@@ -961,7 +970,7 @@ describe('rebuildWebApi', () => {
 				.then(() => {
 					return invoke('original/echo', {method: 'OPTIONS'});
 				}).then(contents => {
-					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
@@ -969,31 +978,73 @@ describe('rebuildWebApi', () => {
 				}).then(() => {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(contents => {
-					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET,POST');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 					expect(contents.headers['access-control-max-age']).toBeUndefined();
 				}).then(done, done.fail);
 			});
-			it('adds CORS even to non-configured routes so failures contain CORS headers', done => {
+			it('creates a MOCK integration for performance', done => {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('MOCK');
+				}).then(done, done.fail);
+			});
+			it('can create CORS handlers for APIs with param paths -- regression check', done => {
+				apiRouteConfig.routes['{owner}'] = {GET: {}};
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(() => {
-					return invoke('original/i-dont-exist', {method: 'OPTIONS'});
+					return invoke('original/echo', {method: 'OPTIONS'});
 				}).then(contents => {
-					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 					expect(contents.headers['access-control-max-age']).toBeUndefined();
+				}).then(done, done.fail);
+			});
+			it('allows a custom OPTIONS handler to take over execution completely for CORS', done => {
+				apiRouteConfig.routes.manual = {POST: {}, OPTIONS: {}};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/manual'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('AWS_PROXY');
+				}).then(() => {
+					return invoke('original/manual', {
+						method: 'OPTIONS',
+						headers: {'content-type': 'text/plain'},
+						body: JSON.stringify({
+							'Access-Control-Allow-Methods': 'GET,OPTIONS',
+							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
+						})
+					});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
 				}).then(done, done.fail);
 			});
 		});
 		describe('when corsHeaders are set', () => {
-			beforeEach(() => {
-				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
-			});
 			it('uses the headers for OPTIONS handlers', done => {
+				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(() => {
 					return invoke('original/echo', {method: 'OPTIONS'});
@@ -1003,32 +1054,67 @@ describe('rebuildWebApi', () => {
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
+			it('uses the headers for OPTIONS handlers even when blank string', done => {
+				apiRouteConfig.corsHeaders = '';
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => {
+					return invoke('original/echo', {method: 'OPTIONS'});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-headers']).toBeUndefined();
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+				}).then(done, done.fail);
+			});
 		});
 		describe('when corsHandlers are set to false', () => {
-			beforeEach(done => {
+			beforeEach(() => {
+
 				apiRouteConfig.corsHandlers = false;
-				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion).then(done, done.fail);
+
 			});
-			it('does not create OPTIONS handlers for CORS', done => {
-				invoke('original/echo', {method: 'OPTIONS', resolveErrors: true})
-				.then(response => {
-					expect(response.statusCode).toEqual(403);
-					expect(response.headers['content-type']).toEqual('application/json');
-					expect(response.headers['access-control-allow-methods']).toBeFalsy();
-					expect(response.headers['access-control-allow-headers']).toBeFalsy();
-					expect(response.headers['access-control-allow-origin']).toBeFalsy();
-					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
-					expect(response.headers['access-control-max-age']).toBeUndefined();
-				})
-				.then(() => invoke('original/i-dont-exist', {method: 'OPTIONS', resolveErrors: true}))
-				.then(response => {
-					expect(response.headers['access-control-allow-methods']).toBeFalsy();
-					expect(response.headers['access-control-allow-headers']).toBeFalsy();
-					expect(response.headers['access-control-allow-origin']).toBeFalsy();
-					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
-					expect(response.headers['access-control-max-age']).toBeUndefined();
-				})
-				.then(done, done.fail);
+			it('does not create any OPTIONS integration by default', done => {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					}).then(r => {
+						expect(r).toBeUndefined();
+						done.fail('OPTIONS resource created');
+					}).catch(e => {
+						expect(e.code).toEqual('NotFoundException');
+					});
+				}).then(done, done.fail);
+			});
+			it('allows the API to set up its own OPTIONS for specific resources', done => {
+				apiRouteConfig.routes.manual = {GET: {}, OPTIONS: {}};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/manual'))
+				.then(resourceId => apiGateway.getIntegrationPromise({
+					httpMethod: 'OPTIONS',
+					resourceId: resourceId,
+					restApiId: apiId
+				}))
+				.then(response => expect(response.type).toEqual('AWS_PROXY'))
+				.then(() => {
+					return invoke('original/manual', {
+						method: 'OPTIONS',
+						headers: {'content-type': 'text/plain'},
+						body: JSON.stringify({
+							'Access-Control-Allow-Methods': 'GET,OPTIONS',
+							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
+						})
+					});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
+				}).then(done, done.fail);
 			});
 		});
 		describe('when corsHandlers are set to true', () => {
@@ -1038,6 +1124,13 @@ describe('rebuildWebApi', () => {
 			it('routes the OPTIONS handler to Lambda', done => {
 				apiRouteConfig.routes.hello = {POST: {}, GET: {}};
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => apiGateway.getIntegrationPromise({
+					httpMethod: 'OPTIONS',
+					resourceId: resourceId,
+					restApiId: apiId
+				}))
+				.then(response => expect(response.type).toEqual('AWS_PROXY'))
 				.then(() => {
 					return invoke('original/echo', {
 						method: 'OPTIONS',
@@ -1060,6 +1153,34 @@ describe('rebuildWebApi', () => {
 				});
 			});
 		});
+		describe('when corsHandlers are set to a string', () => {
+			beforeEach(() => {
+				apiRouteConfig.corsHandlers = 'api.test.com';
+			});
+			it('creates a MOCK integration for the fixed domain', done => {
+
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('MOCK');
+				}).then(() => {
+					return invoke('original/echo', { method: 'OPTIONS' });
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
+					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
+					expect(contents.headers['access-control-allow-origin']).toEqual('api.test.com');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
+				}).then(done, done.fail);
+			});
+		});
+
 		describe('when corsMaxAge is set', () => {
 			beforeEach(() => {
 				apiRouteConfig.corsMaxAge = 10;
@@ -1075,6 +1196,7 @@ describe('rebuildWebApi', () => {
 					}).then(done, done.fail);
 			});
 		});
+
 	});
 
 	describe('when working with an existing api', () => {

@@ -46,6 +46,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		supportsCors = function () {
 			return (apiConfig.corsHandlers !== false);
 		},
+		supportsMockCorsIntegration = function () {
+			return supportsCors && apiConfig.corsHandlers !== true;
+		},
 		putMockIntegration = function (resourceId, httpMethod) {
 			return apiGateway.putIntegrationPromise({
 				restApiId: restApiId,
@@ -72,10 +75,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			});
 		},
 		corsHeaderValue = function () {
-			const val = apiConfig.corsHeaders || 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token';
+			if (apiConfig.corsHeaders === '') {
+				return '';
+			}
 			if (!supportsCors()) {
 				return '';
 			}
+			const val = apiConfig.corsHeaders || 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token';
 			return '\'' + val + '\'';
 		},
 		createMethod = function (methodName, resourceId, path) {
@@ -138,7 +144,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters), methodOptions.requestContentHandling))
 			.then(addMethodResponse);
 		},
-		createCorsHandler = function (resourceId) {
+		createCorsHandler = function (resourceId, supportedMethods) {
 			return apiGateway.putMethodPromise({
 				authorizationType: 'NONE',
 				httpMethod: 'OPTIONS',
@@ -146,15 +152,15 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				restApiId: restApiId
 			})
 			.then(() => {
-				if (apiConfig.corsHandlers) {
-					return putLambdaIntegration(resourceId, 'OPTIONS');
-				} else {
+				if (supportsMockCorsIntegration()) {
 					return putMockIntegration(resourceId, 'OPTIONS');
+				} else {
+					return putLambdaIntegration(resourceId, 'OPTIONS');
 				}
 			})
 			.then(() => {
 				let responseParams = null;
-				if (!apiConfig.corsHandlers) {
+				if (supportsMockCorsIntegration()) {
 					responseParams = {
 						'method.response.header.Access-Control-Allow-Headers': false,
 						'method.response.header.Access-Control-Allow-Methods': false,
@@ -173,14 +179,18 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			})
 			.then(() => {
 				let responseParams = null;
+				if (supportsMockCorsIntegration()) {
+					const corsDomain = (supportsMockCorsIntegration() && apiConfig.corsHandlers) || '*',
+						corsHeaders = corsHeaderValue();
 
-				if (!apiConfig.corsHandlers) {
 					responseParams = {
-						'method.response.header.Access-Control-Allow-Headers': corsHeaderValue(),
-						'method.response.header.Access-Control-Allow-Methods': '\'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT\'',
-						'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+						'method.response.header.Access-Control-Allow-Methods': `'OPTIONS,${supportedMethods.sort().join(',')}'`,
+						'method.response.header.Access-Control-Allow-Origin': `'${corsDomain}'`,
 						'method.response.header.Access-Control-Allow-Credentials': '\'true\''
 					};
+					if (corsHeaders) {
+						responseParams['method.response.header.Access-Control-Allow-Headers'] = corsHeaders;
+					}
 					if (apiConfig.corsMaxAge) {
 						responseParams['method.response.header.Access-Control-Max-Age'] = '\'' + apiConfig.corsMaxAge + '\'';
 					}
@@ -214,6 +224,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		configurePath = function (path) {
 			let resourceId;
 			const supportedMethods = Object.keys(apiConfig.routes[path]),
+				hasCustomCorsHandler = apiConfig.routes[path].OPTIONS,
 				createMethodMapper = function (methodName) {
 					return createMethod(methodName, resourceId, path);
 				};
@@ -221,7 +232,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			.then(r => {
 				resourceId = r;
 			})
-			.then(() => sequentialPromiseMap(supportedMethods, createMethodMapper));
+			.then(() => sequentialPromiseMap(supportedMethods, createMethodMapper))
+			.then(() => {
+				if (!supportsCors() || hasCustomCorsHandler) {
+					return;
+				}
+				return createCorsHandler(resourceId, supportedMethods);
+			});
 		},
 		dropMethods = function (resource) {
 			const dropMethodMapper = function (method) {
@@ -350,18 +367,10 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				authorizerIds = {};
 			}
 		},
-		configureCors = function () {
-			if (!supportsCors()) {
-				return;
-			}
-			return findResourceByPath('{proxy+}')
-			.then(resourceId => createCorsHandler(resourceId));
-		},
 		uploadApiConfig = function () {
 			return removeExistingResources()
 				.then(configureAuthorizers)
 				.then(rebuildApi)
-				.then(configureCors)
 				.then(deployApi)
 				.then(() => ({ cacheReused: false }));
 		},
