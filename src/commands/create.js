@@ -11,6 +11,7 @@ const path = require('path'),
 	validatePackage = require('../tasks/validate-package'),
 	retriableWrap = require('../util/retriable-wrap'),
 	loggingWrap = require('../util/logging-wrap'),
+	deployProxyApi = require('../tasks/deploy-proxy-api'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	readjson = require('../util/readjson'),
 	apiGWUrl = require('../util/apigw-url'),
@@ -223,30 +224,6 @@ module.exports = function create(options, optionalLogger) {
 				return lambdaMetadata;
 			});
 		},
-		deployProxyApi = function (lambdaMetadata) {
-			const apiConfig = {
-					version: 3,
-					corsHandlers: true,
-					routes: {
-						'{proxy+}': { ANY: {}},
-						'': { ANY: {}}
-					}
-				},
-				alias = options.version || 'latest';
-			logger.logStage('creating REST API');
-
-			return apiGatewayPromise.createRestApiPromise({
-				name: lambdaMetadata.FunctionName
-			})
-			.then(result => {
-				lambdaMetadata.api = {
-					id: result.id,
-					url: apiGWUrl(result.id, options.region, alias)
-				};
-				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
-			})
-			.then(() => lambdaMetadata);
-		},
 		saveConfig = function (lambdaMetaData) {
 			const config = {
 				lambda: {
@@ -420,7 +397,7 @@ module.exports = function create(options, optionalLogger) {
 		if (options['api-module']) {
 			return createWebApi(lambdaMetadata, packageFileDir);
 		} else if (options['deploy-proxy-api']) {
-			return deployProxyApi(lambdaMetadata);
+			return deployProxyApi(lambdaMetadata, options, apiGatewayPromise, logger);
 		} else {
 			return lambdaMetadata;
 		}

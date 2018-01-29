@@ -30,11 +30,21 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 	}
 	return installDependencies(source)
 	.then(() => {
-		const contents = [`'use strict'`,
-			'const awsServerlessExpress = require(\'aws-serverless-express\')',
-			`const app = require('./${expressModule}')`,
-			'const server = awsServerlessExpress.createServer(app)',
-			'exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)'].join('\n');
+		const contents = `'use strict'
+const awsServerlessExpress = require('aws-serverless-express')
+const app = require('./${expressModule}')
+const binaryMimeTypes = [
+	'application/octet-stream',
+	'font/eot',
+	'font/opentype',
+	'font/otf',
+	'image/jpeg',
+	'image/png',
+	'image/svg+xml'
+]
+const server = awsServerlessExpress.createServer(app, null, binaryMimeTypes);
+exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)
+`;
 
 		return fsPromise.writeFileAsync(proxyModulePath, contents, 'utf8');
 	})
