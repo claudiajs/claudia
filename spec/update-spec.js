@@ -1,5 +1,6 @@
 /*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname */
 const underTest = require('../src/commands/update'),
+	limits = require('../src/util/limits.json'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	shell = require('shelljs'),
@@ -190,7 +191,73 @@ describe('update', () => {
 			}).then(fileResult => {
 				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
 			}).then(() => {
-				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']);
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
+			}).then(() => {
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
+			}).then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+
+		it('uses a s3 bucket with server side encryption if provided', done => {
+			const s3 = new aws.S3(),
+				logger = new ArrayLogger(),
+				bucketName = testRunName + '-bucket',
+				serverSideEncryption = 'AES256';
+			let archivePath;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise().then(() => {
+				newObjects.s3bucket = bucketName;
+			}).then(() => {
+				return s3.putBucketEncryption({
+					Bucket: bucketName,
+					ServerSideEncryptionConfiguration: {
+						Rules: [
+							{
+								ApplyServerSideEncryptionByDefault: {
+									SSEAlgorithm: 'AES256'
+								}
+							}
+						]
+					}
+				}).promise();
+			}).then(() => {
+				return s3.putBucketPolicy({
+					Bucket: bucketName,
+					Policy: `{
+						"Version": "2012-10-17",
+						"Statement":  [
+							{
+								"Sid": "S3Encryption",
+								"Action": [ "s3:PutObject" ],
+								"Effect": "Deny",
+								"Resource": "arn:aws:s3:::${bucketName}/*",
+								"Principal": "*",
+								"Condition": {
+									"Null": {
+										"s3:x-amz-server-side-encryption": true
+									}
+								}
+							}
+						]
+					}`
+				}).promise();
+			}).then(() => {
+				return underTest({keep: true, 'use-s3-bucket': bucketName, 's3-sse': serverSideEncryption, source: workingdir}, logger);
+			}).then(result => {
+				const expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			}).then(fileResult => {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(() => {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
 			}).then(() => {
 				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
 			}).then(lambdaResult => {
@@ -379,7 +446,7 @@ describe('update', () => {
 				expect(params.requestContext.resourcePath).toEqual('/echo');
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'development',
-					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					claudiaConfig: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			}).then(done, done.fail);
 		});
@@ -423,7 +490,6 @@ describe('update', () => {
 					'postinstallfname': testRunName,
 					'postinstallalias': 'development',
 					'postinstallapiid': newObjects.restApi,
-					'hasPromise': 'true',
 					'postinstallapiUrl': 'https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/development',
 					'hasAWS': 'true',
 					'postinstallregion': awsRegion,
@@ -490,6 +556,7 @@ describe('update', () => {
 				'apigateway.setAcceptHeader',
 				'apigateway.getResources',
 				'apigateway.deleteResource',
+				'apigateway.getGatewayResponses',
 				'apigateway.createResource',
 				'apigateway.putMethod',
 				'apigateway.putIntegration',
@@ -614,23 +681,23 @@ describe('update', () => {
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is < 128', done => {
+		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {
 			underTest({source: workingdir, version: 'new', memory: 64})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is 0', done => {
 			underTest({source: workingdir, version: 'new', memory: 0})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+				.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is > 1536', done => {
-			underTest({source: workingdir, version: 'new', memory: 1536 + 64})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the memory value provided must be less than or equal to 1536'))
+		it(`fails if memory value is > ${limits.LAMBDA.MEMORY.MAX}`, done => {
+			underTest({source: workingdir, version: 'new', memory: limits.LAMBDA.MEMORY.MAX + 64})
+			.then(() => done.fail(`update succeeded`), error => expect(error).toEqual(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.MemorySize).toEqual(256))
 			.then(done, done.fail);
@@ -643,11 +710,11 @@ describe('update', () => {
 			.then(done, done.fail);
 		});
 		it('can specify memory size using the --memory argument', done => {
-			underTest({source: workingdir, version: 'new', memory: 1536})
+			underTest({source: workingdir, version: 'new', memory: limits.LAMBDA.MEMORY.MAX})
 			.then(() => getLambdaConfiguration('new'))
-			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(configuration => expect(configuration.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(() => getLambdaConfiguration())
-			.then(configuration => expect(configuration.MemorySize).toEqual(1536))
+			.then(configuration => expect(configuration.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(done, done.fail);
 		});
 	});

@@ -59,16 +59,18 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 		},
 		configureAuthorizer = function (authConfig, lambdaArn, authName) {
 			const type = getAuthorizerType(authConfig),
+				identityHeader = 'method.request.header.' + (authConfig.headerName || 'Authorization'),
+				identitySource = authConfig.identitySource || identityHeader,
 				params = {
-					identitySource: 'method.request.header.' + (authConfig.headerName || 'Authorization'),
+					identitySource: identitySource,
 					name: authName,
 					restApiId: apiId,
 					type: type
 				};
-			if (type === 'TOKEN') {
-				params.authorizerUri = 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
-			} else if (type === 'COGNITO_USER_POOLS') {
+			if (type === 'COGNITO_USER_POOLS') {
 				params.providerARNs = authConfig.providerARNs;
+			} else {
+				params.authorizerUri = 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
 			}
 			if (authConfig.validationExpression) {
 				params.identityValidationExpression = authConfig.validationExpression;

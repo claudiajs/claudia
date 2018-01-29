@@ -1,5 +1,28 @@
 # Release history
 
+### 3.3.0 27 January 2018
+
+- support for using server-side encryption for code uploads to s3, thanks to [Ricky Blaha](https://github.com/rickyblaha)
+
+### 3.2.0 12 January 2018
+
+- support for Kinesis Data Stream triggers with [`add-kinesis-event-source`](docs/add-kinesis-event-source.md)
+
+### 3.1.0 11 January 2018
+
+- support for request based custom API Gateway Authorisers
+
+### 3.0.0 4 January 2018
+
+- support for deploying to Lambda@Edge with [`set-cloudfront-trigger`](docs/set-cloudfront-trigger.md)
+- support for generating quick start projects with [`generate`](docs/generate.md)
+- support for configuring 3GB Lambda functions using `--memory`
+- support for deploying custom [API Gateway Responses](https://github.com/claudiajs/claudia-api-builder/blob/master/docs/customise-responses.md#api-gateway-responses)
+- speed up API GW deployments by using a single handler for CORS OPTIONS instead of replicating it for each supported route
+- fix for deploying lambdas with a VPC configuration and manually specified roles
+
+This release is fully backwards compatible with 2.0 in terms of client code, but changes internal protocols between claudia API Builder and claudia, which is why we increased the major version. For API and bot deployments, this release requires Claudia API Builder 3.0.
+
 ### 2.14.0 23 June 2017
 
 - support for `allow-alexa-skill-trigger` (thanks to [Slobodan Stojanovic](https://github.com/stojanovic))

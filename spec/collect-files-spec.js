@@ -219,6 +219,19 @@ describe('collectFiles', () => {
 				.then(done, done.fail);
 			});
 		});
+		it('empty .npmignore files do not cause .gitignore to be ignored', done => {
+			fs.writeFileSync(path.join(sourcedir, '.gitignore'), 'root.txt\nsubdir', 'utf8');
+			fs.writeFileSync(path.join(sourcedir, '.npmignore'), '', 'utf8');
+			configurePackage({});
+			underTest(sourcedir)
+			.then(packagePath => {
+				destdir = packagePath;
+				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeTruthy();
+			})
+			.then(done, done.fail);
+		});
+
 	});
 	describe('collecting dependencies', () => {
 		beforeEach(() => {

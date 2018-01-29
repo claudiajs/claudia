@@ -1,5 +1,6 @@
 /*global describe, it, expect, beforeAll, beforeEach, afterAll, afterEach*/
 const underTest = require('../src/commands/create'),
+	limits = require('../src/util/limits.json'),
 	tmppath = require('../src/util/tmppath'),
 	destroyObjects = require('./util/destroy-objects'),
 	callApi = require('../src/util/call-api'),
@@ -184,6 +185,13 @@ describe('create', () => {
 			.then(getLambdaConfiguration)
 			.then(() => done.fail('function was created'), done);
 		});
+		it('refuses to allow recursion to IAM ARN roles', done => {
+			config['allow-recursion'] = true;
+			config.role = 'arn:aws:iam::123456789012:role/S3Access';
+			createFromDir('hello-world')
+			.then(done.fail, message => expect(message).toMatch(/incompatible arguments allow-recursion and role/))
+			.then(done);
+		});
 	});
 
 	describe('role management', () => {
@@ -239,7 +247,7 @@ describe('create', () => {
 				config.role = createdRole.Arn;
 				createFromDir('hello-world', logger)
 				.then(() => {
-					newObjects.lambdaRole = false;
+					newObjects.lambdaRole = roleName;
 					expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
 				})
 				.then(getLambdaConfiguration)
@@ -302,7 +310,7 @@ describe('create', () => {
 				done.fail();
 			});
 		});
-		describe('when VPC access is desired', () => {
+		describe('VPC setup', () => {
 			let vpc, subnet, securityGroup;
 			const securityGroupName = `${testRunName}SecurityGroup`,
 				CidrBlock = '10.0.0.0/16',
@@ -322,6 +330,10 @@ describe('create', () => {
 				})
 				.then(done, done.fail);
 			});
+			beforeEach(() => {
+				config['security-group-ids'] = securityGroup.GroupId;
+				config['subnet-ids'] = subnet.SubnetId;
+			});
 			afterAll(done => {
 				ec2.deleteSubnet({ SubnetId: subnet.SubnetId }).promise()
 				.then(() => ec2.deleteSecurityGroup({ GroupId: securityGroup.GroupId }).promise())
@@ -330,8 +342,6 @@ describe('create', () => {
 				.catch(done.fail);
 			});
 			it('adds subnet and security group membership to the function', done => {
-				config['security-group-ids'] = securityGroup.GroupId;
-				config['subnet-ids'] = subnet.SubnetId;
 				createFromDir('hello-world')
 				.then(getLambdaConfiguration)
 				.then(result => {
@@ -344,8 +354,6 @@ describe('create', () => {
 				});
 			});
 			it('adds VPC Access IAM role', done => {
-				config['security-group-ids'] = securityGroup.GroupId;
-				config['subnet-ids'] = subnet.SubnetId;
 				createFromDir('hello-world')
 				.then(() => iam.listRolePolicies({ RoleName: `${testRunName}-executor` }).promise())
 				.then(result => expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']))
@@ -369,11 +377,69 @@ describe('create', () => {
 							}]
 						});
 				})
-				.then(done, e => {
-					console.log(e);
-					done.fail();
+				.then(done, done.fail);
+			});
+			describe('when a role is provided', () => {
+				let createdRoleArn, roleName;
+				beforeEach(done => {
+					roleName = `${testRunName}-manual`;
+					fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
+					.then(lambdaRolePolicy => {
+						return iam.createRole({
+							RoleName: roleName,
+							AssumeRolePolicyDocument: lambdaRolePolicy
+						}).promise();
+					})
+					.then(result => {
+						createdRoleArn = result.Role.Arn;
+					})
+					.then(done, done.fail);
+				});
+				afterEach(() => {
+					newObjects.lambdaRole = roleName;
+				});
+				it('patches IAM policies when the role is specified with a name', done => {
+					config.role = roleName;
+					createFromDir('hello-world')
+					.then(() => iam.listRolePolicies({ RoleName: roleName }).promise())
+					.then(result => expect(result.PolicyNames).toEqual(['vpc-access-execution']))
+					.then(() => iam.getRolePolicy({ PolicyName: 'vpc-access-execution', RoleName: roleName }).promise())
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
+							{
+								'Version': '2012-10-17',
+								'Statement': [{
+									'Sid': 'VPCAccessExecutionPermission',
+									'Effect': 'Allow',
+									'Action': [
+										'logs:CreateLogGroup',
+										'logs:CreateLogStream',
+										'logs:PutLogEvents',
+										'ec2:CreateNetworkInterface',
+										'ec2:DeleteNetworkInterface',
+										'ec2:DescribeNetworkInterfaces'
+									],
+									'Resource': '*'
+								}]
+							});
+					})
+					.then(done, done.fail);
+				});
+				it('does not try to patch IAM policies if the role is specified with an ARN', done => {
+					config.role = createdRoleArn;
+					fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
+					.then(vpcPolicy => iam.putRolePolicy({
+						RoleName: roleName,
+						PolicyName: 'test-vpc-access',
+						PolicyDocument: vpcPolicy
+					}).promise())
+					.then(() => createFromDir('hello-world'))
+					.then(() => iam.listRolePolicies({ RoleName: roleName }).promise())
+					.then(result => expect(result.PolicyNames).toEqual(['test-vpc-access']))
+					.then(done, done.fail);
 				});
 			});
+
 		});
 
 		it('loads additional policies from a policies directory recursively, if provided', done => {
@@ -444,50 +510,43 @@ describe('create', () => {
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
 			.then(done, done.fail);
 		});
-		it('can create nodejs4.3-edge deployments using the --runtime argument', done => {
-			config.runtime = 'nodejs4.3-edge';
-			createFromDir('hello-world')
-			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3-edge'))
-			.then(done, done.fail);
-		});
 	});
 	describe('memory option support', () => {
-		it('fails if memory value is < 128', done => {
-			config.memory = 128 - 64;
+		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {
+			config.memory = limits.LAMBDA.MEMORY.MIN - 64;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is 0', done => {
 			config.memory = 0;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be greater than or equal to 128'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`))
 			.then(done, done.fail);
 		});
-		it('fails if memory value is > 1536', done => {
-			config.memory = 1536 + 64;
+		it(`fails if memory value is > ${limits.LAMBDA.MEMORY.MAX}`, done => {
+			config.memory = limits.LAMBDA.MEMORY.MAX + 64;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the memory value provided must be less than or equal to 1536'))
+			.then(done.fail, error => expect(error).toEqual(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`))
 			.then(done, done.fail);
 		});
 		it('fails if memory value is not a multiple of 64', done => {
-			config.memory = 128 + 2;
+			config.memory = limits.LAMBDA.MEMORY.MIN + 2;
 			createFromDir('hello-world')
 			.then(done.fail, error => expect(error).toEqual('the memory value provided must be a multiple of 64'))
 			.then(done, done.fail);
 		});
-		it('creates memory size of 128 MB by default', done => {
+		it(`creates memory size of ${limits.LAMBDA.MEMORY.MIN} MB by default`, done => {
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(128))
+			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(limits.LAMBDA.MEMORY.MIN))
 			.then(done, done.fail);
 		});
 		it('can specify memory size using the --memory argument', done => {
-			config.memory = 1536;
+			config.memory = limits.LAMBDA.MEMORY.MAX;
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(1536))
+			.then(lambdaResult => expect(lambdaResult.MemorySize).toEqual(limits.LAMBDA.MEMORY.MAX))
 			.then(done, done.fail);
 		});
 	});
@@ -569,12 +628,12 @@ describe('create', () => {
 			createFromDir('hello-world')
 			.then(creationResult => {
 				expect(creationResult.lambda).toEqual({
-					role: 'hello-world-executor',
+					role: 'hello-world2-executor',
 					region: awsRegion,
-					name: 'hello-world'
+					name: 'hello-world2'
 				});
 			})
-			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world' }).promise())
+			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world2' }).promise())
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
 			.then(done, done.fail);
 		});
@@ -736,7 +795,77 @@ describe('create', () => {
 				}).promise();
 			})
 			.then(fileResult => expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size))
-			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload']))
+			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']))
+			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
+			.then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello world"');
+			})
+			.then(done, done.fail);
+		});
+		it('uses a s3 bucket with server side encryption if provided', done => {
+			const s3 = new aws.S3(),
+				logger = new ArrayLogger(),
+				bucketName = `${testRunName}-bucket`,
+				serverSideEncryption = 'AES256';
+			let archivePath;
+			config.keep = true;
+			config['use-s3-bucket'] = bucketName;
+			config['s3-sse'] = serverSideEncryption;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise()
+			.then(() => {
+				newObjects.s3bucket = bucketName;
+			})
+			.then(() => {
+				return s3.putBucketEncryption({
+					Bucket: bucketName,
+					ServerSideEncryptionConfiguration: {
+						Rules: [
+							{
+								ApplyServerSideEncryptionByDefault: {
+									SSEAlgorithm: 'AES256'
+								}
+							}
+						]
+					}
+				}).promise();
+			})
+			.then(() => {
+				return s3.putBucketPolicy({
+					Bucket: bucketName,
+					Policy: `{
+						"Version": "2012-10-17",
+						"Statement":  [
+							{
+								"Sid": "S3Encryption",
+								"Action": [ "s3:PutObject" ],
+								"Effect": "Deny",
+								"Resource": "arn:aws:s3:::${bucketName}/*",
+								"Principal": "*",
+								"Condition": {
+									"Null": {
+										"s3:x-amz-server-side-encryption": true
+									}
+								}
+							}
+						]
+					}`
+				}).promise();
+			})
+			.then(() => createFromDir('hello-world', logger))
+			.then(result => {
+				const expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			})
+			.then(fileResult => expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size))
+			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']))
 			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
 			.then(lambdaResult => {
 				expect(lambdaResult.StatusCode).toEqual(200);
@@ -923,7 +1052,7 @@ describe('create', () => {
 			.then(params => {
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'latest',
-					claudiaConfig: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					claudiaConfig: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			})
 			.then(done, done.fail);
@@ -968,7 +1097,6 @@ describe('create', () => {
 					'postinstallalias': 'development',
 					'postinstallapiid': apiId,
 					'postinstallregion': awsRegion,
-					'hasPromise': 'true',
 					'postinstallapiUrl': `https://${apiId}.execute-api.${awsRegion}.amazonaws.com/development`,
 					'hasAWS': 'true',
 					'postinstalloption': 'option-123',
@@ -1016,6 +1144,7 @@ describe('create', () => {
 				'apigateway.setAcceptHeader',
 				'apigateway.getRestApi',
 				'apigateway.getResources',
+				'apigateway.getGatewayResponses',
 				'apigateway.createResource',
 				'apigateway.putMethod',
 				'apigateway.putIntegration',

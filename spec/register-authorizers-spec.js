@@ -104,6 +104,82 @@ describe('registerAuthorizers', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('creates header-based authorizers with an identity source', done => {
+		const authorizerConfig = {
+			first: {
+				lambdaName: authorizerLambdaName, identitySource: 'method.request.header.Auth2'
+			}
+		};
+		let result;
+		underTest(authorizerConfig, apiId, awsRegion)
+		.then(createResult => {
+			result = createResult;
+		})
+		.then(() => apiGateway.getAuthorizersPromise({ restApiId: apiId }))
+		.then(authorizers => {
+			expect(authorizers.items.length).toEqual(1);
+			expect(result.first).toEqual(authorizers.items[0].id);
+			expect(authorizers.items[0].name).toEqual('first');
+			expect(authorizers.items[0].type).toEqual('TOKEN');
+			expect(authorizers.items[0].authorizerCredentials).toBeFalsy();
+			expect(authorizers.items[0].authorizerResultTtlInSeconds).toBeFalsy();
+			expect(authorizers.items[0].identityValidationExpression).toBeFalsy();
+			expect(authorizers.items[0].identitySource).toEqual('method.request.header.Auth2');
+			checkAuthUri(authorizers.items[0].authorizerUri);
+		})
+		.then(done, done.fail);
+	});
+	it('creates request-based authorizers with a header', done => {
+		const authorizerConfig = {
+			first: {
+				lambdaName: authorizerLambdaName, type: 'REQUEST', headerName: 'Authorization'
+			}
+		};
+		let result;
+		underTest(authorizerConfig, apiId, awsRegion)
+		.then(createResult => {
+			result = createResult;
+		})
+		.then(() => apiGateway.getAuthorizersPromise({ restApiId: apiId }))
+		.then(authorizers => {
+			expect(authorizers.items.length).toEqual(1);
+			expect(result.first).toEqual(authorizers.items[0].id);
+			expect(authorizers.items[0].name).toEqual('first');
+			expect(authorizers.items[0].type).toEqual('REQUEST');
+			expect(authorizers.items[0].authorizerCredentials).toBeFalsy();
+			expect(authorizers.items[0].authorizerResultTtlInSeconds).toBeFalsy();
+			expect(authorizers.items[0].identityValidationExpression).toBeFalsy();
+			expect(authorizers.items[0].identitySource).toEqual('method.request.header.Authorization');
+			checkAuthUri(authorizers.items[0].authorizerUri);
+		})
+		.then(done, done.fail);
+	});
+
+	it('creates request-based authorizers with an identity source', done => {
+		const authorizerConfig = {
+			first: {
+				lambdaName: authorizerLambdaName, type: 'REQUEST', identitySource: 'method.request.header.Auth, method.request.querystring.Name'
+			}
+		};
+		let result;
+		underTest(authorizerConfig, apiId, awsRegion)
+		.then(createResult => {
+			result = createResult;
+		})
+		.then(() => apiGateway.getAuthorizersPromise({ restApiId: apiId }))
+		.then(authorizers => {
+			expect(authorizers.items.length).toEqual(1);
+			expect(result.first).toEqual(authorizers.items[0].id);
+			expect(authorizers.items[0].name).toEqual('first');
+			expect(authorizers.items[0].type).toEqual('REQUEST');
+			expect(authorizers.items[0].authorizerCredentials).toBeFalsy();
+			expect(authorizers.items[0].authorizerResultTtlInSeconds).toBeFalsy();
+			expect(authorizers.items[0].identityValidationExpression).toBeFalsy();
+			expect(authorizers.items[0].identitySource).toEqual('method.request.header.Auth, method.request.querystring.Name');
+			checkAuthUri(authorizers.items[0].authorizerUri);
+		})
+		.then(done, done.fail);
+	});
 	it('assigns a token validation regex if supplied', done => {
 		const authorizerConfig = {
 			first: { lambdaName: authorizerLambdaName,  validationExpression: 'A-Z' }

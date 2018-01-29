@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "2.14.2",
+  "version": "3.3.0",
   "dependencies": {
     "acorn": {
       "version": "4.0.13",
@@ -61,14 +61,14 @@
       "resolved": "https://registry.npmjs.org/async/-/async-2.5.0.tgz"
     },
     "aws-sdk": {
-      "version": "2.62.0",
-      "from": "aws-sdk@^2.62.0",
-      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.62.0.tgz",
+      "version": "2.173.0",
+      "from": "aws-sdk@latest",
+      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.173.0.tgz",
       "dependencies": {
         "uuid": {
-          "version": "3.0.1",
-          "from": "uuid@3.0.1",
-          "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.0.1.tgz"
+          "version": "3.1.0",
+          "from": "uuid@3.1.0",
+          "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.1.0.tgz"
         }
       }
     },
@@ -78,9 +78,9 @@
       "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-0.4.2.tgz"
     },
     "base64-js": {
-      "version": "1.2.0",
-      "from": "base64-js@^1.0.2",
-      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.2.0.tgz"
+      "version": "1.2.1",
+      "from": "base64-js@>=1.0.2 <2.0.0",
+      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.2.1.tgz"
     },
     "bl": {
       "version": "1.2.1",
@@ -103,9 +103,16 @@
       "resolved": "https://registry.npmjs.org/browserify-zlib/-/browserify-zlib-0.1.4.tgz"
     },
     "buffer": {
-      "version": "5.0.6",
-      "from": "buffer@5.0.6",
-      "resolved": "https://registry.npmjs.org/buffer/-/buffer-5.0.6.tgz"
+      "version": "4.9.1",
+      "from": "buffer@4.9.1",
+      "resolved": "https://registry.npmjs.org/buffer/-/buffer-4.9.1.tgz",
+      "dependencies": {
+        "isarray": {
+          "version": "1.0.0",
+          "from": "isarray@>=1.0.0 <2.0.0",
+          "resolved": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
+        }
+      }
     },
     "buffer-crc32": {
       "version": "0.2.13",
@@ -302,6 +309,11 @@
       "from": "esutils@^2.0.2",
       "resolved": "https://registry.npmjs.org/esutils/-/esutils-2.0.2.tgz"
     },
+    "events": {
+      "version": "1.1.1",
+      "from": "events@>=1.1.1 <2.0.0",
+      "resolved": "https://registry.npmjs.org/events/-/events-1.1.1.tgz"
+    },
     "extend": {
       "version": "3.0.1",
       "from": "extend@3",
@@ -376,7 +388,7 @@
     },
     "ieee754": {
       "version": "1.1.8",
-      "from": "ieee754@^1.1.4",
+      "from": "ieee754@>=1.1.4 <2.0.0",
       "resolved": "https://registry.npmjs.org/ieee754/-/ieee754-1.1.8.tgz"
     },
     "inflight": {
@@ -848,14 +860,7 @@
     "xmlbuilder": {
       "version": "4.2.1",
       "from": "xmlbuilder@4.2.1",
-      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-4.2.1.tgz",
-      "dependencies": {
-        "lodash": {
-          "version": "4.17.4",
-          "from": "lodash@^4.0.0",
-          "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.4.tgz"
-        }
-      }
+      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-4.2.1.tgz"
     },
     "xregexp": {
       "version": "2.0.0",

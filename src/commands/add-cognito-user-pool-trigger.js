@@ -39,6 +39,15 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 			return getOwnerAccount(optionalLogger)
 				.then(owner => `arn:aws:cognito-idp:${lambdaConfig.region}:${owner}:userpool/${options['user-pool-id']}`);
 		},
+		cleanUpPoolConfig = function (data) {
+			/* cognito update requires the full config, not just a patch, but some attributes returned
+			 * from describeUserPool are not accepted back into the configuration, so they have to be removed
+			 */
+			['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers', 'AliasAttributes', 'UsernameAttributes'].forEach(n => delete data[n]);
+			if (Object.keys(data.UserPoolAddOns).length === 0) {
+				delete data.UserPoolAddOns;
+			}
+		},
 		patchPool = function () {
 			return cognito.describeUserPool({
 				UserPoolId: options['user-pool-id']
@@ -47,7 +56,7 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 				data.UserPoolId = data.Id;
 				data.LambdaConfig = data.LambdaConfig || {};
 				options.events.split(',').forEach(name => data.LambdaConfig[name] = lambdaConfig.arn);
-				['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers', 'AliasAttributes'].forEach(n => delete data[n]);
+				cleanUpPoolConfig(data);
 				return cognito.updateUserPool(data).promise();
 			});
 		};

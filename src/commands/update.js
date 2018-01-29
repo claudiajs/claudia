@@ -1,4 +1,5 @@
 const zipdir = require('../tasks/zipdir'),
+	limits = require('../util/limits.json'),
 	collectFiles = require('../tasks/collect-files'),
 	os = require('os'),
 	path = require('path'),
@@ -11,7 +12,6 @@ const zipdir = require('../tasks/zipdir'),
 	rebuildWebApi = require('../tasks/rebuild-web-api'),
 	validatePackage = require('../tasks/validate-package'),
 	apiGWUrl = require('../util/apigw-url'),
-	sequentialPromiseMap = require('sequential-promise-map'),
 	loggingWrap = require('../util/logging-wrap'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
@@ -51,7 +51,6 @@ module.exports = function update(options, optionalLogger) {
 			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
 				.then(rebuildResult => {
 					if (apiModule.postDeploy) {
-						Promise.map = sequentialPromiseMap;
 						return apiModule.postDeploy(
 							options,
 							{
@@ -64,8 +63,7 @@ module.exports = function update(options, optionalLogger) {
 							},
 							{
 								apiGatewayPromise: apiGateway,
-								aws: aws,
-								Promise: Promise
+								aws: aws
 							}
 						);
 					}
@@ -134,11 +132,11 @@ module.exports = function update(options, optionalLogger) {
 				}
 			}
 			if (options.memory || options.memory === 0) {
-				if (options.memory < 128) {
-					return Promise.reject('the memory value provided must be greater than or equal to 128');
+				if (options.memory < limits.LAMBDA.MEMORY.MIN) {
+					return Promise.reject(`the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`);
 				}
-				if (options.memory > 1536) {
-					return Promise.reject('the memory value provided must be less than or equal to 1536');
+				if (options.memory > limits.LAMBDA.MEMORY.MAX) {
+					return Promise.reject(`the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`);
 				}
 				if (options.memory % 64 !== 0) {
 					return Promise.reject('the memory value provided must be a multiple of 64');
@@ -203,7 +201,7 @@ module.exports = function update(options, optionalLogger) {
 	})
 	.then(zipFile => {
 		packageArchive = zipFile;
-		return lambdaCode(packageArchive, options['use-s3-bucket'], logger);
+		return lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger);
 	})
 	.then(functionCode => {
 		logger.logStage('updating Lambda');
@@ -295,6 +293,12 @@ module.exports.doc = {
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 's3-sse',
+			optional: true,
+			example: 'AES256',
+			description: 'The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`'
 		},
 		{
 			argument: 'update-env',

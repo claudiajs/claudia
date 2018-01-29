@@ -1,0 +1,16 @@
+{
+  "name": "#{projectName}",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create": "claudia create --region #{region} --api-module index",
+    "deploy": "claudia update"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "claudia-api-builder": "^2.5.1"
+  }
+}

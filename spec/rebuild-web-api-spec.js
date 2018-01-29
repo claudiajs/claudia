@@ -22,13 +22,28 @@ describe('rebuildWebApi', () => {
 			}
 			options.retry = 403;
 			return callApi(apiId, awsRegion, url, options);
+		},
+		getCustomGatewayResponses = function () {
+			return apiGateway.getGatewayResponsesPromise({ restApiId: apiId })
+			.then(result => result.items.filter(f => !f.defaultResponse));
+		},
+		getResourceForPath = function (path) {
+			return apiGateway.getResourcesPromise({
+				restApiId: apiId
+			})
+			.then(resources => {
+				const resource = resources.items.find(resource => (resource.path === path));
+				return resource && resource.id;
+			});
 		};
+
+
 	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		shell.mkdir(workingdir);
-		apiRouteConfig = {version: 3, routes: { echo: {'GET': {} } }};
+		apiRouteConfig = {version: 4, routes: { echo: {'GET': {} } }};
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
@@ -552,6 +567,150 @@ describe('rebuildWebApi', () => {
 			});
 		});
 	});
+	describe('custom gateway response support', () => {
+		beforeEach(done => {
+			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			create({name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+				newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			}).then(() => {
+				return apiGateway.createRestApiPromise({
+					name: testRunName
+				});
+			}).then(result => {
+				apiId = result.id;
+				newObjects.restApi = result.id;
+			}).then(done, done.fail);
+			apiRouteConfig.corsHandlers = false;
+		});
+		it('does not add any custom responses by default', done => {
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result).toEqual([]))
+			.then(done, done.fail);
+		});
+		it('adds new custom gateway responses if required', done => {
+			apiRouteConfig.customResponses = {'DEFAULT_4XX': {statusCode: 411}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => {
+				expect(result.length).toEqual(1);
+				expect(result[0].responseType).toEqual('DEFAULT_4XX');
+				expect(result[0].statusCode).toEqual('411');
+			})
+			.then(() => {
+				return invoke('original/non-existing', {resolveErrors: true});
+			}).then(response => {
+				expect(response.statusCode).toEqual(411);
+			}).then(done, done.fail);
+		});
+		it('adds multiple custom gateway responses', done => {
+			const sortByResponseType = function (a, b) {
+				if (a.responseType < b.responseType) {
+					return -1;
+				}
+				if (a.responseType > b.responseType) {
+					return 1;
+				}
+				return 0;
+			};
+			apiRouteConfig.customResponses = {'DEFAULT_4XX': {statusCode: 411}, 'DEFAULT_5XX': {statusCode: 511}};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => {
+				result.sort(sortByResponseType);
+				expect(result.length).toEqual(2);
+				expect(result[0].responseType).toEqual('DEFAULT_4XX');
+				expect(result[0].statusCode).toEqual('411');
+				expect(result[1].responseType).toEqual('DEFAULT_5XX');
+				expect(result[1].statusCode).toEqual('511');
+			})
+			.then(() => {
+				return invoke('original/non-existing', {resolveErrors: true});
+			}).then(response => {
+				expect(response.statusCode).toEqual(411);
+			}).then(done, done.fail);
+		});
+		it('adds response parameters', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					responseParameters: {
+						'gatewayresponse.header.x-response-claudia': '\'yes\'',
+						'gatewayresponse.header.x-name': 'method.request.header.name',
+						'gatewayresponse.header.Access-Control-Allow-Origin': '\'a.b.c\'',
+						'gatewayresponse.header.Content-Type': '\'application/json\''
+					},
+					statusCode: 411,
+					responseTemplates: {
+						'application/json': '{"custom": true, "message":$context.error.messageString}'
+					}
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing?key=tom', {
+				headers: {'name': 'tom'},
+				resolveErrors: true
+			}))
+			.then(response => {
+				const bodyJson = JSON.parse(response.body);
+				expect(bodyJson.custom).toEqual(true);
+				expect(bodyJson.message).toEqual('Missing Authentication Token');
+				expect(response.statusCode).toEqual(411);
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('yes');
+				expect(response.headers['x-name']).toEqual('tom');
+			})
+			.then(done, done.fail);
+		});
+		it('works with a headers shortcut', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					headers: {
+						'x-response-claudia': 'yes',
+						'Content-Type': 'application/json',
+						'Access-Control-Allow-Origin': 'a.b.c'
+					}
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing', { resolveErrors: true }))
+			.then(response => {
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('yes');
+			})
+			.then(done, done.fail);
+		});
+		it('can combine responseParameters and headers', done => {
+			apiRouteConfig.customResponses = {
+				'DEFAULT_4XX': {
+					responseParameters: {
+						'gatewayresponse.header.x-response-claudia': '\'yes\'',
+						'gatewayresponse.header.x-name': 'method.request.header.name'
+					},
+					headers: {
+						'x-response-claudia': 'no',
+						'Content-Type': 'application/json',
+						'Access-Control-Allow-Origin': 'a.b.c'
+					},
+					statusCode: 411
+				}
+			};
+			underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+			.then(() => invoke('original/non-existing?key=tom', {
+				headers: {'name': 'tom'},
+				resolveErrors: true
+			}))
+			.then(response => {
+				expect(response.headers['content-type']).toEqual('application/json');
+				expect(response.headers['access-control-allow-origin']).toEqual('a.b.c');
+				expect(response.headers['x-response-claudia']).toEqual('no');
+				expect(response.headers['x-name']).toEqual('tom');
+
+			})
+			.then(done, done.fail);
+		});
+	});
 	describe('binary media type support', () => {
 		beforeEach(done => {
 			shell.cp('-r', 'spec/test-projects/api-gw-binary/*', workingdir);
@@ -804,7 +963,6 @@ describe('rebuildWebApi', () => {
 			}).then(done, done.fail);
 
 		});
-
 		describe('without custom CORS options', () => {
 			it('creates OPTIONS handlers for CORS', done => {
 				apiRouteConfig.routes.hello = {POST: {}, GET: {}};
@@ -812,7 +970,7 @@ describe('rebuildWebApi', () => {
 				.then(() => {
 					return invoke('original/echo', {method: 'OPTIONS'});
 				}).then(contents => {
-					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
@@ -820,19 +978,73 @@ describe('rebuildWebApi', () => {
 				}).then(() => {
 					return invoke('original/hello', {method: 'OPTIONS'});
 				}).then(contents => {
-					expect(contents.headers['access-control-allow-methods']).toEqual('DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT');
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET,POST');
 					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
 					expect(contents.headers['access-control-allow-origin']).toEqual('*');
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 					expect(contents.headers['access-control-max-age']).toBeUndefined();
 				}).then(done, done.fail);
 			});
+			it('creates a MOCK integration for performance', done => {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('MOCK');
+				}).then(done, done.fail);
+			});
+			it('can create CORS handlers for APIs with param paths -- regression check', done => {
+				apiRouteConfig.routes['{owner}'] = {GET: {}};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => {
+					return invoke('original/echo', {method: 'OPTIONS'});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
+					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
+				}).then(done, done.fail);
+			});
+			it('allows a custom OPTIONS handler to take over execution completely for CORS', done => {
+				apiRouteConfig.routes.manual = {POST: {}, OPTIONS: {}};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/manual'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('AWS_PROXY');
+				}).then(() => {
+					return invoke('original/manual', {
+						method: 'OPTIONS',
+						headers: {'content-type': 'text/plain'},
+						body: JSON.stringify({
+							'Access-Control-Allow-Methods': 'GET,OPTIONS',
+							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
+						})
+					});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
+				}).then(done, done.fail);
+			});
 		});
 		describe('when corsHeaders are set', () => {
-			beforeEach(() => {
-				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
-			});
 			it('uses the headers for OPTIONS handlers', done => {
+				apiRouteConfig.corsHeaders = 'X-Custom-Header,X-Api-Key';
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
 				.then(() => {
 					return invoke('original/echo', {method: 'OPTIONS'});
@@ -842,22 +1054,66 @@ describe('rebuildWebApi', () => {
 					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
 				}).then(done, done.fail);
 			});
+			it('uses the headers for OPTIONS handlers even when blank string', done => {
+				apiRouteConfig.corsHeaders = '';
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => {
+					return invoke('original/echo', {method: 'OPTIONS'});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-headers']).toBeUndefined();
+					expect(contents.headers['access-control-allow-origin']).toEqual('*');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+				}).then(done, done.fail);
+			});
 		});
 		describe('when corsHandlers are set to false', () => {
-			beforeEach(done => {
-				apiRouteConfig.corsHandlers = false;
-				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion).then(done, done.fail);
-			});
-			it('does not create OPTIONS handlers for CORS', done => {
-				invoke('original/echo', {method: 'OPTIONS', resolveErrors: true})
-				.then(response => {
-					expect(response.statusCode).toEqual(403);
-					expect(response.headers['content-type']).toEqual('application/json');
-					expect(response.headers['access-control-allow-methods']).toBeFalsy();
-					expect(response.headers['access-control-allow-headers']).toBeFalsy();
-					expect(response.headers['access-control-allow-origin']).toBeFalsy();
-					expect(response.headers['access-control-allow-credentials']).toBeFalsy();
+			beforeEach(() => {
 
+				apiRouteConfig.corsHandlers = false;
+
+			});
+			it('does not create any OPTIONS integration by default', done => {
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					}).then(r => {
+						expect(r).toBeUndefined();
+						done.fail('OPTIONS resource created');
+					}).catch(e => {
+						expect(e.code).toEqual('NotFoundException');
+					});
+				}).then(done, done.fail);
+			});
+			it('allows the API to set up its own OPTIONS for specific resources', done => {
+				apiRouteConfig.routes.manual = {GET: {}, OPTIONS: {}};
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/manual'))
+				.then(resourceId => apiGateway.getIntegrationPromise({
+					httpMethod: 'OPTIONS',
+					resourceId: resourceId,
+					restApiId: apiId
+				}))
+				.then(response => expect(response.type).toEqual('AWS_PROXY'))
+				.then(() => {
+					return invoke('original/manual', {
+						method: 'OPTIONS',
+						headers: {'content-type': 'text/plain'},
+						body: JSON.stringify({
+							'Access-Control-Allow-Methods': 'GET,OPTIONS',
+							'Access-Control-Allow-Headers': 'X-Custom-Header,X-Api-Key',
+							'Access-Control-Allow-Origin': 'custom-origin',
+							'Access-Control-Allow-credentials': 'c1-false'
+						})
+					});
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('GET,OPTIONS');
+					expect(contents.headers['access-control-allow-headers']).toEqual('X-Custom-Header,X-Api-Key');
+					expect(contents.headers['access-control-allow-origin']).toEqual('custom-origin');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('c1-false');
 				}).then(done, done.fail);
 			});
 		});
@@ -868,6 +1124,13 @@ describe('rebuildWebApi', () => {
 			it('routes the OPTIONS handler to Lambda', done => {
 				apiRouteConfig.routes.hello = {POST: {}, GET: {}};
 				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => apiGateway.getIntegrationPromise({
+					httpMethod: 'OPTIONS',
+					resourceId: resourceId,
+					restApiId: apiId
+				}))
+				.then(response => expect(response.type).toEqual('AWS_PROXY'))
 				.then(() => {
 					return invoke('original/echo', {
 						method: 'OPTIONS',
@@ -890,6 +1153,34 @@ describe('rebuildWebApi', () => {
 				});
 			});
 		});
+		describe('when corsHandlers are set to a string', () => {
+			beforeEach(() => {
+				apiRouteConfig.corsHandlers = 'api.test.com';
+			});
+			it('creates a MOCK integration for the fixed domain', done => {
+
+				underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion)
+				.then(() => getResourceForPath('/echo'))
+				.then(resourceId => {
+					return apiGateway.getIntegrationPromise({
+						httpMethod: 'OPTIONS',
+						resourceId: resourceId,
+						restApiId: apiId
+					});
+				}).then(response => {
+					expect(response.type).toEqual('MOCK');
+				}).then(() => {
+					return invoke('original/echo', { method: 'OPTIONS' });
+				}).then(contents => {
+					expect(contents.headers['access-control-allow-methods']).toEqual('OPTIONS,GET');
+					expect(contents.headers['access-control-allow-headers']).toEqual('Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token');
+					expect(contents.headers['access-control-allow-origin']).toEqual('api.test.com');
+					expect(contents.headers['access-control-allow-credentials']).toEqual('true');
+					expect(contents.headers['access-control-max-age']).toBeUndefined();
+				}).then(done, done.fail);
+			});
+		});
+
 		describe('when corsMaxAge is set', () => {
 			beforeEach(() => {
 				apiRouteConfig.corsMaxAge = 10;
@@ -905,6 +1196,7 @@ describe('rebuildWebApi', () => {
 					}).then(done, done.fail);
 			});
 		});
+
 	});
 
 	describe('when working with an existing api', () => {
@@ -927,6 +1219,23 @@ describe('rebuildWebApi', () => {
 				apiRouteConfig.corsHandlers = false;
 				return underTest(newObjects.lambdaFunction, 'original', apiId, apiRouteConfig, awsRegion);
 			}).then(done, done.fail);
+		});
+		it('removes all previous custom gateway responses', done => {
+			apiGateway.putGatewayResponsePromise({
+				restApiId: apiId,
+				responseType: 'DEFAULT_4XX',
+				statusCode: '411'
+			})
+			.then(() => underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion))
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result).toEqual([]))
+			.then(done, done.fail);
+		});
+		it('adds new custom gateway responses', done => {
+			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 3, routes: {extra: { GET: {}}}, customResponses: {'DEFAULT_4XX': {statusCode: 411}}}, awsRegion)
+			.then(() => getCustomGatewayResponses())
+			.then(result => expect(result.map(r => r.responseType)).toEqual(['DEFAULT_4XX']))
+			.then(done, done.fail);
 		});
 		it('adds extra paths from the new definition', done => {
 			underTest(newObjects.lambdaFunction, 'original', apiId, {version: 2, routes: {extra: { GET: {}}}}, awsRegion)
@@ -1109,7 +1418,7 @@ describe('rebuildWebApi', () => {
 						}
 					}
 				}
-			}, '/echo/{name}', 'OPTIONS').then(result => {
+			}, '/{proxy+}', 'OPTIONS').then(result => {
 				expect(result.requestParameters).toBeFalsy();
 				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
 			}).then(done, done.fail);
@@ -1138,6 +1447,7 @@ describe('rebuildWebApi', () => {
 					'apigateway.setupRequestListeners',
 					'apigateway.setAcceptHeader',
 					'apigateway.getResources',
+					'apigateway.getGatewayResponses',
 					'apigateway.createResource',
 					'apigateway.putMethod',
 					'apigateway.putIntegration',
@@ -1172,7 +1482,7 @@ describe('rebuildWebApi', () => {
 				const params = JSON.parse(contents.body);
 				expect(params.stageVariables).toEqual({
 					lambdaVersion: 'original',
-					configHash: 'nWvdJ3sEScZVJeZSDq4LZtDsCZw9dDdmsJbkhnuoZIY='
+					configHash: '-EDMbG0OcNlCZzstFc2jH6rlpI1YDlNYc9YGGxUFuXo='
 				});
 			}).then(done, done.fail);
 		});

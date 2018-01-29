@@ -1,5 +1,5 @@
 const path = require('path'),
-	sequentialPromiseMap = require('sequential-promise-map'),
+	limits = require('../util/limits.json'),
 	fsUtil = require('../util/fs-util'),
 	aws = require('aws-sdk'),
 	zipdir = require('../tasks/zipdir'),
@@ -20,6 +20,7 @@ const path = require('path'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
 	os = require('os'),
+	isRoleArn = require('../util/is-role-arn'),
 	lambdaCode = require('../tasks/lambda-code'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger');
@@ -94,11 +95,11 @@ module.exports = function create(options, optionalLogger) {
 				return 'no files match additional policies (' + options.policies + ')';
 			}
 			if (options.memory || options.memory === 0) {
-				if (options.memory < 128) {
-					return 'the memory value provided must be greater than or equal to 128';
+				if (options.memory < limits.LAMBDA.MEMORY.MIN) {
+					return `the memory value provided must be greater than or equal to ${limits.LAMBDA.MEMORY.MIN}`;
 				}
-				if (options.memory > 1536) {
-					return 'the memory value provided must be less than or equal to 1536';
+				if (options.memory > limits.LAMBDA.MEMORY.MAX) {
+					return `the memory value provided must be less than or equal to ${limits.LAMBDA.MEMORY.MAX}`;
 				}
 				if (options.memory % 64 !== 0) {
 					return 'the memory value provided must be a multiple of 64';
@@ -111,6 +112,9 @@ module.exports = function create(options, optionalLogger) {
 				if (options.timeout > 300) {
 					return 'the timeout value provided must be less than or equal to 300';
 				}
+			}
+			if (options['allow-recursion'] && options.role && isRoleArn(options.role)) {
+				return 'incompatible arguments allow-recursion and role. When specifying a role ARN, Claudia does not patch IAM policies.';
 			}
 		},
 		getPackageInfo = function () {
@@ -199,7 +203,6 @@ module.exports = function create(options, optionalLogger) {
 			})
 			.then(() => {
 				if (apiModule.postDeploy) {
-					Promise.map = sequentialPromiseMap;
 					return apiModule.postDeploy(
 						options,
 						{
@@ -211,8 +214,7 @@ module.exports = function create(options, optionalLogger) {
 						},
 						{
 							apiGatewayPromise: apiGatewayPromise,
-							aws: aws,
-							Promise: Promise
+							aws: aws
 						}
 					);
 				}
@@ -259,9 +261,6 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
-		isRoleArn = function (string) {
-			return /^arn:aws:iam:/.test(string);
-		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
@@ -289,24 +288,6 @@ module.exports = function create(options, optionalLogger) {
 				const policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
 			}));
-		},
-		vpcPolicy = function () {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Sid': 'VPCAccessExecutionPermission',
-					'Effect': 'Allow',
-					'Action': [
-						'logs:CreateLogGroup',
-						'logs:CreateLogStream',
-						'logs:PutLogEvents',
-						'ec2:CreateNetworkInterface',
-						'ec2:DeleteNetworkInterface',
-						'ec2:DescribeNetworkInterfaces'
-					],
-					'Resource': '*'
-				}]
-			});
 		},
 		recursivePolicy = function (functionName) {
 			return JSON.stringify({
@@ -370,12 +351,13 @@ module.exports = function create(options, optionalLogger) {
 		}
 	})
 	.then(() => {
-		if (options['security-group-ids']) {
-			return iam.putRolePolicy({
+		if (options['security-group-ids'] && !isRoleArn(options.role)) {
+			return fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
+			.then(vpcPolicy => iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'vpc-access-execution',
-				PolicyDocument: vpcPolicy()
-			}).promise();
+				PolicyDocument: vpcPolicy
+			}).promise());
 		}
 	})
 	.then(() => {
@@ -387,7 +369,7 @@ module.exports = function create(options, optionalLogger) {
 			}).promise();
 		}
 	})
-	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], logger))
+	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger))
 	.then(functionCode => {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
@@ -533,8 +515,14 @@ module.exports.doc = {
 			optional: true,
 			example: 'claudia-uploads',
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
-				'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
-				'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+			'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
+			'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda'
+		},
+		{
+			argument: 's3-sse',
+			optional: true,
+			example: 'AES256',
+			description: 'The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`'
 		},
 		{
 			argument: 'aws-delay',
