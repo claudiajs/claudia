@@ -1418,7 +1418,7 @@ describe('rebuildWebApi', () => {
 						}
 					}
 				}
-			}, '/{proxy+}', 'OPTIONS').then(result => {
+			}, '/echo/{name}', 'OPTIONS').then(result => {
 				expect(result.requestParameters).toBeFalsy();
 				expect(result.methodIntegration.cacheKeyParameters).toEqual([]);
 			}).then(done, done.fail);
