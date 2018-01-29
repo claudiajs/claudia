@@ -1,5 +1,10 @@
 # Release history
 
+### 3.3.1 29 January 2018
+
+- bugfix for CORS setup with path params
+- enable generate-serverless-express to handle binary content
+
 ### 3.3.0 27 January 2018
 
 - support for using server-side encryption for code uploads to s3, thanks to [Ricky Blaha](https://github.com/rickyblaha)
