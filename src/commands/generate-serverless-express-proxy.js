@@ -42,8 +42,16 @@ const binaryMimeTypes = [
 	'image/png',
 	'image/svg+xml'
 ]
-const server = awsServerlessExpress.createServer(app, null, binaryMimeTypes);
-exports.handler = (event, context) => awsServerlessExpress.proxy(server, event, context)
+exports.handler = (event, context) => {
+	const serverPromise = context.serverPromise || 
+		Promise.resolve().then(() => awsServerlessExpress.createServer(app, null, binaryMimeTypes))
+	if (!context.serverPromise) {
+		context.serverPromise = serverPromise
+	}
+	const contextWithoutServerPromise = Object.assign({}, context)
+	delete contextWithoutServerPromise.serverPromise
+	serverPromise.then(server => awsServerlessExpress.proxy(server, event, contextWithoutServerPromise))
+}
 `;
 
 		return fsPromise.writeFileAsync(proxyModulePath, contents, 'utf8');
