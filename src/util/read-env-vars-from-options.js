@@ -1,5 +1,5 @@
 const parseKeyValueCSV = require('./parse-key-value-csv'),
-	countElements = require('../util/count-elements'),
+	countElements = require('./count-elements'),
 	fs = require('fs');
 module.exports = function readEnvVarsFromOptions(options) {
 	'use strict';
