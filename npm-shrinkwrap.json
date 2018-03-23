@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "dependencies": {
     "acorn-jsx": {
       "version": "3.0.1",
