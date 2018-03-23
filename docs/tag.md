@@ -10,8 +10,8 @@ claudia tag {OPTIONS}
 
 ## Options
 
-*  `--tags`:  tags to add, comma-separated
-    * _For example_: 'Team=onboarding,Project=amarillo'
+*  `--tags`:  The list of tags (key-value pairs) to assign to the lambda function.
+    * _For example_: Team=onboarding,Project=amarillo
 *  `--source`:  (_optional_) Directory with project files
     * _Defaults to_: current directory
 *  `--config`:  (_optional_) Config file containing the resource names

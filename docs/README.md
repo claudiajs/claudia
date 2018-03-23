@@ -16,14 +16,15 @@ claudia [command] {OPTIONS}
 * [`add-kinesis-event-source`](add-kinesis-event-source.md) Set up Kinesis Data Stream event triggers
 * [`add-sns-event-source`](add-sns-event-source.md) Add a notification event to Lambda when a message is published on a SNS topic
 * [`allow-alexa-skill-trigger`](allow-alexa-skill-trigger.md) Allow Alexa Skill triggers
-* [`add-iot-topic-rule`](add-iot-topic-rule.md) Creates an IOT topic rule and configures the Lambda to run when a message is published on a matching IOT Gateway topic
 * [`add-cognito-user-pool-trigger`](add-cognito-user-pool-trigger.md) Configures the Lambda to run on a Cognito User Pool trigger
+* [`add-iot-topic-rule`](add-iot-topic-rule.md) Creates an IOT topic rule and configures the Lambda to run when a message is published on a matching IOT Gateway topic
 * [`set-cloudfront-trigger`](set-cloudfront-trigger.md) Set up Lambda@Edge CloudFront behavior event triggers
 * [`add-scheduled-event`](add-scheduled-event.md) Add a recurring notification event
 * [`test-lambda`](test-lambda.md) Execute the lambda function and print out the response
 * [`destroy`](destroy.md) Undeploy the lambda function and destroy the API and security roles
 * [`generate-serverless-express-proxy`](generate-serverless-express-proxy.md) Create a lambda proxy API wrapper for an express app using aws-serverless-express
 * [`generate`](generate.md) Create a lambda project template that you can immediately deploy
+* [`tag`](tag.md) Add tags (key-value pairs) to a lambda function
 
 ## Options:
 

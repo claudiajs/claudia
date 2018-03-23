@@ -32,7 +32,7 @@ claudia update {OPTIONS}
     You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact
     after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda
     * _For example_: claudia-uploads
-*  `--s3-sse`:  (_optional_) The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`.
+*  `--s3-sse`:  (_optional_) The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`
     * _For example_: AES256
 *  `--update-env`:  (_optional_) comma-separated list of VAR=VALUE environment variables to set, merging with old variables
     * _For example_: S3BUCKET=testbucket,SNSQUEUE=testqueue
