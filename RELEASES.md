@@ -1,5 +1,9 @@
 # Release history
 
+### 3.4.0 23 March 2018
+
+- added tag command to assist with Lambda tagging, thanks to [Mohamed Osama](https://github.com/oss92)
+
 ### 3.3.1 29 January 2018
 
 - bugfix for CORS setup with path params
