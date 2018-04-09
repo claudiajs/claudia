@@ -1,5 +1,12 @@
 # Release history
 
+### 4.0.0 9 April 2018
+
+- compatibility with Node.js 8.10 and NPM 5
+- fix for package-lock.json and --no-optional-dependencies when using NPM 5
+- Claudia now creates new functions using the node8.10 Lambda runtime by default 
+- more resilient waiting on IAM propagation when patching existing roles for VPC access
+
 ### 3.4.0 23 March 2018
 
 - added tag command to assist with Lambda tagging, thanks to [Mohamed Osama](https://github.com/oss92)

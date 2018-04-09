@@ -68,6 +68,15 @@ describe('cleanUpPackage', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('removes package-lock.json if exists', done => {
+		fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), '{}', 'utf8');
+		underTest(sourcedir, {}, logger)
+		.then(result => {
+			expect(result).toEqual(sourcedir);
+			expect(shell.test('-e', path.join(sourcedir, 'package-lock.json'))).toBeFalsy();
+		})
+		.then(done, done.fail);
+	});
 	it('fails if npm install fails', done => {
 		configurePackage({
 			files: ['root.txt'],

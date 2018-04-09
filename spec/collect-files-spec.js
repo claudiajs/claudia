@@ -108,6 +108,29 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
+		it('includes versions from package-lock.json if it exists', done => {
+			const lockContents = JSON.stringify({
+				'name': 't',
+				'version': '1.0.0',
+				'lockfileVersion': 1,
+				'requires': true,
+				'dependencies': {
+					'claudia-api-builder': {
+						'version': '3.0.1',
+						'resolved': 'https://registry.npmjs.org/claudia-api-builder/-/claudia-api-builder-3.0.1.tgz',
+						'integrity': 'sha1-is7sm9KWWujA5amqIhZwWnNJ4Z4='
+					}
+				}
+			});
+			fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), lockContents, 'utf8');
+			configurePackage({ files: ['roo*'], dependencies: {'claudia-api-builder': '^3'} });
+			underTest(sourcedir)
+			.then(packagePath => destdir = packagePath)
+			.then(() => fs.readFileSync(path.join(destdir, 'package-lock.json'), 'utf8'))
+			.then(contents => expect(JSON.parse(contents).dependencies['claudia-api-builder'].version).toEqual('3.0.1'))
+			.then(done, done.fail);
+		});
+
 		['.gitignore', '.npmignore'].forEach(fileName => {
 			it(`ignores ${fileName}`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'root.txt', 'utf8');

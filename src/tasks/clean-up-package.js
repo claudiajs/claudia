@@ -4,7 +4,15 @@ const path = require('path'),
 	runNpm = require('../util/run-npm');
 module.exports = function cleanUpPackage(packageDir, options, logger) {
 	'use strict';
-	const cleanUpDependencies = function () {
+	const silentRemove = function (fileName) {
+			const filePath = path.join(packageDir, fileName);
+			if (fsUtil.fileExists(filePath)) {
+				return fsPromise.unlinkAsync(filePath);
+			} else {
+				return Promise.resolve();
+			}
+		},
+		cleanUpDependencies = function () {
 			if (options['optional-dependencies'] === false) {
 				logger.logApiCall('removing optional dependencies');
 				fsUtil.rmDir(path.join(packageDir, 'node_modules'));
@@ -12,14 +20,9 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 			} else {
 				return Promise.resolve();
 			}
-		},
-		removeNpmrc = function () {
-			const npmrc = path.join(packageDir, '.npmrc');
-			if (fsUtil.fileExists(npmrc)) {
-				return fsPromise.unlinkAsync(npmrc);
-			}
 		};
-	return cleanUpDependencies()
-	.then(removeNpmrc)
+	return silentRemove('package-lock.json')
+	.then(cleanUpDependencies)
+	.then(() => silentRemove('.npmrc'))
 	.then(() => packageDir);
 };

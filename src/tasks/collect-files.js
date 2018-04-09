@@ -61,6 +61,16 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			return localizeDependencies(targetDir, sourcePath)
 			.then(() => targetDir);
 		},
+		copyPackageLock = function (targetDir) {
+			return readjson(path.join(sourcePath, 'package-lock.json'))
+			.catch(() => false)
+			.then(packageLock => {
+				if (packageLock) {
+					return fsPromise.writeFileAsync(path.join(targetDir, 'package-lock.json'), JSON.stringify(packageLock), 'utf8');
+				}
+			})
+			.then(() => targetDir);
+		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
@@ -68,6 +78,7 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 	}
 	return readjson(path.join(sourcePath, 'package.json'))
 	.then(copyFiles)
+	.then(copyPackageLock)
 	.then(rewireRelativeDependencies)
 	.then(installDependencies);
 };

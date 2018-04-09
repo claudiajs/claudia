@@ -146,7 +146,7 @@ module.exports = function create(options, optionalLogger) {
 						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
-						Runtime: options.runtime || 'nodejs6.10',
+						Runtime: options.runtime || 'nodejs8.10',
 						Publish: true,
 						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
 							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),
@@ -158,7 +158,8 @@ module.exports = function create(options, optionalLogger) {
 				error => {
 					return error &&
 						error.code === 'InvalidParameterValueException' &&
-						error.message === 'The role defined for the function cannot be assumed by Lambda.';
+						(error.message === 'The role defined for the function cannot be assumed by Lambda.'
+						|| error.message === 'The provided execution role does not have permissions to call CreateNetworkInterface on EC2');
 				},
 				() => logger.logStage('waiting for IAM role propagation'),
 				Promise
@@ -467,7 +468,7 @@ module.exports.doc = {
 			argument: 'runtime',
 			optional: true,
 			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html',
-			default: 'nodejs6.10'
+			default: 'nodejs8.10'
 		},
 		{
 			argument: 'description',
