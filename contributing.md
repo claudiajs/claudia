@@ -86,7 +86,7 @@ TEST_TIMEOUT=300000
 
 Here are same house rules for Claudia development. Breaking one of these doesn't necessarily mean that your pull request will not be merged, but following the rules will make it easier and faster to do that. If you decide to break one of these, please explain in the pull request why, so we can revise the rules or adjust the code together.
 
-* AWS Lambda currently supports only Node.js 6.10 and 4.3.2, so we use that one as the baseline for Claudia development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment if you need to.
+* AWS Lambda currently supports only Node.js 8.10, 6.10 and 4.3.2, so we use that one as the baseline for Claudia development. You can use [nvm](https://github.com/creationix/nvm) to manage multiple versions of Node on your development environment if you need to.
 * ES6 code is allowed and encouraged, as long as it works on 4.3.2. We don't use babel for transpilation. 
 * We use [Jasmine](https://jasmine.github.io) for tests. 
 * We use `eslint` for linting, with the style guide in [`.eslintrc`](https://github.com/claudiajs/claudia/blob/master/.eslintrc.json)
