@@ -1,11 +1,11 @@
 /*global describe, it, beforeEach, afterEach, expect, process */
 const underTest = require('../src/tasks/collect-files'),
-	shell = require('shelljs'),
 	os = require('os'),
 	fs = require('fs'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	fsPromise = require('../src/util/fs-promise'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path');
 describe('collectFiles', () => {
 	'use strict';
@@ -24,21 +24,21 @@ describe('collectFiles', () => {
 		.then(dir => {
 			workingdir = dir;
 			sourcedir = path.join(workingdir, 'source');
-			shell.mkdir(sourcedir);
+			fs.mkdirSync(sourcedir);
 			fs.writeFileSync(path.join(sourcedir, 'root.txt'), 'text1', 'utf8');
 			fs.writeFileSync(path.join(sourcedir, 'excluded.txt'), 'excl1', 'utf8');
-			shell.mkdir(path.join(sourcedir, 'subdir'));
+			fs.mkdirSync(path.join(sourcedir, 'subdir'));
 			fs.writeFileSync(path.join(sourcedir, 'subdir', 'sub.txt'), 'text2', 'utf8');
 		})
 		.then(done, done.fail);
 	});
 	afterEach(() => {
-		shell.cd(pwd);
+		process.chdir(pwd);
 		if (destdir) {
-			shell.rm('-rf', destdir);
+			fsUtil.rmDir(destdir);
 		}
 		if (sourcedir) {
-			shell.rm('-rf', sourcedir);
+			fsUtil.rmDir(sourcedir);
 		}
 	});
 	it('fails if the source directory is not provided', done => {
@@ -100,9 +100,9 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-				expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
 				done();
 			}, done.fail);
 		});
@@ -111,9 +111,9 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-				expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
 				done();
 			}, done.fail);
 		});
@@ -133,7 +133,7 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'package.json'))).toBeTruthy();
 				done();
 			}, done.fail);
 		});
@@ -167,9 +167,9 @@ describe('collectFiles', () => {
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
@@ -193,19 +193,19 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'package.json'))).toBeTruthy();
 			})
 			.then(done, done.fail);
 		});
 		['node_modules', '.git', '.hg', '.svn', 'CVS'].forEach(dirName => {
 			it(`excludes ${dirName} directory from the package`, done => {
-				shell.mkdir(path.join(sourcedir, dirName));
+				fs.mkdirSync(path.join(sourcedir, dirName));
 				fs.writeFileSync(path.join(sourcedir, dirName, 'sub.txt'), 'text2', 'utf8');
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, dirName, 'sub.txt'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, dirName, 'sub.txt'))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
@@ -217,7 +217,7 @@ describe('collectFiles', () => {
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, fileName))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, fileName))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
@@ -229,7 +229,7 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, fileName))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, fileName))).toBeTruthy();
 			})
 			.then(done, done.fail);
 		});
@@ -240,21 +240,21 @@ describe('collectFiles', () => {
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
 			it(`ignores node_modules even when a separate ignore is specified in ${fileName}`, done => {
-				shell.mkdir(path.join(sourcedir, 'node_modules'));
+				fs.mkdirSync(path.join(sourcedir, 'node_modules'));
 				fs.writeFileSync(path.join(sourcedir, 'node_modules', 'sub.txt'), 'text2', 'utf8');
 				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir', 'utf8');
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, 'node_modules', 'sub.txt'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'sub.txt'))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
@@ -264,9 +264,9 @@ describe('collectFiles', () => {
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
-					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-					expect(shell.test('-e', path.join(packagePath, 'excluded.txt'))).toBeFalsy();
-					expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
 				})
 				.then(done, done.fail);
 			});
@@ -278,8 +278,8 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
-				expect(shell.test('-e', path.join(packagePath, 'subdir'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeTruthy();
 			})
 			.then(done, done.fail);
 		});
@@ -287,8 +287,8 @@ describe('collectFiles', () => {
 	});
 	describe('collecting dependencies', () => {
 		beforeEach(() => {
-			shell.mkdir(path.join(sourcedir, 'node_modules'));
-			shell.mkdir('-p', path.join(sourcedir, 'node_modules', 'old-mod'));
+			fs.mkdirSync(path.join(sourcedir, 'node_modules'));
+			fs.mkdirSync(path.join(sourcedir, 'node_modules', 'old-mod'));
 			fs.writeFileSync(path.join(sourcedir, 'node_modules', 'old-mod', 'old.txt'), 'old-content', 'utf8');
 		});
 		it('collects production npm dependencies if package config includes the dependencies object', done => {
@@ -304,9 +304,9 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
 				done();
 			}, done.fail);
 		});
@@ -324,9 +324,9 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
 				done();
 			}, done.fail);
 		});
@@ -342,8 +342,8 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir, true)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
 				done();
 			}, done.fail);
 		});
@@ -360,8 +360,8 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir, true)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
-				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
 				done();
 			}, done.fail);
 		});
@@ -383,7 +383,7 @@ describe('collectFiles', () => {
 			configurePackage({ files: ['roo*', 'subdir'] });
 			underTest(sourcedir, workingdir)
 			.then(() => {
-				expect(shell.pwd()).toEqual(pwd);
+				expect(process.cwd()).toEqual(pwd);
 				done();
 			}, done.fail);
 		});
@@ -396,7 +396,7 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 			.then(done.fail, () => {
-				expect(shell.pwd()).toEqual(pwd);
+				expect(process.cwd()).toEqual(pwd);
 				done();
 			});
 		});
@@ -416,7 +416,7 @@ describe('collectFiles', () => {
 	it('works with folders containing a space', done => {
 		const oldsource = sourcedir;
 		sourcedir = `${oldsource} with space`;
-		shell.mv(oldsource, sourcedir);
+		fsUtil.move(oldsource, sourcedir);
 		configurePackage({ name: 'test123' });
 		underTest(sourcedir, workingdir)
 		.then(packagePath => {

@@ -29,6 +29,10 @@ exports.recursiveList = function (dirPath) {
 	'use strict';
 	return shell.ls('-R', dirPath);
 };
+exports.move = function (fromPath, toPath) {
+	'use strict';
+	return shell.mv(fromPath, toPath);
+};
 exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
 	'use strict';
 	shell.sed('-i', searchPattern, replacePattern, filePath);
