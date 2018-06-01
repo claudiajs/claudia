@@ -18,11 +18,14 @@ const zipdir = require('../tasks/zipdir'),
 	updateEnvVars = require('../tasks/update-env-vars'),
 	getOwnerId = require('../tasks/get-owner-account-id'),
 	fs = require('fs'),
+	fsPromise = require('../util/fs-promise'),
+	fsUtil = require('../util/fs-util'),
 	loadConfig = require('../util/loadconfig');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
 	let lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig, packageDir, packageArchive, s3Key,
+		workingDir,
 		requiresHandlerUpdate = false;
 	const logger = optionalLogger || new NullLogger(),
 		alias = (options && options.version) || 'latest',
@@ -108,6 +111,7 @@ module.exports = function update(options, optionalLogger) {
 		cleanup = function () {
 			if (!options.keep) {
 				fs.unlinkSync(packageArchive);
+				fsUtil.rmDir(workingDir);
 			} else {
 				updateResult.archive = packageArchive;
 			}
@@ -180,7 +184,9 @@ module.exports = function update(options, optionalLogger) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
 		}
 	})
-	.then(() => collectFiles(options.source, options['use-local-dependencies'], logger))
+	.then(() => fsPromise.mkdtempAsync(os.tmpdir()))
+	.then(dir => workingDir = dir)
+	.then(() => collectFiles(options.source, workingDir, options['use-local-dependencies'], logger))
 	.then(dir => {
 		logger.logStage('validating package');
 		return validatePackage(dir, functionConfig.Handler, apiConfig && apiConfig.module);

@@ -11,7 +11,23 @@ const tmppath = require('../util/tmppath'),
 	tarStream = require('tar-fs'),
 	NullLogger = require('../util/null-logger');
 
-module.exports = function collectFiles(sourcePath, useLocalDependencies, optionalLogger) {
+/*
+ * Creates a directory with a NPM project and all production dependencies localised,
+ * ready for zipping and uploading to lambda. It will also rewire all local file: dependencies
+ * correctly to work with NPM5
+ *
+ * Arguments:
+ *
+ * - sourcePath: a path to a NPM project directory, containing package.json
+ * - workingDir: a directory where it is safe to create files, the resulting dir will be a subdirectory here
+ * - useLocalDependencies: boolean -- if true, existing node_modules will be copied instead of reinstalling
+ * - optionalLogger: log reporter
+ *
+ * Returns:
+ *
+ * A path to a directory containing all dependencies. Other files required to reinstall the package will be stored in the workingDir
+ */
+module.exports = function collectFiles(sourcePath, workingDir, useLocalDependencies, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
 		checkPreconditions = function (providedSourcePath) {
@@ -24,6 +40,16 @@ module.exports = function collectFiles(sourcePath, useLocalDependencies, optiona
 			if (!fsUtil.isDir(providedSourcePath)) {
 				return 'source path must be a directory';
 			}
+			if (!workingDir) {
+				return 'working directory not provided';
+			}
+			if (!fsUtil.fileExists(workingDir)) {
+				return 'working directory does not exist';
+			}
+			if (!fsUtil.isDir(workingDir)) {
+				return 'working directory must be a directory';
+			}
+
 			if (!fsUtil.fileExists(path.join(providedSourcePath, 'package.json'))) {
 				return 'source directory does not contain package.json';
 			}

@@ -1,20 +1,19 @@
 /*global describe, it, beforeEach, afterEach, expect */
-const shell = require('shelljs'),
-	tmppath = require('../src/util/tmppath'),
-	path = require('path'),
+const path = require('path'),
 	fs = require('fs'),
+	os = require('os'),
+	fsUtil = require('../src/util/fs-util'),
 	fsPromise = require('../src/util/fs-promise');
 describe('fs-promise', () => {
 	'use strict';
 	let workingdir, testRunName, filePath;
 	beforeEach(() => {
-		workingdir = tmppath();
-		shell.mkdir(workingdir);
+		workingdir = fs.mkdtempSync(os.tmpdir());
 		testRunName = 'test' + Date.now();
 		filePath = path.join(workingdir, testRunName);
 	});
 	afterEach(() => {
-		shell.rm('-rf', workingdir);
+		fsUtil.rmDir(workingdir);
 	});
 	describe('readFileAsync', () => {
 		it('reads file contents', done => {
@@ -56,4 +55,16 @@ describe('fs-promise', () => {
 			.then(done.fail, done);
 		});
 	});
+	describe('mkdtempAsync', () => {
+		it('creates a temporary folder', done => {
+			fsPromise.mkdtempAsync(path.join(workingdir, 'test1'))
+			.then(result => {
+				expect(fsUtil.isDir(result)).toBeTruthy();
+				expect(path.resolve(path.dirname(result))).toEqual(path.resolve(workingdir));
+				expect(path.basename(result)).toMatch(/^test1/);
+			})
+			.then(done, done.fail);
+		});
+	});
+
 });

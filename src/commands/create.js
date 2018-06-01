@@ -32,6 +32,7 @@ module.exports = function create(options, optionalLogger) {
 		functionDesc,
 		customEnvVars,
 		functionName,
+		workingDir,
 		packageFileDir;
 	const logger = optionalLogger || new NullLogger(),
 		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || (process.env.AWS_DELAY && parseInt(process.env.AWS_DELAY, 10)) || 5000,
@@ -305,6 +306,7 @@ module.exports = function create(options, optionalLogger) {
 		},
 		cleanup = function (result) {
 			if (!options.keep) {
+				fsUtil.rmDir(workingDir);
 				fs.unlinkSync(packageArchive);
 			} else {
 				result.archive = packageArchive;
@@ -321,7 +323,9 @@ module.exports = function create(options, optionalLogger) {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	})
-	.then(() => collectFiles(source, options['use-local-dependencies'], logger))
+	.then(() => fsPromise.mkdtempAsync(os.tmpdir()))
+	.then(dir => workingDir = dir)
+	.then(() => collectFiles(source, workingDir, options['use-local-dependencies'], logger))
 	.then(dir => {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);

@@ -21,5 +21,6 @@ module.exports = {
 	writeFileAsync: promisify(fs, 'writeFile'),
 	readFileAsync: promisify(fs, 'readFile'),
 	unlinkAsync: promisify(fs, 'unlink'),
-	renameAsync: promisify(fs, 'rename')
+	renameAsync: promisify(fs, 'rename'),
+	mkdtempAsync: promisify(fs, 'mkdtemp')
 };

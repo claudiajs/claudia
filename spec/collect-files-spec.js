@@ -1,14 +1,15 @@
-/*global describe, it, beforeEach, afterEach, expect */
+/*global describe, it, beforeEach, afterEach, expect, process */
 const underTest = require('../src/tasks/collect-files'),
 	shell = require('shelljs'),
 	os = require('os'),
 	fs = require('fs'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
+	fsPromise = require('../src/util/fs-promise'),
 	path = require('path');
 describe('collectFiles', () => {
 	'use strict';
-	let destdir, sourcedir, pwd;
+	let destdir, sourcedir, workingdir, pwd;
 	const configurePackage = function (packageConf) {
 			packageConf.name = packageConf.name || 'testproj';
 			packageConf.version = packageConf.version || '1.0.0';
@@ -17,14 +18,19 @@ describe('collectFiles', () => {
 		isSameDir = function (dir1, dir2) {
 			return !path.relative(dir1, dir2);
 		};
-	beforeEach(() => {
-		sourcedir = tmppath();
-		shell.mkdir(sourcedir);
-		fs.writeFileSync(path.join(sourcedir, 'root.txt'), 'text1', 'utf8');
-		fs.writeFileSync(path.join(sourcedir, 'excluded.txt'), 'excl1', 'utf8');
-		shell.mkdir(path.join(sourcedir, 'subdir'));
-		fs.writeFileSync(path.join(sourcedir, 'subdir', 'sub.txt'), 'text2', 'utf8');
-		pwd = shell.pwd();
+	beforeEach(done => {
+		pwd = process.cwd();
+		fsPromise.mkdtempAsync(os.tmpdir())
+		.then(dir => {
+			workingdir = dir;
+			sourcedir = path.join(workingdir, 'source');
+			shell.mkdir(sourcedir);
+			fs.writeFileSync(path.join(sourcedir, 'root.txt'), 'text1', 'utf8');
+			fs.writeFileSync(path.join(sourcedir, 'excluded.txt'), 'excl1', 'utf8');
+			shell.mkdir(path.join(sourcedir, 'subdir'));
+			fs.writeFileSync(path.join(sourcedir, 'subdir', 'sub.txt'), 'text2', 'utf8');
+		})
+		.then(done, done.fail);
 	});
 	afterEach(() => {
 		shell.cd(pwd);
@@ -39,36 +45,59 @@ describe('collectFiles', () => {
 		underTest()
 		.then(done.fail, message => {
 			expect(message).toEqual('source directory not provided');
-			done();
-		});
+		})
+		.then(done, done.fail);
+	});
+	it('fails if the working directory is not specified', done => {
+		underTest(sourcedir)
+		.then(done.fail, message => {
+			expect(message).toEqual('working directory not provided');
+		})
+		.then(done, done.fail);
 	});
 	it('fails if the source directory does not exist', done => {
-		underTest(tmppath())
+		underTest(tmppath(), workingdir)
 		.then(done.fail, message => {
 			expect(message).toEqual('source directory does not exist');
-			done();
-		});
+		})
+		.then(done, done.fail);
+	});
+	it('fails if the working directory does not exist', done => {
+		underTest(sourcedir, tmppath())
+		.then(done.fail, message => {
+			expect(message).toEqual('working directory does not exist');
+		})
+		.then(done, done.fail);
 	});
 	it('fails if the source directory is not a directory', done => {
 		const filePath = path.join(sourcedir, 'file.txt');
 		fs.writeFileSync(filePath, '{}', 'utf8');
-		underTest(filePath)
+		underTest(filePath, workingdir)
 		.then(done.fail, message => {
 			expect(message).toEqual('source path must be a directory');
-			done();
-		});
+		})
+		.then(done, done.fail);
+	});
+	it('fails if the working directory is not a directory', done => {
+		const filePath = path.join(sourcedir, 'file.txt');
+		fs.writeFileSync(filePath, '{}', 'utf8');
+		underTest(sourcedir, filePath)
+		.then(done.fail, message => {
+			expect(message).toEqual('working directory must be a directory');
+		})
+		.then(done, done.fail);
 	});
 	it('fails if package.json does not exist in the source directory', done => {
-		underTest(sourcedir)
+		underTest(sourcedir, workingdir)
 		.then(done.fail, message => {
 			expect(message).toEqual('source directory does not contain package.json');
-			done();
-		});
+		})
+		.then(done, done.fail);
 	});
 	describe('when the files property is specified', () => {
 		it('it limits the files copied to the files property', done => {
 			configurePackage({ files: ['roo*'] });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -79,7 +108,7 @@ describe('collectFiles', () => {
 		});
 		it('works when files is a single string', done => {
 			configurePackage({ files: ['root.txt'] });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -90,7 +119,7 @@ describe('collectFiles', () => {
 		});
 		it('copies all the listed files/subfolders/with wildcards from the files property to a folder in temp path', done => {
 			configurePackage({ files: ['roo*', 'subdir'] });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
@@ -101,7 +130,7 @@ describe('collectFiles', () => {
 		});
 		it('includes package.json even if it is not in the files property', done => {
 			configurePackage({ files: ['roo*'] });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
@@ -124,7 +153,7 @@ describe('collectFiles', () => {
 			});
 			fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), lockContents, 'utf8');
 			configurePackage({ files: ['roo*'], dependencies: {'claudia-api-builder': '^3'} });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => destdir = packagePath)
 			.then(() => fs.readFileSync(path.join(destdir, 'package-lock.json'), 'utf8'))
 			.then(contents => expect(JSON.parse(contents).dependencies['claudia-api-builder'].version).toEqual('3.0.1'))
@@ -135,7 +164,7 @@ describe('collectFiles', () => {
 			it(`ignores ${fileName}`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'root.txt', 'utf8');
 				configurePackage({files: ['roo*']});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -149,7 +178,7 @@ describe('collectFiles', () => {
 	describe('when the files property is not specified', () => {
 		it('copies all the project files to a folder in temp path', done => {
 			configurePackage({});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
@@ -161,7 +190,7 @@ describe('collectFiles', () => {
 		});
 		it('includes package.json even if it is not in the files property', done => {
 			configurePackage({});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'package.json'))).toBeTruthy();
@@ -173,7 +202,7 @@ describe('collectFiles', () => {
 				shell.mkdir(path.join(sourcedir, dirName));
 				fs.writeFileSync(path.join(sourcedir, dirName, 'sub.txt'), 'text2', 'utf8');
 				configurePackage({});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, dirName, 'sub.txt'))).toBeFalsy();
@@ -185,7 +214,7 @@ describe('collectFiles', () => {
 			it(`excludes ${fileName} file from the package`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
 				configurePackage({});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, fileName))).toBeFalsy();
@@ -197,7 +226,7 @@ describe('collectFiles', () => {
 			const fileName = '.npmrc';
 			fs.writeFileSync(path.join(sourcedir, fileName), 'text2', 'utf8');
 			configurePackage({});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, fileName))).toBeTruthy();
@@ -208,7 +237,7 @@ describe('collectFiles', () => {
 			it(`ignores the wildcard contents specified in ${fileName}`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir', 'utf8');
 				configurePackage({});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -222,7 +251,7 @@ describe('collectFiles', () => {
 				fs.writeFileSync(path.join(sourcedir, 'node_modules', 'sub.txt'), 'text2', 'utf8');
 				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir', 'utf8');
 				configurePackage({});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, 'node_modules', 'sub.txt'))).toBeFalsy();
@@ -232,7 +261,7 @@ describe('collectFiles', () => {
 			it(`survives blank and comment lines in ignore file lists for ${fileName}`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'excl*\nsubdir\n\n#root.txt', 'utf8');
 				configurePackage({});
-				underTest(sourcedir)
+				underTest(sourcedir, workingdir)
 				.then(packagePath => {
 					destdir = packagePath;
 					expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -246,7 +275,7 @@ describe('collectFiles', () => {
 			fs.writeFileSync(path.join(sourcedir, '.gitignore'), 'root.txt\nsubdir', 'utf8');
 			fs.writeFileSync(path.join(sourcedir, '.npmignore'), '', 'utf8');
 			configurePackage({});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'root.txt'))).toBeTruthy();
@@ -272,7 +301,7 @@ describe('collectFiles', () => {
 					'minimist': '^1.2.0'
 				}
 			});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
@@ -292,7 +321,7 @@ describe('collectFiles', () => {
 				}
 			});
 			fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
@@ -310,7 +339,7 @@ describe('collectFiles', () => {
 					'minimist': '^1.2.0'
 				}
 			});
-			underTest(sourcedir, true)
+			underTest(sourcedir, workingdir, true)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
@@ -328,7 +357,7 @@ describe('collectFiles', () => {
 					'minimist': '^1.2.0'
 				}
 			});
-			underTest(sourcedir, true)
+			underTest(sourcedir, workingdir, true)
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(shell.test('-e', path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
@@ -344,7 +373,7 @@ describe('collectFiles', () => {
 					'non-existing-package': '2.0.0'
 				}
 			});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(done.fail, reason => {
 				expect(reason).toMatch(/npm install --production failed/);
 				done();
@@ -352,7 +381,7 @@ describe('collectFiles', () => {
 		});
 		it('does not change the current working dir', done => {
 			configurePackage({ files: ['roo*', 'subdir'] });
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(() => {
 				expect(shell.pwd()).toEqual(pwd);
 				done();
@@ -365,7 +394,7 @@ describe('collectFiles', () => {
 					'non-existing-package': '2.0.0'
 				}
 			});
-			underTest(sourcedir)
+			underTest(sourcedir, workingdir)
 			.then(done.fail, () => {
 				expect(shell.pwd()).toEqual(pwd);
 				done();
@@ -374,7 +403,7 @@ describe('collectFiles', () => {
 	});
 	it('works with scoped packages', done => {
 		configurePackage({ name: '@test/packname' });
-		underTest(sourcedir)
+		underTest(sourcedir, workingdir)
 		.then(packagePath => {
 			destdir = packagePath;
 			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
@@ -389,7 +418,7 @@ describe('collectFiles', () => {
 		sourcedir = `${oldsource} with space`;
 		shell.mv(oldsource, sourcedir);
 		configurePackage({ name: 'test123' });
-		underTest(sourcedir)
+		underTest(sourcedir, workingdir)
 		.then(packagePath => {
 			destdir = packagePath;
 			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
@@ -408,7 +437,7 @@ describe('collectFiles', () => {
 				'uuid': '^2.0.0'
 			}
 		});
-		underTest(sourcedir, false, logger)
+		underTest(sourcedir, workingdir, false, logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
