@@ -325,7 +325,7 @@ module.exports = function create(options, optionalLogger) {
 	})
 	.then(() => fsPromise.mkdtempAsync(os.tmpdir()))
 	.then(dir => workingDir = dir)
-	.then(() => collectFiles(source, workingDir, options['use-local-dependencies'], logger))
+	.then(() => collectFiles(source, workingDir, options, logger))
 	.then(dir => {
 		logger.logStage('validating package');
 		return validatePackage(dir, options.handler, options['api-module']);
@@ -501,6 +501,12 @@ module.exports.doc = {
 			argument: 'use-local-dependencies',
 			optional: true,
 			description: 'Do not install dependencies, use local node_modules directory instead'
+		},
+		{
+			argument: 'npm-options',
+			optional: true,
+			description: 'Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information',
+			example: '--ignore-scripts'
 		},
 		{
 			argument: 'cache-api-config',

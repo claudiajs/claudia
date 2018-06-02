@@ -67,9 +67,21 @@ describe('Some new feature', function () {
 
 You can run just that one test by executing `npm test -- filter="Some new feature works well"`, or execute all the tests in that same spec bloc by using `npm test -- filter="Some new feature"`
 
-#### Change the remote operation timeout
+#### Filtering tests
 
-By default, tests have 150 seconds to complete before timing out. You might want to change that depending on where you're executing the tests from and what AWS region you're running them in. Do so by changing the TEST_TIMEOUT environment variable before running the tests, and set it to a number of milliseconds. 
+Run a subset of tests by executing `npm test -- filter=<Jasmine Spec Name Filter>`, for example:
+
+* `npm test -- filter="cleanUpPackage"` runs all the tests in the `cleanUpPackage` suite
+* `npm test -- filter="cleanUpPackage fails if npm install fails"` runs a single test called `cleanUpPackage fails if npm install fails`
+
+#### Options for tests
+
+
+* `TEST_TIMEOUT`: (default: 150000) - milliseconds to allow individual tests to run before timing out.
+* `SKIP_AWS`: (default: not set) - set to a non empty string to prevent generic AWS resources from being created for the tests. useful to speed up running individual tests that do not talk to AWS at all
+* `AWS_DEPLOY_RETRIES`: (default: 5) - number of retries to make when deploying AWS resources that might be rate limited.
+* `AWS_DEPLOY_TIMEOUT`: (default: 10000) - milliseconds to pause between retries when deploying AWS resources. 
+* `CLOUDFRONT_DISTRIBUTION_ID`: (default: not set) - cloudfront distribution ID to use for edge deployment tests. if not set, edge deployment tests are skipped
 
 #### Managing environment variables for testing
 

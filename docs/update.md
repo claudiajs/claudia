@@ -23,6 +23,8 @@ claudia update {OPTIONS}
     The value must be a multiple of 64 MB.
 *  `--no-optional-dependencies`:  (_optional_) Do not upload optional dependencies to Lambda.
 *  `--use-local-dependencies`:  (_optional_) Do not install dependencies, use local node_modules directory instead
+*  `--npm-options`:  (_optional_) Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information
+    * _For example_: --ignore-scripts
 *  `--cache-api-config`:  (_optional_) Name of the stage variable for storing the current API configuration signature.
     If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment
     * _For example_: claudiaConfigCache

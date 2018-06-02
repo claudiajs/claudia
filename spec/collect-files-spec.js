@@ -330,6 +330,25 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
+		it('passes additional options to NPM if requested', done => {
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'uuid': '^2.0.0'
+				},
+				optionalDependencies: {
+					'minimist': '^1.2.0'
+				}
+			});
+			underTest(sourcedir, workingdir, {'npm-options': '--no-optional'})
+			.then(packagePath => {
+				destdir = packagePath;
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
+				done();
+			}, done.fail);
+		});
 		it('uses local node_modules instead of running npm install if localDependencies is set to true', done => {
 			configurePackage({
 				dependencies: {
@@ -339,7 +358,7 @@ describe('collectFiles', () => {
 					'minimist': '^1.2.0'
 				}
 			});
-			underTest(sourcedir, workingdir, true)
+			underTest(sourcedir, workingdir, {'use-local-dependencies': true})
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
@@ -347,7 +366,7 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
-		it('uses local node_modules when localDependencie is set to true, even when only specific files are requested', done => {
+		it('uses local node_modules when localDependencies is set to true, even when only specific files are requested', done => {
 			configurePackage({
 				files: ['root.txt'],
 				dependencies: {
@@ -357,7 +376,7 @@ describe('collectFiles', () => {
 					'minimist': '^1.2.0'
 				}
 			});
-			underTest(sourcedir, workingdir, true)
+			underTest(sourcedir, workingdir, {'use-local-dependencies': true})
 			.then(packagePath => {
 				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
@@ -437,7 +456,7 @@ describe('collectFiles', () => {
 				'uuid': '^2.0.0'
 			}
 		});
-		underTest(sourcedir, workingdir, false, logger)
+		underTest(sourcedir, workingdir, {}, logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],

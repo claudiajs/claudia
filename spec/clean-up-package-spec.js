@@ -59,6 +59,16 @@ describe('cleanUpPackage', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('passes additional options to NPM if requested', done => {
+		underTest(sourcedir, { 'optional-dependencies': false, 'npm-options': '--dry-run' }, logger)
+		.then(result => {
+			expect(result).toEqual(sourcedir);
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+		})
+		.then(done, done.fail);
+	});
+
 	it('removes .npmrc if exists', done => {
 		fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
 		underTest(sourcedir, {}, logger)
@@ -86,7 +96,7 @@ describe('cleanUpPackage', () => {
 		});
 		underTest(sourcedir, { 'optional-dependencies': false }, logger)
 		.then(done.fail, reason => {
-			expect(reason).toMatch(/npm install --production --no-optional failed/);
+			expect(reason).toMatch(/npm install --production --no-optional  failed/);
 			done();
 		});
 	});

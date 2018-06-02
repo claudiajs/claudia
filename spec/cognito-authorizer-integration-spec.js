@@ -25,7 +25,7 @@ describe('cognitoAuthorizers', () => {
 			return invoke(version + '/', {
 				method: 'GET',
 				resolveErrors: false,
-				retryTimeout: process.env.AWS_DEPLOY_RETRY_TIMEOUT || 5000,
+				retryTimeout: process.env.AWS_DEPLOY_TIMEOUT || 10000,
 				retries: process.env.AWS_DEPLOY_RETRIES || 5
 			});
 		},

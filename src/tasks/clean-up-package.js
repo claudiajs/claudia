@@ -13,10 +13,11 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 			}
 		},
 		cleanUpDependencies = function () {
+			const extraNpmOptions = options['npm-options'] || '';
 			if (options['optional-dependencies'] === false) {
 				logger.logApiCall('removing optional dependencies');
 				fsUtil.rmDir(path.join(packageDir, 'node_modules'));
-				return runNpm(packageDir, 'install --production --no-optional', logger);
+				return runNpm(packageDir, `install --production --no-optional ${extraNpmOptions}`, logger);
 			} else {
 				return Promise.resolve();
 			}

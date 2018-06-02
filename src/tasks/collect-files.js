@@ -27,9 +27,11 @@ const tmppath = require('../util/tmppath'),
  *
  * A path to a directory containing all dependencies. Other files required to reinstall the package will be stored in the workingDir
  */
-module.exports = function collectFiles(sourcePath, workingDir, useLocalDependencies, optionalLogger) {
+module.exports = function collectFiles(sourcePath, workingDir, options, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
+		useLocalDependencies = options && options['use-local-dependencies'],
+		npmOptions =  options && options['npm-options'] || '',
 		checkPreconditions = function (providedSourcePath) {
 			if (!providedSourcePath) {
 				return 'source directory not provided';
@@ -65,9 +67,10 @@ module.exports = function collectFiles(sourcePath, workingDir, useLocalDependenc
 		copyFiles = function (packageConfig) {
 			const packDir = tmppath(),
 				targetDir = tmppath(),
-				expectedName = expectedArchiveName(packageConfig);
+				expectedName = expectedArchiveName(packageConfig),
+				absolutePath = path.resolve(sourcePath);
 			fsUtil.ensureCleanDir(packDir);
-			return runNpm(packDir, 'pack "' + path.resolve(sourcePath) + '"', logger)
+			return runNpm(packDir, `pack "${absolutePath}" ${npmOptions}`, logger)
 			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
 			.then(() => fsPromise.renameAsync(path.join(packDir, 'package'), targetDir))
 			.then(() => {
@@ -80,7 +83,7 @@ module.exports = function collectFiles(sourcePath, workingDir, useLocalDependenc
 				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
-				return runNpm(targetDir, 'install --production', logger);
+				return runNpm(targetDir, `install --production ${npmOptions}`, logger);
 			}
 		},
 		rewireRelativeDependencies = function (targetDir) {
