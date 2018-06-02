@@ -83,6 +83,23 @@ describe('fsUtil', () => {
 			expect(fsUtil.isDir(pathName)).toBeTruthy();
 		});
 	});
+	describe('isLink', () => {
+		it('is false for non-existing paths', () => {
+			expect(fsUtil.isLink(pathName)).toBeFalsy();
+		});
+		it('is false for files', () => {
+			fs.writeFileSync(pathName, '123', 'utf8');
+			expect(fsUtil.isLink(pathName)).toBeFalsy();
+		});
+		it('is true for links', () => {
+			const linkPath = path.resolve(pathName, 'link.txt'),
+				filePath = path.resolve(pathName, 'file.txt');
+			fs.mkdirSync(pathName);
+			fs.writeFileSync(filePath, '123', 'utf8');
+			fs.symlinkSync(filePath, linkPath);
+			expect(fsUtil.isLink(linkPath)).toBeTruthy();
+		});
+	});
 	describe('copy', () => {
 		it('recursively copies a directory to another existing dir', () => {
 			fs.mkdirSync(pathName);

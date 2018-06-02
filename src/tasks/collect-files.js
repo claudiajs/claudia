@@ -31,7 +31,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
 		useLocalDependencies = options && options['use-local-dependencies'],
-		npmOptions =  options && options['npm-options'] || '',
+		npmOptions = (options && options['npm-options']) ? (' ' + options['npm-options']) : '',
 		checkPreconditions = function (providedSourcePath) {
 			if (!providedSourcePath) {
 				return 'source directory not provided';
@@ -70,7 +70,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				expectedName = expectedArchiveName(packageConfig),
 				absolutePath = path.resolve(sourcePath);
 			fsUtil.ensureCleanDir(packDir);
-			return runNpm(packDir, `pack "${absolutePath}" ${npmOptions}`, logger)
+			return runNpm(packDir, `pack "${absolutePath}"${npmOptions}`, logger)
 			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
 			.then(() => fsPromise.renameAsync(path.join(packDir, 'package'), targetDir))
 			.then(() => {
@@ -83,7 +83,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
-				return runNpm(targetDir, `install --production ${npmOptions}`, logger);
+				return runNpm(targetDir, `install --production${npmOptions}`, logger);
 			}
 		},
 		rewireRelativeDependencies = function (targetDir) {

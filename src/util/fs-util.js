@@ -21,6 +21,10 @@ exports.isFile = function (filePath) {
 	'use strict';
 	return shell.test('-f', filePath);
 };
+exports.isLink = function (filePath) {
+	'use strict';
+	return shell.test('-L', filePath);
+};
 exports.copy = function (from, to) {
 	'use strict';
 	return shell.cp('-r', from, to);

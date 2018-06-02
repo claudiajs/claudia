@@ -2,9 +2,11 @@
 const underTest = require('../src/tasks/collect-files'),
 	os = require('os'),
 	fs = require('fs'),
+	runNpm = require('../src/util/run-npm'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	fsPromise = require('../src/util/fs-promise'),
+	NullLogger = require('../src/util/null-logger'),
 	fsUtil = require('../src/util/fs-util'),
 	path = require('path');
 describe('collectFiles', () => {
@@ -17,7 +19,15 @@ describe('collectFiles', () => {
 		},
 		isSameDir = function (dir1, dir2) {
 			return !path.relative(dir1, dir2);
-		};
+		},
+		setupDep = function (name, deps) {
+			const depdir = path.join(workingdir, name);
+			fs.mkdirSync(depdir);
+			fs.writeFileSync(path.join(depdir, 'package.json'), JSON.stringify({name: name, version: '1.0.0', dependencies: deps }), 'utf8');
+			fs.writeFileSync(path.join(depdir, name + '.js'), 'hello there', 'utf8');
+		},
+		nullLogger = new NullLogger();
+
 	beforeEach(done => {
 		pwd = process.cwd();
 		fsPromise.mkdtempAsync(os.tmpdir())
@@ -137,29 +147,6 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
-		it('includes versions from package-lock.json if it exists', done => {
-			const lockContents = JSON.stringify({
-				'name': 't',
-				'version': '1.0.0',
-				'lockfileVersion': 1,
-				'requires': true,
-				'dependencies': {
-					'claudia-api-builder': {
-						'version': '3.0.1',
-						'resolved': 'https://registry.npmjs.org/claudia-api-builder/-/claudia-api-builder-3.0.1.tgz',
-						'integrity': 'sha1-is7sm9KWWujA5amqIhZwWnNJ4Z4='
-					}
-				}
-			});
-			fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), lockContents, 'utf8');
-			configurePackage({ files: ['roo*'], dependencies: {'claudia-api-builder': '^3'} });
-			underTest(sourcedir, workingdir)
-			.then(packagePath => destdir = packagePath)
-			.then(() => fs.readFileSync(path.join(destdir, 'package-lock.json'), 'utf8'))
-			.then(contents => expect(JSON.parse(contents).dependencies['claudia-api-builder'].version).toEqual('3.0.1'))
-			.then(done, done.fail);
-		});
-
 		['.gitignore', '.npmignore'].forEach(fileName => {
 			it(`ignores ${fileName}`, done => {
 				fs.writeFileSync(path.join(sourcedir, fileName), 'root.txt', 'utf8');
@@ -384,7 +371,28 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
-
+		it('includes versions from package-lock.json if it exists', done => {
+			const lockContents = JSON.stringify({
+				'name': 't',
+				'version': '1.0.0',
+				'lockfileVersion': 1,
+				'requires': true,
+				'dependencies': {
+					'claudia-api-builder': {
+						'version': '3.0.1',
+						'resolved': 'https://registry.npmjs.org/claudia-api-builder/-/claudia-api-builder-3.0.1.tgz',
+						'integrity': 'sha1-is7sm9KWWujA5amqIhZwWnNJ4Z4='
+					}
+				}
+			});
+			fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), lockContents, 'utf8');
+			configurePackage({ files: ['roo*'], dependencies: {'claudia-api-builder': '^3'} });
+			underTest(sourcedir, workingdir)
+			.then(packagePath => destdir = packagePath)
+			.then(() => fs.readFileSync(path.join(destdir, 'package-lock.json'), 'utf8'))
+			.then(contents => expect(JSON.parse(contents).dependencies['claudia-api-builder'].version).toEqual('3.0.1'))
+			.then(done, done.fail);
+		});
 		it('fails if npm install fails', done => {
 			configurePackage({
 				files: ['root.txt'],
@@ -418,6 +426,125 @@ describe('collectFiles', () => {
 				expect(process.cwd()).toEqual(pwd);
 				done();
 			});
+		});
+	});
+	describe('relative file dependencies', () => {
+
+		it('works with relative file dependencies', done => {
+			setupDep('prod-dep');
+			setupDep('dev-dep');
+			setupDep('opt-dep');
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep'
+				},
+				devDependencies: {
+					'dev-dep': 'file:../dev-dep'
+				},
+				optionalDependencies: {
+					'opt-dep': 'file:../opt-dep'
+				}
+			});
+			underTest(sourcedir, workingdir)
+				.then(packagePath => {
+					destdir = packagePath;
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'opt-dep', 'opt-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
+				})
+				.then(done, done.fail);
+
+		});
+		it('works with relative file dependencies after installation using package-lock', done => {
+			setupDep('prod-dep');
+			setupDep('dev-dep');
+			setupDep('opt-dep');
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep'
+				},
+				devDependencies: {
+					'dev-dep': 'file:../dev-dep'
+				},
+				optionalDependencies: {
+					'opt-dep': 'file:../opt-dep'
+				}
+			});
+			runNpm(sourcedir, 'install', nullLogger)
+				.then(() => underTest(sourcedir, workingdir))
+				.then(packagePath => {
+					destdir = packagePath;
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'opt-dep', 'opt-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
+				})
+				.then(done, done.fail);
+
+		});
+		it('works with relative file dependencies after shrinkwrapping', done => {
+			setupDep('prod-dep');
+			setupDep('dev-dep');
+			setupDep('opt-dep');
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep'
+				},
+				devDependencies: {
+					'dev-dep': 'file:../dev-dep'
+				},
+				optionalDependencies: {
+					'opt-dep': 'file:../opt-dep'
+				}
+
+			});
+			runNpm(sourcedir, 'install', nullLogger)
+				.then(() => runNpm(sourcedir, 'shrinkwrap', nullLogger))
+				.then(() => underTest(sourcedir, workingdir))
+				.then(packagePath => {
+					destdir = packagePath;
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'opt-dep', 'opt-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
+				})
+				.then(done, done.fail);
+
+		});
+		it('works with transitive relative file dependencies', done => {
+			setupDep('trans-dep');
+			setupDep('prod-dep', {'trans-dep': 'file:../trans-dep'});
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep'
+				}
+			});
+			underTest(sourcedir, workingdir)
+				.then(packagePath => {
+					destdir = packagePath;
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(
+						fsUtil.fileExists(path.join(packagePath, 'node_modules', 'trans-dep', 'trans-dep.js')) || /* npm3 */
+						fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'node_modules', 'trans-dep', 'trans-dep.js')) /*npm5+*/
+					).toBeTruthy();
+				})
+				.then(done, done.fail);
 		});
 	});
 	it('works with scoped packages', done => {
