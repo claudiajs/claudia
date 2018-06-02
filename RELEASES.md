@@ -1,5 +1,9 @@
 # Release history
 
+### 4.1.0 XXX
+
+- use `--npm-options` to pass additional options to NPM when installing packages. Useful to specify behaviour for package locking.
+
 ### 4.0.0 9 April 2018
 
 - compatibility with Node.js 8.10 and NPM 5
