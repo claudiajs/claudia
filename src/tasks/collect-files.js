@@ -1,5 +1,4 @@
-const tmppath = require('../util/tmppath'),
-	readjson = require('../util/readjson'),
+const readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),
 	fsUtil = require('../util/fs-util'),
 	fs = require('fs'),
@@ -59,24 +58,24 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 		extractTarGz = function (archive, dir) {
 			return new Promise((resolve, reject) => {
 				const extractStream = tarStream.extract(dir);
-				extractStream.on('finish', resolve);
+				extractStream.on('finish', () => resolve(dir));
 				extractStream.on('error', reject);
 				fs.createReadStream(archive).pipe(gunzip()).pipe(extractStream);
 			});
 		},
-		copyFiles = function (packageConfig) {
-			const packDir = tmppath(),
-				targetDir = tmppath(),
-				expectedName = expectedArchiveName(packageConfig),
-				absolutePath = path.resolve(sourcePath);
-			fsUtil.ensureCleanDir(packDir);
-			return runNpm(packDir, `pack "${absolutePath}"${npmOptions}`, logger)
-			.then(() => extractTarGz(path.join(packDir, expectedName), packDir))
-			.then(() => fsPromise.renameAsync(path.join(packDir, 'package'), targetDir))
-			.then(() => {
-				fsUtil.rmDir(packDir);
-				return targetDir;
-			});
+		packToTarGz = function (projectDir) {
+			const absolutePath = path.resolve(projectDir);
+			let packageConfig;
+			return readjson(path.join(projectDir, 'package.json'))
+			.then(config => packageConfig = config)
+			.then(() => fsPromise.mkdtempAsync(path.join(workingDir, 'pack')))
+			.then(packDir => runNpm(packDir, `pack "${absolutePath}"${npmOptions}`, logger))
+			.then(packDir => path.join(packDir, expectedArchiveName(packageConfig)));
+		},
+		copyFiles = function (projectDir) {
+			return packToTarGz(projectDir)
+			.then(archive => extractTarGz(archive, path.dirname(archive)))
+			.then(archiveDir => path.join(archiveDir, 'package'));
 		},
 		installDependencies = function (targetDir) {
 			if (useLocalDependencies) {
@@ -105,8 +104,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	if (validationError) {
 		return Promise.reject(validationError);
 	}
-	return readjson(path.join(sourcePath, 'package.json'))
-	.then(copyFiles)
+	return copyFiles(sourcePath)
 	.then(copyPackageLock)
 	.then(rewireRelativeDependencies)
 	.then(installDependencies);

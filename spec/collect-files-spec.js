@@ -17,8 +17,8 @@ describe('collectFiles', () => {
 			packageConf.version = packageConf.version || '1.0.0';
 			fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
 		},
-		isSameDir = function (dir1, dir2) {
-			return !path.relative(dir1, dir2);
+		isSubDir = function (dir1, dir2) {
+			return path.relative(dir1, dir2).startsWith('..');
 		},
 		setupDep = function (name, deps) {
 			const depdir = path.join(workingdir, name);
@@ -30,9 +30,9 @@ describe('collectFiles', () => {
 
 	beforeEach(done => {
 		pwd = process.cwd();
-		fsPromise.mkdtempAsync(os.tmpdir())
+		fsPromise.mkdtempAsync(os.tmpdir() + path.sep)
 		.then(dir => {
-			workingdir = dir;
+			workingdir = path.resolve(dir);
 			sourcedir = path.join(workingdir, 'source');
 			fs.mkdirSync(sourcedir);
 			fs.writeFileSync(path.join(sourcedir, 'root.txt'), 'text1', 'utf8');
@@ -127,12 +127,12 @@ describe('collectFiles', () => {
 				done();
 			}, done.fail);
 		});
-		it('copies all the listed files/subfolders/with wildcards from the files property to a folder in temp path', done => {
+		it('copies all the listed files/subfolders/with wildcards from the files property to a folder in the working path', done => {
 			configurePackage({ files: ['roo*', 'subdir'] });
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+				expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 				done();
@@ -163,12 +163,12 @@ describe('collectFiles', () => {
 		});
 	});
 	describe('when the files property is not specified', () => {
-		it('copies all the project files to a folder in temp path', done => {
+		it('copies all the project files to a folder in the working path', done => {
 			configurePackage({});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
 				destdir = packagePath;
-				expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+				expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 				expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
@@ -552,7 +552,7 @@ describe('collectFiles', () => {
 		underTest(sourcedir, workingdir)
 		.then(packagePath => {
 			destdir = packagePath;
-			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+			expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 			expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');
@@ -567,7 +567,7 @@ describe('collectFiles', () => {
 		underTest(sourcedir, workingdir)
 		.then(packagePath => {
 			destdir = packagePath;
-			expect(isSameDir(path.dirname(packagePath), os.tmpdir())).toBeTruthy();
+			expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 			expect(fs.readFileSync(path.join(packagePath, 'excluded.txt'), 'utf8')).toEqual('excl1');

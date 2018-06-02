@@ -323,7 +323,7 @@ module.exports = function create(options, optionalLogger) {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	})
-	.then(() => fsPromise.mkdtempAsync(os.tmpdir()))
+	.then(() => fsPromise.mkdtempAsync(os.tmpdir() + path.sep))
 	.then(dir => workingDir = dir)
 	.then(() => collectFiles(source, workingDir, options, logger))
 	.then(dir => {

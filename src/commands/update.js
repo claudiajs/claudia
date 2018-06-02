@@ -184,7 +184,7 @@ module.exports = function update(options, optionalLogger) {
 			return apiGateway.getRestApiPromise({restApiId: apiConfig.id});
 		}
 	})
-	.then(() => fsPromise.mkdtempAsync(os.tmpdir()))
+	.then(() => fsPromise.mkdtempAsync(os.tmpdir() + path.sep))
 	.then(dir => workingDir = dir)
 	.then(() => collectFiles(options.source, workingDir, options, logger))
 	.then(dir => {
