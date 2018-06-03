@@ -1,14 +1,12 @@
 const readjson = require('../util/readjson'),
 	runNpm = require('../util/run-npm'),
 	fsUtil = require('../util/fs-util'),
-	fs = require('fs'),
+	extractTar = require('../util/extract-tar'),
 	fsPromise = require('../util/fs-promise'),
 	path = require('path'),
 	localizeDependencies = require('./localize-dependencies'),
-	expectedArchiveName = require('../util/expected-archive-name'),
-	gunzip = require('gunzip-maybe'),
-	tarStream = require('tar-fs'),
-	NullLogger = require('../util/null-logger');
+	NullLogger = require('../util/null-logger'),
+	packProjectToTar = require('../util/pack-project-to-tar');
 
 /*
  * Creates a directory with a NPM project and all production dependencies localised,
@@ -55,26 +53,9 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				return 'source directory does not contain package.json';
 			}
 		},
-		extractTarGz = function (archive, dir) {
-			return new Promise((resolve, reject) => {
-				const extractStream = tarStream.extract(dir);
-				extractStream.on('finish', () => resolve(dir));
-				extractStream.on('error', reject);
-				fs.createReadStream(archive).pipe(gunzip()).pipe(extractStream);
-			});
-		},
-		packToTarGz = function (projectDir) {
-			const absolutePath = path.resolve(projectDir);
-			let packageConfig;
-			return readjson(path.join(projectDir, 'package.json'))
-			.then(config => packageConfig = config)
-			.then(() => fsPromise.mkdtempAsync(path.join(workingDir, 'pack')))
-			.then(packDir => runNpm(packDir, `pack "${absolutePath}"${npmOptions}`, logger))
-			.then(packDir => path.join(packDir, expectedArchiveName(packageConfig)));
-		},
 		copyFiles = function (projectDir) {
-			return packToTarGz(projectDir)
-			.then(archive => extractTarGz(archive, path.dirname(archive)))
+			return packProjectToTar(projectDir, workingDir, npmOptions, logger)
+			.then(archive => extractTar(archive, path.dirname(archive)))
 			.then(archiveDir => path.join(archiveDir, 'package'));
 		},
 		installDependencies = function (targetDir) {

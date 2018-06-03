@@ -20,10 +20,10 @@ describe('collectFiles', () => {
 		isSubDir = function (dir1, dir2) {
 			return path.relative(dir1, dir2).startsWith('..');
 		},
-		setupDep = function (name, deps) {
+		setupDep = function (name, deps, devDeps) {
 			const depdir = path.join(workingdir, name);
 			fs.mkdirSync(depdir);
-			fs.writeFileSync(path.join(depdir, 'package.json'), JSON.stringify({name: name, version: '1.0.0', dependencies: deps }), 'utf8');
+			fs.writeFileSync(path.join(depdir, 'package.json'), JSON.stringify({name: name, version: '1.0.0', dependencies: deps, devDependencies: devDeps }), 'utf8');
 			fs.writeFileSync(path.join(depdir, name + '.js'), 'hello there', 'utf8');
 		},
 		nullLogger = new NullLogger();
@@ -524,6 +524,7 @@ describe('collectFiles', () => {
 				.then(done, done.fail);
 
 		});
+
 		it('works with transitive relative file dependencies', done => {
 			setupDep('trans-dep');
 			setupDep('prod-dep', {'trans-dep': 'file:../trans-dep'});
@@ -546,6 +547,27 @@ describe('collectFiles', () => {
 				})
 				.then(done, done.fail);
 		});
+		it('does not keep devDependencies of relative file dependencies', done => {
+
+			setupDep('dev-dep');
+			setupDep('prod-dep', {}, {'dev-dep': 'file:../dev-dep'});
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep'
+				}
+			});
+			runNpm(path.join(workingdir, 'prod-dep'), 'install', nullLogger)
+			.then(() => underTest(sourcedir, workingdir))
+			.then(packagePath => {
+				destdir = packagePath;
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy(); /* npm3 */
+				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'node_modules', 'dev-dep'))).toBeFalsy(); /*npm5+*/
+			})
+			.then(done, done.fail);
+		});
+
 	});
 	it('works with scoped packages', done => {
 		configurePackage({ name: '@test/packname' });
