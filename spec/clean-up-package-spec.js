@@ -96,8 +96,31 @@ describe('cleanUpPackage', () => {
 		});
 		underTest(sourcedir, { 'optional-dependencies': false }, logger)
 		.then(done.fail, reason => {
-			expect(reason).toMatch(/npm install --production --no-optional  failed/);
+			expect(reason).toMatch(/npm install --no-audit --production --no-optional failed/);
 			done();
 		});
 	});
+	it('logs progress', done => {
+		const logger = new ArrayLogger();
+		underTest(sourcedir, { 'optional-dependencies': false, 'npm-options': '--dry-run' }, logger)
+		.then(() => {
+			expect(logger.getCombinedLog()).toEqual([
+				['call', 'removing optional dependencies'],
+				['call', 'npm install --no-audit --production --no-optional --dry-run'],
+				['call', 'npm dedupe --dry-run']
+			]);
+		})
+		.then(done, done.fail);
+	});
+	it('only dedupes if optional deps are not turned off', done => {
+		const logger = new ArrayLogger();
+		underTest(sourcedir, {}, logger)
+		.then(() => {
+			expect(logger.getCombinedLog()).toEqual([
+				['call', 'npm dedupe']
+			]);
+		})
+		.then(done, done.fail);
+	});
+
 });
