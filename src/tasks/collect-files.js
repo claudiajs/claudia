@@ -26,6 +26,7 @@ const readjson = require('../util/readjson'),
 module.exports = function collectFiles(sourcePath, workingDir, options, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
+		cachedRewrites = {},
 		useLocalDependencies = options && options['use-local-dependencies'],
 		npmOptions = (options && options['npm-options']) ? (' ' + options['npm-options']) : '',
 		checkPreconditions = function (providedSourcePath) {
@@ -72,7 +73,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
-				return runNpm(targetDir, `install --production${npmOptions}`, logger);
+				return runNpm(targetDir, `install --no-audit --production${npmOptions}`, logger);
 			}
 		},
 		isRelativeDependency = function (dependency) {
@@ -89,20 +90,24 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				throw new Error('invalid relative dependency path ' + dependencyPath);
 			}
 			const actualPath = path.resolve(referencePath, dependencyPath.replace(/^file:/, ''));
+
+			if (cachedRewrites[actualPath]) {
+				return cachedRewrites[actualPath];
+			}
 			if (fsUtil.isFile(actualPath)) {
-				return actualPath;
+				return 'file:' + actualPath;
 			}
 			if (fsUtil.isDir(actualPath)) {
 				return readjson(path.join(actualPath, 'package.json'))
 				.then(packageConf => {
 					if (!hasRelativeDependencies(packageConf)) {
 						return packProjectToTar(actualPath, workingDir, npmOptions, logger);
-					} else {
-						return cleanCopyToDir(actualPath)
-							.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) //eslint-disable-line
-							.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
 					}
-				});
+					return cleanCopyToDir(actualPath)
+						.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) // eslint-disable-line no-use-before-define
+						.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
+				})
+				.then(remappedPath => cachedRewrites[actualPath] = remappedPath);
 			}
 		},
 		remapDependencyType = function (subConfig, referenceDir) {

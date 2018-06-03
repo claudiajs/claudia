@@ -6,12 +6,14 @@ const underTest = require('../src/tasks/collect-files'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	fsPromise = require('../src/util/fs-promise'),
+	readjson = require('../src/util/readjson'),
 	NullLogger = require('../src/util/null-logger'),
 	fsUtil = require('../src/util/fs-util'),
+	packProjectToTar = require('../src/util/pack-project-to-tar'),
 	path = require('path');
 describe('collectFiles', () => {
 	'use strict';
-	let destdir, sourcedir, workingdir, pwd;
+	let sourcedir, workingdir, pwd;
 	const configurePackage = function (packageConf) {
 			packageConf.name = packageConf.name || 'testproj';
 			packageConf.version = packageConf.version || '1.0.0';
@@ -44,12 +46,7 @@ describe('collectFiles', () => {
 	});
 	afterEach(() => {
 		process.chdir(pwd);
-		if (destdir) {
-			fsUtil.rmDir(destdir);
-		}
-		if (sourcedir) {
-			fsUtil.rmDir(sourcedir);
-		}
+		fsUtil.rmDir(workingdir);
 	});
 	it('fails if the source directory is not provided', done => {
 		underTest()
@@ -109,7 +106,6 @@ describe('collectFiles', () => {
 			configurePackage({ files: ['roo*'] });
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
@@ -120,7 +116,6 @@ describe('collectFiles', () => {
 			configurePackage({ files: ['root.txt'] });
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
@@ -131,7 +126,6 @@ describe('collectFiles', () => {
 			configurePackage({ files: ['roo*', 'subdir'] });
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
@@ -142,7 +136,6 @@ describe('collectFiles', () => {
 			configurePackage({ files: ['roo*'] });
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'package.json'))).toBeTruthy();
 				done();
 			}, done.fail);
@@ -153,7 +146,6 @@ describe('collectFiles', () => {
 				configurePackage({files: ['roo*']});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
@@ -167,7 +159,6 @@ describe('collectFiles', () => {
 			configurePackage({});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 				expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 				expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
@@ -179,7 +170,6 @@ describe('collectFiles', () => {
 			configurePackage({});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'package.json'))).toBeTruthy();
 			})
 			.then(done, done.fail);
@@ -191,7 +181,6 @@ describe('collectFiles', () => {
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, dirName, 'sub.txt'))).toBeFalsy();
 				})
 				.then(done, done.fail);
@@ -203,7 +192,6 @@ describe('collectFiles', () => {
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, fileName))).toBeFalsy();
 				})
 				.then(done, done.fail);
@@ -215,7 +203,6 @@ describe('collectFiles', () => {
 			configurePackage({});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, fileName))).toBeTruthy();
 			})
 			.then(done, done.fail);
@@ -226,7 +213,6 @@ describe('collectFiles', () => {
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
@@ -240,7 +226,6 @@ describe('collectFiles', () => {
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'sub.txt'))).toBeFalsy();
 				})
 				.then(done, done.fail);
@@ -250,7 +235,6 @@ describe('collectFiles', () => {
 				configurePackage({});
 				underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'excluded.txt'))).toBeFalsy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeFalsy();
@@ -264,7 +248,6 @@ describe('collectFiles', () => {
 			configurePackage({});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'root.txt'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'subdir'))).toBeTruthy();
 			})
@@ -290,7 +273,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
@@ -310,7 +292,6 @@ describe('collectFiles', () => {
 			fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
 			underTest(sourcedir, workingdir)
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
@@ -329,7 +310,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir, {'npm-options': '--no-optional'})
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'minimist'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeFalsy();
@@ -347,7 +327,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir, {'use-local-dependencies': true})
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
 				done();
@@ -365,7 +344,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir, {'use-local-dependencies': true})
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'uuid'))).toBeFalsy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'old-mod'))).toBeTruthy();
 				done();
@@ -388,8 +366,7 @@ describe('collectFiles', () => {
 			fs.writeFileSync(path.join(sourcedir, 'package-lock.json'), lockContents, 'utf8');
 			configurePackage({ files: ['roo*'], dependencies: {'claudia-api-builder': '^3'} });
 			underTest(sourcedir, workingdir)
-			.then(packagePath => destdir = packagePath)
-			.then(() => fs.readFileSync(path.join(destdir, 'package-lock.json'), 'utf8'))
+			.then(packagedir => fs.readFileSync(path.join(packagedir, 'package-lock.json'), 'utf8'))
 			.then(contents => expect(JSON.parse(contents).dependencies['claudia-api-builder'].version).toEqual('3.0.1'))
 			.then(done, done.fail);
 		});
@@ -402,7 +379,7 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 			.then(done.fail, reason => {
-				expect(reason).toMatch(/npm install --production failed/);
+				expect(reason).toMatch(/npm install --no-audit --production failed/);
 				done();
 			});
 		});
@@ -429,7 +406,6 @@ describe('collectFiles', () => {
 		});
 	});
 	describe('relative file dependencies', () => {
-
 		it('works with relative file dependencies', done => {
 			setupDep('prod-dep');
 			setupDep('dev-dep');
@@ -448,7 +424,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
 					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
@@ -458,6 +433,28 @@ describe('collectFiles', () => {
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
 				})
 				.then(done, done.fail);
+		});
+		it('remaps file links to absolute paths', done => {
+			let tgzPath, relativePath;
+			setupDep('prod-dep');
+			packProjectToTar(path.join(workingdir, 'prod-dep'), workingdir, '', nullLogger)
+			.then(archivePath => tgzPath = archivePath)
+			.then(() => {
+				relativePath = path.relative(sourcedir, tgzPath);
+				configurePackage({
+					files: ['root.txt'],
+					dependencies: {
+						'prod-dep': 'file:' + relativePath
+					}
+				});
+			})
+			.then(() => underTest(sourcedir, workingdir))
+			.then(packagePath => readjson(path.join(packagePath, 'package.json')))
+			.then(packageConf => {
+				expect(packageConf.dependencies['prod-dep']).toEqual('file:' + tgzPath);
+				expect(packageConf.dependencies['prod-dep']).not.toEqual('file:' + relativePath);
+			})
+			.then(done, done.fail);
 
 		});
 		it('works with relative file dependencies after installation using package-lock', done => {
@@ -479,7 +476,6 @@ describe('collectFiles', () => {
 			runNpm(sourcedir, 'install', nullLogger)
 				.then(() => underTest(sourcedir, workingdir))
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
 					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
@@ -512,7 +508,6 @@ describe('collectFiles', () => {
 				.then(() => runNpm(sourcedir, 'shrinkwrap', nullLogger))
 				.then(() => underTest(sourcedir, workingdir))
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
 					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
@@ -536,7 +531,6 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 				.then(packagePath => {
-					destdir = packagePath;
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
 					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
@@ -546,6 +540,25 @@ describe('collectFiles', () => {
 					).toBeTruthy();
 				})
 				.then(done, done.fail);
+		});
+		it('resolves the same relative dependency dir to the same file to enable deduping', done => {
+			setupDep('trans-dep');
+			setupDep('prod-dep', {'trans-dep': 'file:../trans-dep'});
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': 'file:../prod-dep',
+					'trans-dep': 'file:../trans-dep'
+				}
+			});
+			underTest(sourcedir, workingdir)
+			.then(packagePath => Promise.all([readjson(path.join(packagePath, 'package.json')), readjson(path.join(packagePath, 'node_modules', 'prod-dep', 'package.json'))]))
+			.then(packageConfArray => {
+				const mainConf = packageConfArray[0],
+					depConf = packageConfArray[1];
+				expect(mainConf.dependencies['trans-dep']).toEqual(depConf.dependencies['trans-dep']);
+			})
+			.then(done, done.fail);
 		});
 		it('does not keep devDependencies of relative file dependencies', done => {
 
@@ -560,7 +573,6 @@ describe('collectFiles', () => {
 			runNpm(path.join(workingdir, 'prod-dep'), 'install', nullLogger)
 			.then(() => underTest(sourcedir, workingdir))
 			.then(packagePath => {
-				destdir = packagePath;
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy(); /* npm3 */
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'node_modules', 'dev-dep'))).toBeFalsy(); /*npm5+*/
@@ -573,7 +585,6 @@ describe('collectFiles', () => {
 		configurePackage({ name: '@test/packname' });
 		underTest(sourcedir, workingdir)
 		.then(packagePath => {
-			destdir = packagePath;
 			expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
@@ -588,7 +599,6 @@ describe('collectFiles', () => {
 		configurePackage({ name: 'test123' });
 		underTest(sourcedir, workingdir)
 		.then(packagePath => {
-			destdir = packagePath;
 			expect(isSubDir(path.dirname(packagePath), workingdir)).toBeTruthy();
 			expect(fs.readFileSync(path.join(packagePath, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(packagePath, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
@@ -610,7 +620,7 @@ describe('collectFiles', () => {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
 				['call', `npm pack "${sourcedir}"`],
-				['call', 'npm install --production']
+				['call', 'npm install --no-audit --production']
 			]);
 		})
 		.then(done, done.fail);
