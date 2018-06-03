@@ -28,7 +28,6 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	const logger = optionalLogger || new NullLogger(),
 		useLocalDependencies = options && options['use-local-dependencies'],
 		npmOptions = (options && options['npm-options']) ? (' ' + options['npm-options']) : '',
-		containsNonEmptyElement = r => r && Array.isArray(r) && r.find(x => !!x),
 		checkPreconditions = function (providedSourcePath) {
 			if (!providedSourcePath) {
 				return 'source directory not provided';
@@ -79,6 +78,12 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 		isRelativeDependency = function (dependency) {
 			return (dependency && dependency.startsWith('file:'));
 		},
+		hasRelativeDependencies = function (packageConf) {
+			return ['dependencies', 'devDependencies', 'optionalDependencies'].find(depType => {
+				const subConf = packageConf[depType];
+				return subConf && Object.keys(subConf).map(key => subConf[key]).find(isRelativeDependency);
+			});
+		},
 		remapSingleDep = function (dependencyPath, referencePath) {
 			if (!isRelativeDependency(dependencyPath)) {
 				throw new Error('invalid relative dependency path ' + dependencyPath);
@@ -88,9 +93,16 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				return actualPath;
 			}
 			if (fsUtil.isDir(actualPath)) {
-				return cleanCopyToDir(actualPath)
-					.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) //eslint-disable-line
-					.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
+				return readjson(path.join(actualPath, 'package.json'))
+				.then(packageConf => {
+					if (!hasRelativeDependencies(packageConf)) {
+						return packProjectToTar(actualPath, workingDir, npmOptions, logger);
+					} else {
+						return cleanCopyToDir(actualPath)
+							.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) //eslint-disable-line
+							.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
+					}
+				});
 			}
 		},
 		remapDependencyType = function (subConfig, referenceDir) {
@@ -108,18 +120,15 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 		},
 		rewireRelativeDependencies = function (targetDir, referenceDir) {
 			const confPath = path.join(targetDir, 'package.json');
-			let packageConfig;
 			return readjson(confPath)
-			.then(c => packageConfig = c)
-			.then(() => Promise.all(['dependencies', 'devDependencies', 'optionalDependencies'].map(t => remapDependencyType(packageConfig[t], referenceDir))))
-			.then(mappingResults => {
-				if (containsNonEmptyElement(mappingResults)) {
-					return fsPromise.writeFileAsync(confPath, JSON.stringify(packageConfig, null, 2), 'utf8');
+			.then(packageConfig => {
+				if (hasRelativeDependencies(packageConfig)) {
+					return Promise.all(['dependencies', 'devDependencies', 'optionalDependencies'].map(t => remapDependencyType(packageConfig[t], referenceDir)))
+					.then(() => fsPromise.writeFileAsync(confPath, JSON.stringify(packageConfig, null, 2), 'utf8'));
 				}
 			})
 			.then(() => targetDir);
 		},
-
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
