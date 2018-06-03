@@ -7,6 +7,7 @@
 - packaging support for NPM 5 and 6 using relative file dependencies -- this previously worked only with NPM 3 because NPM 5 uses symbolic links for relative references
 - upload size optimised using for NPM 5 and 6 by deduping dependencies after packaging
 - use `--post-package-script=<NPM SCRIPT NAME>` with `claudia create` or `claudia update` to execute a custom post-package step to clean up resources, optimise package size etc. This runs after all validations are complete, and development dependencies are not available at this stage... but you can use npm to uninstall utility tools as part of this step if needed.
+- new command. [`claudia pack`](docs/pack.md) just packages the files, correctly handling NPM dependencies, without deploying anywhere. Useful for troubleshooting, or if you want to deploy to Lambda using some other tool but get Claudia to prepare the package for you. This is specially useful for CloudFormation deployments if you want to use NPM 5 or 6. The command works with any Node.js Lambda project, not just Claudia-specific ones. 
 
 ### 4.0.0 9 April 2018
 

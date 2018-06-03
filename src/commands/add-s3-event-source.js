@@ -106,7 +106,7 @@ module.exports = function addS3EventSource(options) {
 
 module.exports.doc = {
 	description: 'Add a notification event to Lambda when a file is added to a S3 bucket, and set up access permissions',
-	priority: 4,
+	priority: 5,
 	args: [
 		{
 			argument: 'bucket',
