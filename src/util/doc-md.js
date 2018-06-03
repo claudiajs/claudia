@@ -48,6 +48,9 @@ const fs = require('fs'),
 			if (argDoc.default) {
 				pushLines(indent('* _Defaults to_: ' + argDoc.default, 4));
 			}
+			if (argDoc.since) {
+				pushLines(indent('* _Introduced in version_: ' + argDoc.since, 4));
+			}
 		});
 		lines.push('');
 		return lines.join('\n');

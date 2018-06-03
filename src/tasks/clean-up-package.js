@@ -16,6 +16,12 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 		dedupe = function () {
 			return runNpm(packageDir, `dedupe${npmOptions}`, logger);
 		},
+		runPostPackageScript = function () {
+			const script = options['post-package-script'];
+			if (script) {
+				return runNpm(packageDir, `run ${script}${npmOptions}`, logger);
+			}
+		},
 		cleanUpDependencies = function () {
 			if (options['optional-dependencies'] === false) {
 				logger.logApiCall('removing optional dependencies');
@@ -28,6 +34,7 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 	return silentRemove('package-lock.json')
 	.then(cleanUpDependencies)
 	.then(dedupe)
+	.then(runPostPackageScript)
 	.then(() => silentRemove('.npmrc'))
 	.then(() => packageDir);
 };

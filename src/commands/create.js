@@ -506,7 +506,8 @@ module.exports.doc = {
 			argument: 'npm-options',
 			optional: true,
 			description: 'Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information',
-			example: '--ignore-scripts'
+			example: '--ignore-scripts',
+			since: '4.1.0'
 		},
 		{
 			argument: 'cache-api-config',
@@ -514,6 +515,14 @@ module.exports.doc = {
 			example: 'claudiaConfigCache',
 			description: 'Name of the stage variable for storing the current API configuration signature.\n' +
 				'If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment'
+		},
+		{
+			argument: 'post-package-script',
+			optional: true,
+			example: 'customNpmScript',
+			description: 'the name of a NPM script to execute custom processing after claudia finished packaging your files.\n' +
+				'Note that development dependencies are not available at this point, but you can use npm uninstall to remove utility tools as part of this step.',
+			since: '4.1.0'
 		},
 		{
 			argument: 'keep',

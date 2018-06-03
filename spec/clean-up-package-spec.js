@@ -122,5 +122,25 @@ describe('cleanUpPackage', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('executes a post-package script if requested', done => {
+		const logger = new ArrayLogger();
+		configurePackage({
+			files: ['root.txt'],
+			scripts: {
+				'customPack': 'npm uninstall uuid'
+			}
+		});
+		underTest(sourcedir, {'post-package-script': 'customPack'}, logger)
+		.then(() => {
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
+			expect(logger.getCombinedLog()).toEqual([
+				['call', 'npm dedupe'],
+				['call', 'npm run customPack']
+			]);
+		})
+		.then(done, done.fail);
+
+
+	});
 
 });

@@ -3,6 +3,10 @@
 ### 4.1.0 XXX
 
 - use `--npm-options` to pass additional options to NPM when installing packages. Useful to specify behaviour for package locking.
+- packaging using NPM 6 is now faster as audits are turned off by default
+- packaging support for NPM 5 and 6 using relative file dependencies -- this previously worked only with NPM 3 because NPM 5 uses symbolic links for relative references
+- upload size optimised using for NPM 5 and 6 by deduping dependencies after packaging
+- use `--post-package-script=<NPM SCRIPT NAME>` with `claudia create` or `claudia update` to execute a custom post-package step to clean up resources, optimise package size etc. This runs after all validations are complete, and development dependencies are not available at this stage... but you can use npm to uninstall utility tools as part of this step if needed.
 
 ### 4.0.0 9 April 2018
 

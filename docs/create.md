@@ -51,9 +51,14 @@ claudia create {OPTIONS}
 *  `--use-local-dependencies`:  (_optional_) Do not install dependencies, use local node_modules directory instead
 *  `--npm-options`:  (_optional_) Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information
     * _For example_: --ignore-scripts
+    * _Introduced in version_: 4.1.0
 *  `--cache-api-config`:  (_optional_) Name of the stage variable for storing the current API configuration signature.
     If set, it will also be used to check if the previously deployed configuration can be re-used and speed up deployment
     * _For example_: claudiaConfigCache
+*  `--post-package-script`:  (_optional_) the name of a NPM script to execute custom processing after claudia finished packaging your files.
+    Note that development dependencies are not available at this point, but you can use npm uninstall to remove utility tools as part of this step.
+    * _For example_: customNpmScript
+    * _Introduced in version_: 4.1.0
 *  `--keep`:  (_optional_) keep the produced package archive on disk for troubleshooting purposes.
     If not set, the temporary files will be removed after the Lambda function is successfully created
 *  `--use-s3-bucket`:  (_optional_) The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.
