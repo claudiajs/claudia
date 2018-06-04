@@ -212,6 +212,16 @@ describe('fsUtil', () => {
 			});
 		});
 	});
+	describe('silentRemove', () => {
+		it('removes an existing file', () => {
+			fs.writeFileSync(pathName, '123', 'utf8');
+			fsUtil.silentRemove(pathName);
+			expect(fsUtil.isFile(pathName)).toBeFalsy();
+		});
+		it('will not complain if the file does not exist', () => {
+			expect(() => fsUtil.silentRemove(pathName)).not.toThrow();
+		});
+	});
 	describe('isFile', () => {
 		it('is false for non-existing paths', () => {
 			expect(fsUtil.isFile(pathName)).toBeFalsy();

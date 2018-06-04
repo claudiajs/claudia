@@ -5,7 +5,7 @@ exports.ensureCleanDir = function (dirPath) {
 	shell.rm('-rf', dirPath);
 	shell.mkdir('-p', dirPath);
 };
-exports.rmDir = function (dirPath) {
+exports.silentRemove = exports.rmDir = function (dirPath) {
 	'use strict';
 	shell.rm('-rf', dirPath);
 };

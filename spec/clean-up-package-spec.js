@@ -1,7 +1,7 @@
 /*global describe, it, beforeEach, afterEach, expect*/
 const underTest = require('../src/tasks/clean-up-package'),
-	shell = require('shelljs'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	runNpm = require('../src/util/run-npm'),
@@ -14,9 +14,9 @@ describe('cleanUpPackage', () => {
 	};
 	beforeEach(done => {
 		sourcedir = tmppath();
-		shell.mkdir(sourcedir);
+		fs.mkdirSync(sourcedir);
 		logger = new ArrayLogger();
-		pwd = shell.pwd();
+		pwd = process.cwd();
 		configurePackage({
 			dependencies: {
 				'uuid': '^2.0.0'
@@ -29,9 +29,9 @@ describe('cleanUpPackage', () => {
 		.then(done, done.fail);
 	});
 	afterEach(() => {
-		shell.cd(pwd);
+		process.chdir(pwd);
 		if (sourcedir) {
-			shell.rm('-rf', sourcedir);
+			fsUtil.rmDir(sourcedir);
 		}
 	});
 	it('returns the directory path', done => {
@@ -45,8 +45,8 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, {}, logger)
 		.then(result => {
 			expect(result).toEqual(sourcedir);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeTruthy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'minimist'))).toBeTruthy();
 		})
 		.then(done, done.fail);
 	});
@@ -54,8 +54,8 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, { 'optional-dependencies': false }, logger)
 		.then(result => {
 			expect(result).toEqual(sourcedir);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
 		})
 		.then(done, done.fail);
 	});
@@ -63,8 +63,8 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, { 'optional-dependencies': false, 'npm-options': '--dry-run' }, logger)
 		.then(result => {
 			expect(result).toEqual(sourcedir);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
 		})
 		.then(done, done.fail);
 	});
@@ -74,7 +74,7 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, {}, logger)
 		.then(result => {
 			expect(result).toEqual(sourcedir);
-			expect(shell.test('-e', path.join(sourcedir, '.npmrc'))).toBeFalsy();
+			expect(fsUtil.isFile(path.join(sourcedir, '.npmrc'))).toBeFalsy();
 		})
 		.then(done, done.fail);
 	});
@@ -83,7 +83,7 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, {}, logger)
 		.then(result => {
 			expect(result).toEqual(sourcedir);
-			expect(shell.test('-e', path.join(sourcedir, 'package-lock.json'))).toBeFalsy();
+			expect(fsUtil.isFile(path.join(sourcedir, 'package-lock.json'))).toBeFalsy();
 		})
 		.then(done, done.fail);
 	});
@@ -96,7 +96,7 @@ describe('cleanUpPackage', () => {
 		});
 		underTest(sourcedir, { 'optional-dependencies': false }, logger)
 		.then(done.fail, reason => {
-			expect(reason).toMatch(/npm install --no-audit --production --no-optional failed/);
+			expect(reason).toMatch(/npm install --no-package-lock --no-audit --production --no-optional failed/);
 			done();
 		});
 	});
@@ -106,8 +106,8 @@ describe('cleanUpPackage', () => {
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['call', 'removing optional dependencies'],
-				['call', 'npm install --no-audit --production --no-optional --dry-run'],
-				['call', 'npm dedupe --dry-run']
+				['call', 'npm install --no-package-lock --no-audit --production --no-optional --dry-run'],
+				['call', 'npm dedupe --no-package-lock --dry-run']
 			]);
 		})
 		.then(done, done.fail);
@@ -117,7 +117,7 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, {}, logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
-				['call', 'npm dedupe']
+				['call', 'npm dedupe --no-package-lock']
 			]);
 		})
 		.then(done, done.fail);
@@ -132,15 +132,12 @@ describe('cleanUpPackage', () => {
 		});
 		underTest(sourcedir, {'post-package-script': 'customPack'}, logger)
 		.then(() => {
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
+			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
 			expect(logger.getCombinedLog()).toEqual([
-				['call', 'npm dedupe'],
+				['call', 'npm dedupe --no-package-lock'],
 				['call', 'npm run customPack']
 			]);
 		})
 		.then(done, done.fail);
-
-
 	});
-
 });
