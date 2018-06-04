@@ -15,12 +15,14 @@ const fs = require('fs'),
 				target[methodName].apply(target, originalArgs);
 			});
 		};
+	},
+	build = function () {
+		'use strict';
+		const result = {},
+			methods = ['writeFile', 'readFile', 'unlink', 'chmod', 'stat', 'rename', 'mkdtemp'];
+		methods.forEach(method => result[`${method}Async`] = promisify(fs, method));
+		return result;
 	};
+module.exports = build();
 
-module.exports = {
-	writeFileAsync: promisify(fs, 'writeFile'),
-	readFileAsync: promisify(fs, 'readFile'),
-	unlinkAsync: promisify(fs, 'unlink'),
-	renameAsync: promisify(fs, 'rename'),
-	mkdtempAsync: promisify(fs, 'mkdtemp')
-};
+

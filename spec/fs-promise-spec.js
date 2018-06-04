@@ -66,5 +66,24 @@ describe('fs-promise', () => {
 			.then(done, done.fail);
 		});
 	});
-
+	describe('statAsync', () => {
+		it('gets stats for a dir', done => {
+			fsPromise.writeFileAsync(filePath, 'fileContents-123', 'utf8')
+			.then(() => fsPromise.statAsync(filePath))
+			.then(stat => {
+				expect(stat.isDirectory()).toBeFalsy();
+				expect(stat.isFile()).toBeTruthy();
+			})
+			.then(done, done.fail);
+		});
+	});
+	describe('chmodAsync', () => {
+		it('changes the file mode', done => {
+			fsPromise.writeFileAsync(filePath, 'fileContents-123', 'utf8')
+			.then(() => fsPromise.chmodAsync(filePath, 0o755))
+			.then(() => fs.statSync(filePath))
+			.then(stats => expect(stats.mode & 0o777).toEqual(0o755))
+			.then(done, done.fail);
+		});
+	});
 });

@@ -1,5 +1,6 @@
 const path = require('path'),
 	fsUtil = require('../util/fs-util'),
+	fsPromise = require('../util/fs-promise'),
 	runNpm = require('../util/run-npm');
 module.exports = function cleanUpPackage(packageDir, options, logger) {
 	'use strict';
@@ -13,8 +14,19 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 				return runNpm(packageDir, `run ${script}${npmOptions}`, logger);
 			}
 		},
-		fixFilePermissions = function (dir) {
-			return dir;
+		fixEntryPermissions = function (path) {
+			return fsPromise.statAsync(path)
+			.then(stats => {
+				const requiredMode = stats.isDirectory() ? 0o755 : 0o644;
+				return (stats.mode & 0o777) | requiredMode;
+			})
+			.then(mode => fsPromise.chmodAsync(path, mode));
+		},
+		fixFilePermissions = function () {
+			return Promise.all(
+				fsUtil.recursiveList(packageDir)
+				.map(component => fixEntryPermissions(path.join(packageDir, component)))
+			);
 		},
 		cleanUpDependencies = function () {
 			if (options['optional-dependencies'] === false) {

@@ -140,4 +140,26 @@ describe('cleanUpPackage', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('fixes file permissions for non-world readable files in the directory', done => {
+		fs.writeFileSync(path.join(sourcedir, 'owner-readable.txt'), 'owner', 'utf8');
+		fs.chmodSync(path.join(sourcedir, 'owner-readable.txt'), 0o400);
+		fs.writeFileSync(path.join(sourcedir, 'group-readable.txt'), 'group', 'utf8');
+		fs.chmodSync(path.join(sourcedir, 'group-readable.txt'), 0o640);
+		fs.writeFileSync(path.join(sourcedir, 'group-executable.txt'), 'group-exec', 'utf8');
+		fs.chmodSync(path.join(sourcedir, 'group-executable.txt'), 0o650);
+		fs.mkdirSync(path.join(sourcedir, 'subdir'));
+		fs.chmodSync(path.join(sourcedir, 'subdir'), 0o700);
+		fs.writeFileSync(path.join(sourcedir, 'subdir', 'user-exec.txt'), 'user-exec', 'utf8');
+		fs.chmodSync(path.join(sourcedir, 'subdir', 'user-exec.txt'), 0o701);
+		underTest(sourcedir, { }, logger)
+		.then(() => {
+			expect(fs.statSync(path.join(sourcedir, 'owner-readable.txt')).mode & 0o777).toEqual(0o644);
+			expect(fs.statSync(path.join(sourcedir, 'group-readable.txt')).mode & 0o777).toEqual(0o644);
+			expect(fs.statSync(path.join(sourcedir, 'group-executable.txt')).mode & 0o777).toEqual(0o654);
+			expect(fs.statSync(path.join(sourcedir, 'subdir')).mode & 0o777).toEqual(0o755);
+			expect(fs.statSync(path.join(sourcedir, 'subdir', 'user-exec.txt')).mode & 0o777).toEqual(0o745);
+		})
+		.then(done, done.fail);
+
+	});
 });
