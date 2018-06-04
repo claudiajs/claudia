@@ -1,6 +1,6 @@
 # Release history
 
-### 4.1.0 XXX
+### 5.0.0 XXX
 
 - use `--npm-options` to pass additional options to NPM when installing packages. Useful to specify behaviour for package locking.
 - packaging using NPM 6 is now faster as audits are turned off by default
@@ -8,6 +8,7 @@
 - upload size optimised using for NPM 5 and 6 by deduping dependencies after packaging
 - use `--post-package-script=<NPM SCRIPT NAME>` with `claudia create` or `claudia update` to execute a custom post-package step to clean up resources, optimise package size etc. This runs after all validations are complete, and development dependencies are not available at this stage... but you can use npm to uninstall utility tools as part of this step if needed.
 - new command. [`claudia pack`](docs/pack.md) just packages the files, correctly handling NPM dependencies, without deploying anywhere. Useful for troubleshooting, or if you want to deploy to Lambda using some other tool but get Claudia to prepare the package for you. This is specially useful for CloudFormation deployments if you want to use NPM 5 or 6. The command works with any Node.js Lambda project, not just Claudia-specific ones. 
+- claudia automatically fixes file access permissions in your package that would prevent Lambda from running code.
 
 ### 4.0.0 9 April 2018
 

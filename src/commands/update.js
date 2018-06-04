@@ -284,7 +284,7 @@ module.exports.doc = {
 			optional: true,
 			description: 'Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information',
 			example: '--ignore-scripts',
-			since: '4.1.0'
+			since: '5.0.0'
 		},
 		{
 			argument: 'cache-api-config',
@@ -299,7 +299,7 @@ module.exports.doc = {
 			example: 'customNpmScript',
 			description: 'the name of a NPM script to execute custom processing after claudia finished packaging your files.\n' +
 				'Note that development dependencies are not available at this point, but you can use npm uninstall to remove utility tools as part of this step.',
-			since: '4.1.0'
+			since: '5.0.0'
 		},
 		{
 			argument: 'keep',
