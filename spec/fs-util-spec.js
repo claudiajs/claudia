@@ -59,6 +59,24 @@ describe('fsUtil', () => {
 			expect(fs.readFileSync(path.join(newName, 'file.txt'), 'utf8')).toEqual('123');
 			fsUtil.rmDir(newName);
 		});
+		it('moves a file to a new location', () => {
+			const newName = tmppath();
+			fs.writeFileSync(pathName, '123', 'utf8');
+			fsUtil.move(pathName, newName);
+			expect(() => fs.accessSync(pathName)).toThrowError(/ENOENT: no such file or directory/);
+			expect(fs.readFileSync(path.join(newName), 'utf8')).toEqual('123');
+			fsUtil.rmDir(newName);
+		});
+
+		it('overwrites an existing file during move', () => {
+			const newName = tmppath();
+			fs.writeFileSync(newName, '345', 'utf8');
+			fs.writeFileSync(pathName, '123', 'utf8');
+			fsUtil.move(pathName, newName);
+			expect(() => fs.accessSync(pathName)).toThrowError(/ENOENT: no such file or directory/);
+			expect(fs.readFileSync(path.join(newName), 'utf8')).toEqual('123');
+			fsUtil.rmDir(newName);
+		});
 	});
 
 	describe('fileExists', () => {

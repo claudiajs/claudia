@@ -24,9 +24,6 @@ module.exports = function pack(options, optionalLogger) {
 			if (!fsUtil.fileExists(packageConfPath)) {
 				return 'package.json does not exist in the source folder';
 			}
-			if (outputFileName && fsUtil.fileExists(outputFileName)) {
-				return `${outputFileName} already exists`;
-			}
 		},
 		cleanup = (result) => {
 			fsUtil.rmDir(workingDir);
@@ -43,15 +40,18 @@ module.exports = function pack(options, optionalLogger) {
 				.then(packageConf => outputFileName = path.resolve(expectedArchiveName(packageConf, '.zip')));
 		}
 	})
+	.then(() => {
+		if (!options.force && fsUtil.fileExists(outputFileName)) {
+			throw `${outputFileName} already exists. Use --force to overwrite it.`;
+		}
+	})
 	.then(() => collectFiles(source, workingDir, options, logger))
 	.then(dir => cleanUpPackage(dir, options, logger))
 	.then(dir => {
 		logger.logStage('zipping package');
 		return zipdir(dir);
 	})
-	.then(zipFile => {
-		fsUtil.move(zipFile, outputFileName);
-	})
+	.then(zipFile => fsUtil.move(zipFile, outputFileName))
 	.then(cleanup)
 	.then(() => ({
 		output: outputFileName
@@ -67,6 +67,12 @@ module.exports.doc = {
 			optional: true,
 			description: 'Output file path',
 			default: 'File in the current directory named after the NPM package name and version'
+		},
+		{
+			argument: 'force',
+			optional: true,
+			description: 'If set, existing output files will be overwritten',
+			default: 'not set, so trying to write over an existing output file will result in an error'
 		},
 		{
 			argument: 'source',

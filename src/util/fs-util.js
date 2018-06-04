@@ -35,7 +35,7 @@ exports.recursiveList = function (dirPath) {
 };
 exports.move = function (fromPath, toPath) {
 	'use strict';
-	return shell.mv(fromPath, toPath);
+	return shell.mv('-f', fromPath, toPath);
 };
 exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
 	'use strict';

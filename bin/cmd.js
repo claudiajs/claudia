@@ -12,7 +12,7 @@ const minimist = require('minimist'),
 		return minimist(process.argv.slice(2), {
 			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region', 'profile'],
-			boolean: ['quiet'],
+			boolean: ['quiet', 'force'],
 			default: { 'source': shell.pwd().toString() }
 		});
 	},

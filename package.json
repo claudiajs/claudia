@@ -39,7 +39,7 @@
     "prepublishOnly": "npm shrinkwrap && node src/util/doc-md.js",
     "pretest": "eslint .",
     "test": "node spec/support/jasmine-runner.js",
-    "debug": "node debug spec/support/jasmine-runner.js",
+    "debug": "node --debug-brk --inspect spec/support/jasmine-runner.js",
     "integration-build": "aws codebuild start-build --project-name claudiajs --region us-west-2 --profile claudia-test",
     "integration-results": "aws s3 cp s3://claudiatestresults/claudiajs/buildresult.txt . --profile claudia-test",
     "integration-build-status": "aws codebuild batch-get-builds --ids $(aws codebuild list-builds-for-project --project-name claudiajs --profile claudia-test --region us-west-2 --query 'ids[0]' --output text) --region us-west-2 --profile claudia-test --query 'builds[].buildStatus' --output text"
