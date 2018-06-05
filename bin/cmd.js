@@ -6,7 +6,7 @@ const minimist = require('minimist'),
 	ConsoleLogger = require('../src/util/console-logger'),
 	docTxt = require('../src/util/doc-txt'),
 	AWS = require('aws-sdk'),
-	proxy = require('proxy-agent'),
+	HttpsProxyAgent = require('https-proxy-agent'),
 	readArgs = function () {
 		'use strict';
 		return minimist(process.argv.slice(2), {
@@ -53,7 +53,7 @@ const minimist = require('minimist'),
 		}
 		if (args.proxy) {
 			AWS.config.httpOptions = AWS.config.httpOptions || {};
-			AWS.config.httpOptions.agent = proxy(args.proxy);
+			AWS.config.httpOptions.agent = new HttpsProxyAgent(args.proxy);
 		}
 		commands[command](args, logger).then(result => {
 			if (result && !args.quiet) {
