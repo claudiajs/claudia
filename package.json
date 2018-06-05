@@ -44,7 +44,11 @@
     "integration-results": "aws s3 cp s3://claudiatestresults/claudiajs/buildresult.txt . --profile claudia-test",
     "integration-build-status": "aws codebuild batch-get-builds --ids $(aws codebuild list-builds-for-project --project-name claudiajs --profile claudia-test --region us-west-2 --query 'ids[0]' --output text) --region us-west-2 --profile claudia-test --query 'builds[].buildStatus' --output text"
   },
-  "author": "Gojko Adzic <gojko@gojko.com> http://gojko.net",
+  "author": "Gojko Adzic <gojko@gojko.com> (http://gojko.net)",
+  "contributors": [
+    "Slobodan Stojanovic <slobodan@cloudhorizon.com> (http://slobodan.me)",
+    "Alexander Simovic (https://github.com/simalexan)"
+  ],
   "dependencies": {
     "archiver": "^2.0.0",
     "aws-sdk": "^2.251.1",
@@ -66,5 +70,8 @@
     "eslint-config-defaults": "^9.0.0",
     "jasmine": "^2.5.2",
     "jasmine-spec-reporter": "^2.7.0"
+  },
+  "engines" : { 
+    "node" : ">=6.10.0" 
   }
 }
