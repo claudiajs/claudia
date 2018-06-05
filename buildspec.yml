@@ -12,7 +12,11 @@ environment_variables:
 phases:
   install:
     commands:
-      - npm install 
+      - echo "NODE VERSION"
+      - node --version
+      - echo "NPM VERSION"
+      - npm --version
+      - npm install --no-audit --silent 
   build:
     commands:
       - npm test -- ci > buildresult.txt 
