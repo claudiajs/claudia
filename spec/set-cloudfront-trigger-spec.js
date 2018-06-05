@@ -9,9 +9,6 @@ const underTest = require('../src/commands/set-cloudfront-trigger'),
 	awsRegion = require('./util/test-aws-region'),
 	distributionId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
 if (!distributionId) {
-	throw 'CLOUDFRONT_DISTRIBUTION_ID not set. to disable the CloudFront tests, set it to FALSE';
-}
-if (distributionId === 'FALSE') {
 	return;
 }
 describe('setCloudfrontTrigger', () => {
