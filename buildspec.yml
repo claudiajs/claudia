@@ -1,5 +1,14 @@
 version: 0.1
 
+environment_variables:
+  plaintext:
+    AWS_REGION: "us-west-2"
+    AWS_DELAY: "10000"
+    AWS_DEPLOY_TIMEOUT: "20000"
+    AWS_DEPLOY_RETRIES: "10"
+    TEST_TIMEOUT: "150000"
+    CLOUDFRONT_DISTRIBUTION_ID: "E17XW3PVVSPSO9"
+
 phases:
   install:
     commands:
