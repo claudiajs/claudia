@@ -26,7 +26,7 @@ const readjson = require('../util/readjson'),
 module.exports = function collectFiles(sourcePath, workingDir, options, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
-		cachedRewrites = {},
+
 		useLocalDependencies = options && options['use-local-dependencies'],
 		npmOptions = (options && options['npm-options']) ? (' ' + options['npm-options']) : '',
 		checkPreconditions = function (providedSourcePath) {
@@ -77,7 +77,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 			}
 		},
 		isRelativeDependency = function (dependency) {
-			return (dependency && dependency.startsWith('file:'));
+			return (dependency && typeof dependency === 'string' && dependency.startsWith('file:'));
 		},
 		hasRelativeDependencies = function (packageConf) {
 			return ['dependencies', 'devDependencies', 'optionalDependencies'].find(depType => {
@@ -85,30 +85,31 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				return subConf && Object.keys(subConf).map(key => subConf[key]).find(isRelativeDependency);
 			});
 		},
+		activeRemapPromise = {},
 		remapSingleDep = function (dependencyPath, referencePath) {
 			if (!isRelativeDependency(dependencyPath)) {
 				throw new Error('invalid relative dependency path ' + dependencyPath);
 			}
 			const actualPath = path.resolve(referencePath, dependencyPath.replace(/^file:/, ''));
-
-			if (cachedRewrites[actualPath]) {
-				return cachedRewrites[actualPath];
-			}
 			if (fsUtil.isFile(actualPath)) {
-				return 'file:' + actualPath;
+				return Promise.resolve('file:' + actualPath);
 			}
 			if (fsUtil.isDir(actualPath)) {
-				return readjson(path.join(actualPath, 'package.json'))
-				.then(packageConf => {
-					if (!hasRelativeDependencies(packageConf)) {
-						return packProjectToTar(actualPath, workingDir, npmOptions, logger);
-					}
-					return cleanCopyToDir(actualPath)
-						.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) // eslint-disable-line no-use-before-define
-						.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
-				})
-				.then(remappedPath => cachedRewrites[actualPath] = remappedPath);
+				if (!activeRemapPromise[actualPath]) {
+					activeRemapPromise[actualPath] = readjson(path.join(actualPath, 'package.json'))
+					.then(packageConf => {
+						if (!hasRelativeDependencies(packageConf)) {
+							return packProjectToTar(actualPath, workingDir, npmOptions, logger);
+						}
+						return cleanCopyToDir(actualPath)
+							.then(cleanCopyPath => rewireRelativeDependencies(cleanCopyPath, actualPath)) // eslint-disable-line no-use-before-define
+							.then(cleanCopyPath => packProjectToTar(cleanCopyPath, workingDir, npmOptions, logger));
+					})
+					.then(remappedPath =>  'file:' + remappedPath);
+				}
+				return activeRemapPromise[actualPath];
 			}
+			throw new Error(`${dependencyPath} points to ${actualPath}, which is neither dir nor a file, cannot remap.`);
 		},
 		remapDependencyType = function (subConfig, referenceDir) {
 			if (!subConfig) {
@@ -134,6 +135,38 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 			})
 			.then(() => targetDir);
 		},
+		traverse = function (object, predicate) {
+			Object.keys(object).forEach((key) => {
+				const val = object[key];
+				if (!object) {
+					return false;
+				}
+				if (typeof val === 'object') {
+					traverse(val, predicate);
+				} else {
+					predicate(object, key);
+				}
+			});
+		},
+		updatePackageLock = function (targetDir, referenceDir) {
+			const lockPath = path.join(targetDir, 'package-lock.json'),
+				promises = [];
+			if (!fsUtil.isFile(lockPath)) {
+				return targetDir;
+			}
+			return readjson(lockPath)
+			.then(json => {
+				traverse(json, (hash, key) => {
+					if (isRelativeDependency(hash[key])) {
+						promises.push(remapSingleDep(hash[key], referenceDir).then(v => hash[key] = v));
+					}
+				});
+				return Promise.all(promises)
+				//.then(() => console.log(json))
+				.then(() => fsPromise.writeFileAsync(lockPath, JSON.stringify(json, null, 2), 'utf8'));
+			})
+			.then(() => targetDir);
+		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
@@ -141,5 +174,6 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	}
 	return cleanCopyToDir(sourcePath)
 	.then(copyDir => rewireRelativeDependencies(copyDir, sourcePath))
+	.then(copyDir => updatePackageLock(copyDir, sourcePath))
 	.then(installDependencies);
 };
