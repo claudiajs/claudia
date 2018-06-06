@@ -2,10 +2,19 @@ const cp = require('child_process'),
 	os = require('os');
 module.exports = function spawnPromise(command, args, options, suppressOutput) {
 	'use strict';
-	const actualCommand = os.platform() === 'win32' ? `"${command}"` : command,
+	const isWin = os.platform() === 'win32',
+		actualCommand = isWin ? `"${command}"` : command,
 		normalDefaults = {env: process.env, cwd: process.cwd()},
 		windowsDefaults = Object.assign({shell: true}, normalDefaults),
-		defaultOptions = os.platform() === 'win32' ? windowsDefaults : normalDefaults;
+		defaultOptions = isWin ? windowsDefaults : normalDefaults;
+
+	if (isWin) {
+		args.forEach((v, i) => {
+			if (/\s/.test(v)) {
+				args[i] =  `"${v}"`;
+			}
+		});
+	}
 	return new Promise((resolve, reject) => {
 		const subProcess = cp.spawn(actualCommand, args, Object.assign(defaultOptions, options));
 		if (!suppressOutput) {
