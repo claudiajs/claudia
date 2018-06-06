@@ -17,6 +17,9 @@ describe('collectFiles', () => {
 	const configurePackage = function (packageConf) {
 			packageConf.name = packageConf.name || 'testproj';
 			packageConf.version = packageConf.version || '1.0.0';
+			packageConf.repository = '/';
+			packageConf.license = 'UNLICENSED';
+			packageConf.description = 'npm is whiny';
 			fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
 		},
 		isSubDir = function (dir1, dir2) {
@@ -379,7 +382,7 @@ describe('collectFiles', () => {
 			});
 			underTest(sourcedir, workingdir)
 			.then(done.fail, reason => {
-				expect(reason).toMatch(/npm install --no-audit --production failed/);
+				expect(reason).toMatch(/npm install -q --no-audit --production failed/);
 				done();
 			});
 		});
@@ -493,7 +496,7 @@ describe('collectFiles', () => {
 		it('remaps file links to absolute paths', done => {
 			let tgzPath, relativePath;
 			setupDep('prod-dep');
-			packProjectToTar(path.join(workingdir, 'prod-dep'), workingdir, '', nullLogger)
+			packProjectToTar(path.join(workingdir, 'prod-dep'), workingdir, [], nullLogger)
 			.then(archivePath => tgzPath = archivePath)
 			.then(() => {
 				relativePath = path.relative(sourcedir, tgzPath);
@@ -718,8 +721,8 @@ describe('collectFiles', () => {
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
-				['call', `npm pack "${sourcedir}"`],
-				['call', 'npm install --no-audit --production']
+				['call', `npm pack ${sourcedir}`],
+				['call', 'npm install -q --no-audit --production']
 			]);
 		})
 		.then(done, done.fail);

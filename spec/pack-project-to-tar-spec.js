@@ -38,7 +38,7 @@ describe('packProjectToTar', () => {
 		fsUtil.rmDir(workingdir);
 	});
 	it('returns a path to a tar archive containing packed project files', done => {
-		packProjectToTar(sourcedir, workingdir, '', logger)
+		packProjectToTar(sourcedir, workingdir, [], logger)
 		.then(archive => extractTar(archive, unpackdir))
 		.then(() => {
 			expect(fsUtil.fileExists(path.join(unpackdir, 'package', 'root.txt'))).toBeTruthy();
@@ -49,17 +49,17 @@ describe('packProjectToTar', () => {
 		.then(done, done.fail);
 	});
 	it('creates the archive in a subdir of the working dir', done => {
-		packProjectToTar(sourcedir, workingdir, '', logger)
+		packProjectToTar(sourcedir, workingdir, [], logger)
 		.then(archive => {
 			expect(path.dirname(path.dirname(archive))).toEqual(workingdir);
 		})
 		.then(done, done.fail);
 	});
 	it('logs NPM commands', done => {
-		packProjectToTar(sourcedir, workingdir, '', logger)
+		packProjectToTar(sourcedir, workingdir, [], logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
-				['call', `npm pack "${sourcedir}"`]
+				['call', `npm pack ${sourcedir}`]
 			]);
 		})
 		.then(done, done.fail);

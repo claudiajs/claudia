@@ -26,7 +26,7 @@ describe('runNpm', () => {
 			shell.rm('-rf', sourcedir);
 		}
 	});
-	it('executes NPM in a folder', done => {
+	it('executes NPM in a folder with arguments as a string', done => {
 		configurePackage({
 			dependencies: {
 				'uuid': '^2.0.0'
@@ -35,7 +35,7 @@ describe('runNpm', () => {
 				'minimist': '^1.2.0'
 			}
 		});
-		underTest(sourcedir, 'install --production', logger).then(packagePath => {
+		underTest(sourcedir, 'install -s --production', logger).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
 			expect(shell.pwd()).toEqual(pwd);
 			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
@@ -43,6 +43,24 @@ describe('runNpm', () => {
 			done();
 		}, done.fail);
 	});
+	it('executes NPM in a folder with arguments as an array', done => {
+		configurePackage({
+			dependencies: {
+				'uuid': '^2.0.0'
+			},
+			devDependencies: {
+				'minimist': '^1.2.0'
+			}
+		});
+		underTest(sourcedir, ['install', '-s', '--production'], logger).then(packagePath => {
+			expect(packagePath).toEqual(sourcedir);
+			expect(shell.pwd()).toEqual(pwd);
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			done();
+		}, done.fail);
+	});
+
 	it('uses local .npmrc if exists', done => {
 		configurePackage({
 			dependencies: {
@@ -53,7 +71,7 @@ describe('runNpm', () => {
 			}
 		});
 		fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
-		underTest(sourcedir, 'install --production', logger).then(packagePath => {
+		underTest(sourcedir, 'install -s --production', logger).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
 			expect(shell.pwd()).toEqual(pwd);
 			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
@@ -69,8 +87,8 @@ describe('runNpm', () => {
 				'non-existing-package': '2.0.0'
 			}
 		});
-		underTest(sourcedir, 'install --production', logger).then(done.fail, reason => {
-			expect(reason).toMatch(/npm install --production failed/);
+		underTest(sourcedir, 'install -s --production', logger).then(done.fail, reason => {
+			expect(reason).toMatch(/npm install -s --production failed/);
 			done();
 		});
 	});

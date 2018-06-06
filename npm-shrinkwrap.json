@@ -209,6 +209,11 @@
       "from": "isarray@~1.0.0",
       "resolved": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
     },
+    "isexe": {
+      "version": "2.0.0",
+      "from": "isexe@>=2.0.0 <3.0.0",
+      "resolved": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz"
+    },
     "jmespath": {
       "version": "0.15.0",
       "from": "jmespath@0.15.0",
@@ -392,6 +397,11 @@
       "version": "2.0.3",
       "from": "uuid@^2.0.1",
       "resolved": "https://registry.npmjs.org/uuid/-/uuid-2.0.3.tgz"
+    },
+    "which": {
+      "version": "1.3.1",
+      "from": "which@latest",
+      "resolved": "https://registry.npmjs.org/which/-/which-1.3.1.tgz"
     },
     "wrappy": {
       "version": "1.0.2",

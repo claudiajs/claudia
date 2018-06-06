@@ -28,7 +28,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	const logger = optionalLogger || new NullLogger(),
 
 		useLocalDependencies = options && options['use-local-dependencies'],
-		npmOptions = (options && options['npm-options']) ? (' ' + options['npm-options']) : '',
+		npmOptions = (options && options['npm-options']) ? options['npm-options'].split(' ') : [],
 		checkPreconditions = function (providedSourcePath) {
 			if (!providedSourcePath) {
 				return 'source directory not provided';
@@ -73,7 +73,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
-				return runNpm(targetDir, `install --no-audit --production${npmOptions}`, logger);
+				return runNpm(targetDir, ['install',  '-q', '--no-audit', '--production'].concat(npmOptions), logger);
 			}
 		},
 		isRelativeDependency = function (dependency) {

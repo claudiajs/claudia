@@ -10,6 +10,10 @@ describe('cleanUpPackage', () => {
 	'use strict';
 	let sourcedir, pwd, logger;
 	const configurePackage = function (packageConf) {
+		packageConf.name = 'name1';
+		packageConf.version = '1.0.0';
+		packageConf.repository = '/';
+		packageConf.license = 'UNLICENSED';
 		fs.writeFileSync(path.join(sourcedir, 'package.json'), JSON.stringify(packageConf), 'utf8');
 	};
 	beforeEach(done => {
@@ -25,7 +29,7 @@ describe('cleanUpPackage', () => {
 				'minimist': '^1.2.0'
 			}
 		});
-		runNpm(sourcedir, 'install', logger)
+		runNpm(sourcedir, ['install', '--silent'], logger)
 		.then(done, done.fail);
 	});
 	afterEach(() => {
@@ -96,7 +100,7 @@ describe('cleanUpPackage', () => {
 		});
 		underTest(sourcedir, { 'optional-dependencies': false }, logger)
 		.then(done.fail, reason => {
-			expect(reason).toMatch(/npm install --no-package-lock --no-audit --production --no-optional failed/);
+			expect(reason).toMatch(/npm install -q --no-package-lock --no-audit --production --no-optional failed/);
 			done();
 		});
 	});
@@ -106,8 +110,8 @@ describe('cleanUpPackage', () => {
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['call', 'removing optional dependencies'],
-				['call', 'npm install --no-package-lock --no-audit --production --no-optional --dry-run'],
-				['call', 'npm dedupe --no-package-lock --dry-run']
+				['call', 'npm install -q --no-package-lock --no-audit --production --no-optional --dry-run'],
+				['call', 'npm dedupe -q --no-package-lock --dry-run']
 			]);
 		})
 		.then(done, done.fail);
@@ -117,7 +121,7 @@ describe('cleanUpPackage', () => {
 		underTest(sourcedir, {}, logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
-				['call', 'npm dedupe --no-package-lock']
+				['call', 'npm dedupe -q --no-package-lock']
 			]);
 		})
 		.then(done, done.fail);
@@ -134,7 +138,7 @@ describe('cleanUpPackage', () => {
 		.then(() => {
 			expect(fsUtil.isDir(path.join(sourcedir, 'node_modules', 'uuid'))).toBeFalsy();
 			expect(logger.getCombinedLog()).toEqual([
-				['call', 'npm dedupe --no-package-lock'],
+				['call', 'npm dedupe -q --no-package-lock'],
 				['call', 'npm run customPack']
 			]);
 		})

@@ -11,7 +11,7 @@ module.exports = function generateServerlessExpressProxy(options, optionalLogger
 		proxyModuleName = (options && options['proxy-module-name']) || 'lambda',
 		proxyModulePath = path.join(source, `${proxyModuleName}.js`),
 		expressModule = options && options['express-module'],
-		installDependencies = targetDir => runNpm(targetDir, `install ${serverlessModule} -S`, logger);
+		installDependencies = targetDir => runNpm(targetDir, ['install', serverlessModule, '-S'], logger);
 
 	if (!expressModule) {
 		return Promise.reject('please specify express app module with --express-module');

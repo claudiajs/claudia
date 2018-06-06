@@ -8,7 +8,7 @@ module.exports = function packProjectToTar(projectDir, workingDir,  npmOptions, 
 	const absolutePath = path.resolve(projectDir),
 		runWithConfig = function (packageConfig) {
 			return fsPromise.mkdtempAsync(path.join(workingDir, expectedArchiveName(packageConfig, '-')))
-			.then(packDir => runNpm(packDir, `pack "${absolutePath}"${npmOptions}`, logger))
+			.then(packDir => runNpm(packDir, ['pack', absolutePath].concat(npmOptions), logger))
 			.then(packDir => path.join(packDir, expectedArchiveName(packageConfig)));
 		};
 	return readjson(path.join(projectDir, 'package.json'))
