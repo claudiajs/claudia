@@ -26,7 +26,7 @@ const readjson = require('../util/readjson'),
 module.exports = function collectFiles(sourcePath, workingDir, options, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
-
+		runQuietly = options && options.quiet,
 		useLocalDependencies = options && options['use-local-dependencies'],
 		npmOptions = (options && options['npm-options']) ? options['npm-options'].split(' ') : [],
 		checkPreconditions = function (providedSourcePath) {
@@ -73,7 +73,7 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				fsUtil.copy(path.join(sourcePath, 'node_modules'), targetDir);
 				return Promise.resolve(targetDir);
 			} else {
-				return runNpm(targetDir, ['install',  '-q', '--no-audit', '--production'].concat(npmOptions), logger);
+				return runNpm(targetDir, ['install',  '-q', '--no-audit', '--production'].concat(npmOptions), logger, runQuietly);
 			}
 		},
 		isRelativeDependency = function (dependency) {

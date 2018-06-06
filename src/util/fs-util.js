@@ -27,7 +27,7 @@ exports.isLink = function (filePath) {
 };
 exports.copy = function (from, to) {
 	'use strict';
-	return shell.cp('-r', from, to);
+	return shell.cp('-rf', from, to);
 };
 exports.recursiveList = function (dirPath) {
 	'use strict';

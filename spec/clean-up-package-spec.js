@@ -29,7 +29,7 @@ describe('cleanUpPackage', () => {
 				'minimist': '^1.2.0'
 			}
 		});
-		runNpm(sourcedir, ['install', '--silent'], logger)
+		runNpm(sourcedir, ['install', '--silent'], logger, true)
 		.then(done, done.fail);
 	});
 	afterEach(() => {

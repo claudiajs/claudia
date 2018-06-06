@@ -575,7 +575,7 @@ describe('collectFiles', () => {
 					'opt-dep': 'file:../opt-dep'
 				}
 			});
-			runNpm(sourcedir, 'install', nullLogger)
+			runNpm(sourcedir, 'install', nullLogger, true)
 				.then(() => underTest(sourcedir, workingdir))
 				.then(packagePath => {
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
@@ -606,8 +606,8 @@ describe('collectFiles', () => {
 				}
 
 			});
-			runNpm(sourcedir, 'install', nullLogger)
-				.then(() => runNpm(sourcedir, 'shrinkwrap', nullLogger))
+			runNpm(sourcedir, 'install', nullLogger, true)
+				.then(() => runNpm(sourcedir, 'shrinkwrap', nullLogger, true))
 				.then(() => underTest(sourcedir, workingdir))
 				.then(packagePath => {
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
@@ -672,7 +672,7 @@ describe('collectFiles', () => {
 					'prod-dep': 'file:../prod-dep'
 				}
 			});
-			runNpm(path.join(workingdir, 'prod-dep'), 'install', nullLogger)
+			runNpm(path.join(workingdir, 'prod-dep'), 'install', nullLogger, true)
 			.then(() => underTest(sourcedir, workingdir))
 			.then(packagePath => {
 				expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();

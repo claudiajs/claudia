@@ -6,12 +6,12 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 	'use strict';
 	const npmOptions = (options && options['npm-options']) ? options['npm-options'].split(' ') : [],
 		dedupe = function () {
-			return runNpm(packageDir, ['dedupe', '-q', '--no-package-lock'].concat(npmOptions), logger);
+			return runNpm(packageDir, ['dedupe', '-q', '--no-package-lock'].concat(npmOptions), logger, true);
 		},
 		runPostPackageScript = function () {
 			const script = options['post-package-script'];
 			if (script) {
-				return runNpm(packageDir, ['run', script].concat(npmOptions), logger);
+				return runNpm(packageDir, ['run', script].concat(npmOptions), logger, options && options.quiet);
 			}
 		},
 		fixEntryPermissions = function (path) {
@@ -32,7 +32,7 @@ module.exports = function cleanUpPackage(packageDir, options, logger) {
 			if (options['optional-dependencies'] === false) {
 				logger.logApiCall('removing optional dependencies');
 				fsUtil.rmDir(path.join(packageDir, 'node_modules'));
-				return runNpm(packageDir, ['install', '-q', '--no-package-lock', '--no-audit', '--production', '--no-optional'].concat(npmOptions), logger);
+				return runNpm(packageDir, ['install', '-q', '--no-package-lock', '--no-audit', '--production', '--no-optional'].concat(npmOptions), logger, options && options.quiet);
 			}
 		};
 	return Promise.resolve()

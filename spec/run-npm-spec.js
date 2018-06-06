@@ -35,7 +35,7 @@ describe('runNpm', () => {
 				'minimist': '^1.2.0'
 			}
 		});
-		underTest(sourcedir, 'install -s --production', logger).then(packagePath => {
+		underTest(sourcedir, 'install -s --production', logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
 			expect(shell.pwd()).toEqual(pwd);
 			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
@@ -52,7 +52,7 @@ describe('runNpm', () => {
 				'minimist': '^1.2.0'
 			}
 		});
-		underTest(sourcedir, ['install', '-s', '--production'], logger).then(packagePath => {
+		underTest(sourcedir, ['install', '-s', '--production'], logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
 			expect(shell.pwd()).toEqual(pwd);
 			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
@@ -71,7 +71,7 @@ describe('runNpm', () => {
 			}
 		});
 		fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
-		underTest(sourcedir, 'install -s --production', logger).then(packagePath => {
+		underTest(sourcedir, 'install -s --production', logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
 			expect(shell.pwd()).toEqual(pwd);
 			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
@@ -87,7 +87,7 @@ describe('runNpm', () => {
 				'non-existing-package': '2.0.0'
 			}
 		});
-		underTest(sourcedir, 'install -s --production', logger).then(done.fail, reason => {
+		underTest(sourcedir, 'install -s --production', logger, true).then(done.fail, reason => {
 			expect(reason).toMatch(/npm install -s --production failed/);
 			done();
 		});
