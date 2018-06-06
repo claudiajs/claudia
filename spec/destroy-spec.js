@@ -7,6 +7,8 @@ const underTest = require('../src/commands/destroy'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
+	readjson = require('../src/util/readjson'),
+	fsPromise = require('../src/util/fs-promise'),
 	awsRegion = require('./util/test-aws-region');
 describe('destroy', () => {
 	'use strict';
@@ -66,6 +68,18 @@ describe('destroy', () => {
 			.catch(expectedException => expect(expectedException.message).toContain(newObjects.lambdaRole))
 			.then(done, done.fail);
 		});
+		it('keeps the role if it was shared', done => {
+			const configPath = path.join(workingdir, 'claudia.json');
+			readjson(configPath)
+			.then(json => {
+				json.lambda.sharedRole = true;
+				return fsPromise.writeFileAsync(configPath, JSON.stringify(json), 'utf8');
+			})
+			.then(() => underTest({ source: workingdir }))
+			.then(() => iam.getRole({ RoleName: newObjects.lambdaRole }).promise())
+			.then(done, done.fail);
+		});
+
 	});
 	describe('removing the config file', () => {
 		beforeEach(done => {

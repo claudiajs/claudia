@@ -227,7 +227,10 @@ describe('create', () => {
 			it('creates the function using the provided role by name', done => {
 				config.role = `${testRunName}-manual`;
 				createFromDir('hello-world', logger)
-				.then(createResult => expect(createResult.lambda.role).toEqual(`${testRunName}-manual`))
+				.then(createResult => {
+					expect(createResult.lambda.role).toEqual(`${testRunName}-manual`);
+					expect(createResult.lambda.sharedRole).toBeTruthy();
+				})
 				.then(getLambdaConfiguration)
 				.then(lambdaMetadata => expect(lambdaMetadata.Role).toEqual(createdRole.Arn))
 				.then(invoke)
@@ -501,13 +504,6 @@ describe('create', () => {
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
-			.then(done, done.fail);
-		});
-		it('can create nodejs4.3 when requested', done => {
-			config.runtime = 'nodejs4.3';
-			createFromDir('hello-world')
-			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs4.3'))
 			.then(done, done.fail);
 		});
 		it('can create nodejs6.10 when requested', done => {

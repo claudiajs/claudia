@@ -255,6 +255,9 @@ module.exports = function create(options, optionalLogger) {
 					region: options.region
 				}
 			};
+			if (options.role) {
+				config.lambda.sharedRole = true;
+			}
 			if (lambdaMetaData.api) {
 				config.api =  lambdaMetaData.api;
 			}

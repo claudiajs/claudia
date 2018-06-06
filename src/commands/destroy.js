@@ -26,7 +26,7 @@ module.exports = function destroy(options) {
 			}
 		})
 		.then(() => {
-			if (lambdaConfig.role) {
+			if (lambdaConfig.role && !lambdaConfig.sharedRole) {
 				return destroyRole(lambdaConfig.role);
 			}
 		})
