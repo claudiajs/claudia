@@ -41,7 +41,7 @@ See the [Release History](RELEASES.md)
 
 ## A new book by the core Claudia.js team
 
-* [Serverless Apps with Node and Claudia.js](https://www.manning.com/books/serverless-apps-with-node-and-claudiajs), by Slobodan Stojanovic and Aleksandar Simovic, 2017
+* [Serverless Applications with Node.js, Using AWS Lambda and Claudia.js](https://www.manning.com/books/serverless-applications-with-nodejs), by Slobodan Stojanovic and Aleksandar Simovic, 2018
 
 ## Further reading
 
