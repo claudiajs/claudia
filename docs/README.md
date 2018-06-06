@@ -24,7 +24,6 @@ claudia [command] {OPTIONS}
 * [`test-lambda`](test-lambda.md) Execute the lambda function and print out the response
 * [`destroy`](destroy.md) Undeploy the lambda function and destroy the API and security roles
 * [`generate-serverless-express-proxy`](generate-serverless-express-proxy.md) Create a lambda proxy API wrapper for an express app using aws-serverless-express
-* [`generate`](generate.md) Create a lambda project template that you can immediately deploy
 * [`tag`](tag.md) Add tags (key-value pairs) to a lambda function
 
 ## Options:
