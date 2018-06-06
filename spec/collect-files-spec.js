@@ -457,10 +457,10 @@ describe('collectFiles', () => {
 				.then(packagePath => {
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
-					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeFalsy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'opt-dep', 'opt-dep.js'))).toBeTruthy();
 					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
-					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeFalsy();
 					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
 				})
 				.then(done, done.fail);
@@ -485,8 +485,8 @@ describe('collectFiles', () => {
 			underTest(sourcedir, workingdir)
 			.then(packagePath => readjson(path.join(packagePath, 'package.json')))
 			.then(packageConf => {
-				expect(packageConf.dependencies['prod-dep']).toMatch(/file:.*\/prod-dep-1.0.0.tgz/);
-				expect(packageConf.optionalDependencies['opt-dep']).toMatch(/file:.*\/opt-dep-1.0.0.tgz/);
+				expect(path.basename(packageConf.dependencies['prod-dep'])).toEqual('prod-dep-1.0.0.tgz');
+				expect(path.basename(packageConf.optionalDependencies['opt-dep'])).toEqual('opt-dep-1.0.0.tgz');
 				expect(packageConf.devDependencies).toBeFalsy();
 			})
 			.then(done, done.fail);
