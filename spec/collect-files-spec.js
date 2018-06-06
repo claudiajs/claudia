@@ -434,7 +434,36 @@ describe('collectFiles', () => {
 				})
 				.then(done, done.fail);
 		});
-		it('remaps relative dependencies in package.json', done => {
+		it('supports direct paths without file:', done => {
+			setupDep('prod-dep');
+			setupDep('dev-dep');
+			setupDep('opt-dep');
+			configurePackage({
+				files: ['root.txt'],
+				dependencies: {
+					'prod-dep': '../prod-dep'
+				},
+				devDependencies: {
+					'dev-dep': path.resolve(workingdir, 'dev-dep')
+				},
+				optionalDependencies: {
+					'opt-dep': path.resolve(workingdir, 'opt-dep')
+				}
+			});
+			underTest(sourcedir, workingdir)
+				.then(packagePath => {
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'prod-dep', 'prod-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'prod-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'opt-dep', 'opt-dep.js'))).toBeTruthy();
+					expect(fsUtil.isDir(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(!fsUtil.isLink(path.join(packagePath, 'node_modules', 'opt-dep'))).toBeTruthy();
+					expect(fsUtil.fileExists(path.join(packagePath, 'node_modules', 'dev-dep'))).toBeFalsy();
+				})
+				.then(done, done.fail);
+		});
+
+		it('remaps optional and production relative dependencies in package.json', done => {
 			setupDep('prod-dep');
 			setupDep('dev-dep');
 			setupDep('opt-dep');
@@ -454,8 +483,8 @@ describe('collectFiles', () => {
 			.then(packagePath => readjson(path.join(packagePath, 'package.json')))
 			.then(packageConf => {
 				expect(packageConf.dependencies['prod-dep']).toMatch(/file:.*\/prod-dep-1.0.0.tgz/);
-				expect(packageConf.devDependencies['dev-dep']).toMatch(/file:.*\/dev-dep-1.0.0.tgz/);
 				expect(packageConf.optionalDependencies['opt-dep']).toMatch(/file:.*\/opt-dep-1.0.0.tgz/);
+				expect(packageConf.devDependencies).toBeFalsy();
 			})
 			.then(done, done.fail);
 
@@ -484,27 +513,26 @@ describe('collectFiles', () => {
 			.then(done, done.fail);
 
 		});
-		it('remaps relative dependencies in package lock', done => {
+		it('removes package lock if relative dependencies are used', done => {
 			const lock = {
-					'name': 'testproj',
-					'version': '1.0.0',
-					'lockfileVersion': 1,
-					'requires': true,
-					'dependencies': {
-						'dev-dep': {
-							'version': 'file:../dev-dep',
-							'dev': true
-						},
-						'opt-dep': {
-							'version': 'file:../opt-dep',
-							'optional': true
-						},
-						'prod-dep': {
-							'version': 'file:../prod-dep'
-						}
+				'name': 'testproj',
+				'version': '1.0.0',
+				'lockfileVersion': 1,
+				'requires': true,
+				'dependencies': {
+					'dev-dep': {
+						'version': 'file:../dev-dep',
+						'dev': true
+					},
+					'opt-dep': {
+						'version': 'file:../opt-dep',
+						'optional': true
+					},
+					'prod-dep': {
+						'version': 'file:../prod-dep'
 					}
-				},
-				lockedReference = x => x.resolved || x.version;
+				}
+			};
 			setupDep('prod-dep');
 			setupDep('dev-dep');
 			setupDep('opt-dep');
@@ -522,17 +550,13 @@ describe('collectFiles', () => {
 			});
 			fsPromise.writeFileAsync(path.join(sourcedir, 'package-lock.json'), JSON.stringify(lock), 'utf8')
 			.then(() => underTest(sourcedir, workingdir))
-			.then(packagePath => readjson(path.join(packagePath, 'package-lock.json')))
-			.then(packageConf => {
-				//console.log(packageConf);
-				expect(lockedReference(packageConf.dependencies['prod-dep'])).toMatch(/\/prod-dep-1.0.0.tgz$/);
-				expect(lockedReference(packageConf.dependencies['dev-dep'])).toMatch(/\/dev-dep-1.0.0.tgz$/);
-				expect(lockedReference(packageConf.dependencies['opt-dep'])).toMatch(/\/opt-dep-1.0.0.tgz$/);
+			.then(() => {
+				expect(fsUtil.isFile(path.join(workingdir, 'package-lock.json'))).toBeFalsy();
 			})
 			.then(done, done.fail);
 
 		});
-		it('works with relative file dependencies after installation using package-lock', done => {
+		it('works with relative file dependencies after installation', done => {
 			setupDep('prod-dep');
 			setupDep('dev-dep');
 			setupDep('opt-dep');

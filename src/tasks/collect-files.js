@@ -77,7 +77,8 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 			}
 		},
 		isRelativeDependency = function (dependency) {
-			return (dependency && typeof dependency === 'string' && dependency.startsWith('file:'));
+			return (dependency && typeof dependency === 'string' && (dependency.startsWith('file:')
+				|| dependency.startsWith('.') || dependency.startsWith('/')));
 		},
 		hasRelativeDependencies = function (packageConf) {
 			return ['dependencies', 'devDependencies', 'optionalDependencies'].find(depType => {
@@ -129,8 +130,12 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 			return readjson(confPath)
 			.then(packageConfig => {
 				if (hasRelativeDependencies(packageConfig)) {
-					return Promise.all(['dependencies', 'devDependencies', 'optionalDependencies'].map(t => remapDependencyType(packageConfig[t], referenceDir)))
-					.then(() => fsPromise.writeFileAsync(confPath, JSON.stringify(packageConfig, null, 2), 'utf8'));
+					if (packageConfig.devDependencies) {
+						delete packageConfig.devDependencies;
+					}
+					return Promise.all(['dependencies', 'optionalDependencies'].map(t => remapDependencyType(packageConfig[t], referenceDir)))
+					.then(() => fsPromise.writeFileAsync(confPath, JSON.stringify(packageConfig, null, 2), 'utf8'))
+					.then(() => fsUtil.silentRemove(path.join(targetDir, 'package-lock.json')));
 				}
 			})
 			.then(() => targetDir);
@@ -148,25 +153,6 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 				}
 			});
 		},
-		updatePackageLock = function (targetDir, referenceDir) {
-			const lockPath = path.join(targetDir, 'package-lock.json'),
-				promises = [];
-			if (!fsUtil.isFile(lockPath)) {
-				return targetDir;
-			}
-			return readjson(lockPath)
-			.then(json => {
-				traverse(json, (hash, key) => {
-					if (isRelativeDependency(hash[key])) {
-						promises.push(remapSingleDep(hash[key], referenceDir).then(v => hash[key] = v));
-					}
-				});
-				return Promise.all(promises)
-				//.then(() => console.log(json))
-				.then(() => fsPromise.writeFileAsync(lockPath, JSON.stringify(json, null, 2), 'utf8'));
-			})
-			.then(() => targetDir);
-		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {
@@ -174,6 +160,5 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 	}
 	return cleanCopyToDir(sourcePath)
 	.then(copyDir => rewireRelativeDependencies(copyDir, sourcePath))
-	.then(copyDir => updatePackageLock(copyDir, sourcePath))
 	.then(installDependencies);
 };
