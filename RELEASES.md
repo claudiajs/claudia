@@ -1,6 +1,6 @@
 # Release history
 
-### 5.0.0 XXX
+### 5.0.0 7 June 2018
 
 - use `--npm-options` to pass additional options to NPM when installing packages. Useful to specify behaviour for package locking.
 - packaging using NPM 6 is now faster as audits are turned off by default
