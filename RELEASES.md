@@ -10,6 +10,7 @@
 - new command. [`claudia pack`](docs/pack.md) just packages the files, correctly handling NPM dependencies, without deploying anywhere. Useful for troubleshooting, or if you want to deploy to Lambda using some other tool but get Claudia to prepare the package for you. This is specially useful for CloudFormation deployments if you want to use NPM 5 or 6. The command works with any Node.js Lambda project, not just Claudia-specific ones. 
 - claudia automatically fixes file access permissions in your package that would prevent Lambda from running code.
 - NPM output is now directly written to the console, rather than a separate log file, to make packaging errors more obvious
+- (for newly created functions only) claudia destroy will not delete a role if it was created using --role
 
 ### 4.0.0 9 April 2018
 
