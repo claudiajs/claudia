@@ -1,5 +1,10 @@
 # Release history
 
+### 5.0.1 
+
+- bug fix for add-cognito-user-pool-trigger, when user pool has custom domain, thanks to [Christian Sepulveda](https://github.com/csepulv)
+- better error handling when a config file is requested for an invalid directory
+
 ### 5.0.0 7 June 2018
 
 - use `--npm-options` to pass additional options to NPM when installing packages. Useful to specify behaviour for package locking.
