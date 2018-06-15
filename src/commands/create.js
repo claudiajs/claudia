@@ -83,6 +83,9 @@ module.exports = function create(options, optionalLogger) {
 			if (options['api-module'] && options['api-module'].indexOf('.') >= 0) {
 				return 'API module must be a module name, without the file extension or function name';
 			}
+			if (!fsUtil.isDir(path.dirname(configFile))) {
+				return 'cannot write to ' + configFile;
+			}
 			if (fsUtil.fileExists(configFile)) {
 				if (options && options.config) {
 					return options.config + ' already exists';

@@ -152,6 +152,17 @@ describe('create', () => {
 			.then(done.fail, message => expect(message).toEqual('lambda.json already exists'))
 			.then(done);
 		});
+		it('fails if the alternative config is requested in a non-existent directory', done => {
+			shell.mkdir(workingdir);
+			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
+			shell.cd(workingdir);
+			config.config = path.join('non-existent', 'lambda.json');
+			underTest(config)
+			.then(done.fail, message => expect(message).toEqual('cannot write to non-existent/lambda.json'))
+			.then(done);
+		});
+
 		it('checks the current folder if the source parameter is not defined', done => {
 			shell.mkdir(workingdir);
 			shell.cd(workingdir);
