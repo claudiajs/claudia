@@ -43,7 +43,7 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 			/* cognito update requires the full config, not just a patch, but some attributes returned
 			 * from describeUserPool are not accepted back into the configuration, so they have to be removed
 			 */
-			['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers', 'AliasAttributes', 'UsernameAttributes', 'Arn'].forEach(n => delete data[n]);
+			['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers', 'AliasAttributes', 'UsernameAttributes', 'Arn', 'Domain'].forEach(n => delete data[n]);
 			if (Object.keys(data.UserPoolAddOns).length === 0) {
 				delete data.UserPoolAddOns;
 			}
