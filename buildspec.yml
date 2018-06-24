@@ -18,7 +18,7 @@ phases:
       - npm install --no-audit --silent 
   build:
     commands:
-      - npm test -- ci > buildresult.txt 
+      - npm test -- filter='creates and links an API to a lambda version' ci > buildresult.txt 
   post_build:
     commands:
       - sh spec/clean-test-resources.sh
