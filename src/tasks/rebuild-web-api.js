@@ -11,11 +11,11 @@ const aws = require('aws-sdk'),
 	flattenRequestParameters = require('./flatten-request-parameters'),
 	patchBinaryTypes = require('./patch-binary-types'),
 	getOwnerId = require('./get-owner-account-id'),
+	clearApi = require('./clear-api'),
 	registerAuthorizers = require('./register-authorizers');
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, awsRegion, optionalLogger, configCacheStageVar) {
 	'use strict';
-	let existingResources,
-		ownerId,
+	let ownerId,
 		authorizerIds;
 	const logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
@@ -26,23 +26,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						() => logger.logApiCall('rate-limited by AWS, waiting before retry')),
 		configHash = safeHash(apiConfig),
 		knownIds = {},
-		findByPath = function (resourceItems, path) {
-			let result;
-			resourceItems.forEach(item => {
-				if (item.path === path) {
-					result = item;
-				}
-			});
-			return result;
-		},
-		getExistingResources = function () {
-			return apiGateway.getResourcesPromise({restApiId: restApiId, limit: 499});
-		},
-		findRoot = function () {
-			const rootResource = findByPath(existingResources, '/');
-			knownIds[''] = rootResource.id;
-			return rootResource.id;
-		},
 		supportsCors = function () {
 			return (apiConfig.corsHandlers !== false);
 		},
@@ -240,56 +223,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				return createCorsHandler(resourceId, supportedMethods);
 			});
 		},
-		dropMethods = function (resource) {
-			const dropMethodMapper = function (method) {
-				return apiGateway.deleteMethodPromise({
-					resourceId: resource.id,
-					restApiId: restApiId,
-					httpMethod: method
-				});
-			};
-			if (resource.resourceMethods) {
-				return sequentialPromiseMap(Object.keys(resource.resourceMethods), dropMethodMapper);
-			} else {
-				return Promise.resolve();
-			}
-		},
-		removeResource = function (resource) {
-			if (resource.path !== '/') {
-				return apiGateway.deleteResourcePromise({
-					resourceId: resource.id,
-					restApiId: restApiId
-				});
-			} else {
-				return dropMethods(resource);
-			}
-		},
-		dropSubresources = function () {
-			let currentResource;
-			if (existingResources.length === 0) {
-				return Promise.resolve();
-			} else {
-				currentResource = existingResources.pop();
-				return removeResource(currentResource)
-				.then(() => {
-					if (existingResources.length > 0) {
-						return dropSubresources();
-					}
-				});
-			}
-		},
-		pathSort = function (resA, resB) {
-			if (resA.path > resB.path) {
-				return 1;
-			} else if (resA.path === resB.path) {
-				return 0;
-			}
-			return -1;
-		},
-		getCustomGatewayResponses = function () {
-			return apiGateway.getGatewayResponsesPromise({ restApiId: restApiId })
-			.then(result => result.items.filter(f => !f.defaultResponse));
-		},
 		configureGatewayResponse = function (responseType, responseConfig) {
 			const params = {
 				restApiId: restApiId,
@@ -313,29 +246,21 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			return apiGateway.putGatewayResponsePromise(params);
 
 		},
-		dropGatewayResponse = function (gatewayResponse) {
-			return apiGateway.deleteGatewayResponsePromise({
-				responseType: gatewayResponse.responseType,
-				restApiId: restApiId
-			});
-		},
-		dropCustomGatewayResponses = function () {
-			return getCustomGatewayResponses()
-			.then(responses => sequentialPromiseMap(responses, dropGatewayResponse));
-		},
 		removeExistingResources = function () {
-			return getExistingResources()
+			return clearApi(apiGateway, restApiId, functionName);
+		},
+		cacheRootId = function () {
+			return apiGateway.getResourcesPromise({restApiId: restApiId, limit: 499})
 			.then(resources => {
-				existingResources = resources.items;
-				existingResources.sort(pathSort);
-				return existingResources;
-			})
-			.then(findRoot)
-			.then(dropSubresources)
-			.then(dropCustomGatewayResponses);
+				resources.items.forEach(resource => {
+					const pathWithoutStartingSlash = resource.path.replace(/^\//, '');
+					knownIds[pathWithoutStartingSlash] = resource.id;
+				});
+			});
 		},
 		rebuildApi = function () {
 			return allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion)
+			.then(() => cacheRootId())
 			.then(() => sequentialPromiseMap(Object.keys(apiConfig.routes), configurePath))
 			.then(() => {
 				if (apiConfig.customResponses) {
