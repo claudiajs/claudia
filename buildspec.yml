@@ -18,7 +18,7 @@ phases:
       - npm install --no-audit --silent 
   build:
     commands:
-      - npm test -- filter='rebuildWebApi when working with a blank api' ci > buildresult.txt 
+      - npm test -- ci > buildresult.txt 
   post_build:
     commands:
       - sh spec/clean-test-resources.sh
