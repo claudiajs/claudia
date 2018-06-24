@@ -60,7 +60,13 @@ describe('rebuildWebApi', () => {
 		.then(done, done.fail);
 	});
 	afterEach(done => {
-		destroyObjects(newObjects).then(done, done.fail);
+		Promise.all([
+			apiGateway.deleteStagePromise({
+				restApiId: apiId,
+				stageName: stageName
+			}).catch(() => false),
+			destroyObjects(newObjects)
+		]).then(done, done.fail);
 	});
 	describe('when working with a blank api', () => {
 		beforeEach(done => {
