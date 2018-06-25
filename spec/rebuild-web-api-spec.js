@@ -1,4 +1,4 @@
-/*global beforeEach, afterEach, describe, expect, require, console, it, describe, beforeAll, afterAll */
+/*global beforeEach, afterEach, describe, expect, require, console, it, describe, afterAll */
 const underTest = require('../src/tasks/rebuild-web-api'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),
@@ -37,13 +37,6 @@ describe('rebuildWebApi', () => {
 				return resource && resource.id;
 			});
 		};
-	beforeAll(done => {
-		apiGateway.createRestApiPromise({name: 'generic-api'})
-		.then(result => {
-			apiId = result.id;
-		})
-		.then(done, done.fail);
-	});
 	afterAll(done => {
 		destroyObjects({restApi: apiId}).then(done, done.fail);
 	});
@@ -56,8 +49,18 @@ describe('rebuildWebApi', () => {
 		shell.mkdir(workingdir);
 		apiRouteConfig = {version: 4, routes: { echo: {'GET': {} } }};
 		stageName = `original${Date.now()}`;
-		clearApi(apiGateway, apiId, testRunName)
-		.then(done, done.fail);
+		if (!apiId) {
+			console.log('creating api');
+			apiGateway.createRestApiPromise({name: 'generic-api'})
+			.then(result => {
+				apiId = result.id;
+			})
+			.then(done, done.fail);
+		} else {
+			console.log('reusing api', apiId);
+			clearApi(apiGateway, apiId, testRunName)
+			.then(done, done.fail);
+		}
 	});
 	afterEach(done => {
 		Promise.all([
