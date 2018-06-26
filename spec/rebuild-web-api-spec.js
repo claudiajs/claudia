@@ -89,13 +89,12 @@ describe('rebuildWebApi', () => {
 		}
 	});
 	afterEach(done => {
-		Promise.all([
+		const cleanApiStage =  apiId &&
 			apiGateway.deleteStagePromise({
 				restApiId: apiId,
 				stageName: stageName
-			}).catch(() => false),
-			destroyObjects(newObjects)
-		]).then(done, done.fail);
+			}).catch(() => false);
+		Promise.all([cleanApiStage, destroyObjects(newObjects)]).then(done, done.fail);
 	});
 	describe('when working with a blank api', () => {
 
@@ -615,6 +614,11 @@ describe('rebuildWebApi', () => {
 			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
 			.then(done, done.fail);
 		});
+		afterEach(done => {
+			const oldApiId = apiId;
+			apiId = false;
+			destroyObjects({restApi: oldApiId}).then(done, done.fail);
+		});
 		it('does not add any custom responses by default', done => {
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
 			.then(() => getCustomGatewayResponses())
@@ -813,86 +817,86 @@ describe('rebuildWebApi', () => {
 		it('converts recognised binary content types into base64 text', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
-					body: 'Hello World',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+						body: 'Hello World',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+				}).then(done, done.fail);
 		});
 		it('converts recognised binary content types into base64 when requestContentHandling is CONVERT_TO_TEXT', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			apiRouteConfig.routes.echo.POST.requestContentHandling = 'CONVERT_TO_TEXT';
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
-					body: 'Hello World',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+						body: 'Hello World',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+				}).then(done, done.fail);
 		});
 		it('does not convert if content type is not recognised as binary', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/x-markdown', 'image/tiff'];
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
-					body: 'Hello World',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('Hello World');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+						body: 'Hello World',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('Hello World');
+				}).then(done, done.fail);
 		});
 		it('does not convert when requestContentHandling is set to CONVERT_TO_BINARY', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			apiRouteConfig.routes.echo.POST.requestContentHandling = 'CONVERT_TO_BINARY';
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
-					body: 'Hello World',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'content-type': 'application/octet-stream', 'result-content-type': 'text/plain'},
+						body: 'Hello World',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+				}).then(done, done.fail);
 		});
 		it('sets up the API to convert base64 results to binary', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			apiRouteConfig.routes.echo.POST.success = { contentHandling: 'CONVERT_TO_BINARY' };
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'Content-Type': 'text/plain', 'result-encoded': 'true', 'accept': 'image/png', 'result-content-type': 'image/png'},
-					body: 'SGVsbG8gV29ybGQ=',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('Hello World');
-				expect(contents.headers['content-type']).toEqual('image/png');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'Content-Type': 'text/plain', 'result-encoded': 'true', 'accept': 'image/png', 'result-content-type': 'image/png'},
+						body: 'SGVsbG8gV29ybGQ=',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('Hello World');
+					expect(contents.headers['content-type']).toEqual('image/png');
+				}).then(done, done.fail);
 		});
 		it('does not convert to binary unless the encoding flag is set', done => {
 			apiRouteConfig.binaryMediaTypes = ['application/octet-stream', 'image/png'];
 			apiRouteConfig.routes.echo.POST.success = { contentHandling: 'CONVERT_TO_BINARY' };
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion)
-			.then(() => {
-				return invoke(stageName + '/echo', {
-					headers: {'Content-Type': 'text/plain', 'accept': 'image/png', 'result-content-type': 'image/png'},
-					body: 'SGVsbG8gV29ybGQ=',
-					method: 'POST'
-				});
-			}).then(contents => {
-				expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
-				expect(contents.headers['content-type']).toEqual('image/png');
-			}).then(done, done.fail);
+				.then(() => {
+					return invoke(stageName + '/echo', {
+						headers: {'Content-Type': 'text/plain', 'accept': 'image/png', 'result-content-type': 'image/png'},
+						body: 'SGVsbG8gV29ybGQ=',
+						method: 'POST'
+					});
+				}).then(contents => {
+					expect(contents.body).toEqual('SGVsbG8gV29ybGQ=');
+					expect(contents.headers['content-type']).toEqual('image/png');
+				}).then(done, done.fail);
 		});
 	});
 	describe('custom authorizers', () => {

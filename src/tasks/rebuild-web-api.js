@@ -266,6 +266,11 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				if (apiConfig.customResponses) {
 					return sequentialPromiseMap(Object.keys(apiConfig.customResponses), responseType => configureGatewayResponse(responseType, apiConfig.customResponses[responseType]));
 				}
+			})
+			.then(() => {
+				if (apiConfig.binaryMediaTypes) {
+					return patchBinaryTypes(restApiId, apiGateway, apiConfig.binaryMediaTypes);
+				}
 			});
 		},
 		deployApi = function () {
@@ -311,7 +316,6 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		.then(accountOwnerId => {
 			ownerId = accountOwnerId;
 		})
-		.then(() => patchBinaryTypes(restApiId, apiGateway, apiConfig.binaryMediaTypes))
 		.then(getExistingConfigHash)
 		.then(existingHash => {
 			if (existingHash && existingHash === configHash) {
