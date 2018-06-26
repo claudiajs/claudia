@@ -18,10 +18,7 @@ phases:
       - npm install --no-audit --silent 
   build:
     commands:
-      - npm test -- ci filter='rebuildWebApi' > buildresult.txt 
-  post_build:
-    commands:
-      - sh spec/clean-test-resources.sh
+      - npm test -- ci > buildresult.txt 
 
 artifacts:
   files:
