@@ -1429,18 +1429,16 @@ describe('rebuildWebApi', () => {
 		it('logs execution', done => {
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion, logger).then(() => {
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
-					'apigateway.getRestApi',
+					'apigateway.putRestApi',
 					'apigateway.setupRequestListeners',
 					'apigateway.setAcceptHeader',
-					'apigateway.putRestApi',
 					'apigateway.getResources',
 					'apigateway.createResource',
 					'apigateway.putMethod',
 					'apigateway.putIntegration',
 					'apigateway.putMethodResponse',
 					'apigateway.putIntegrationResponse',
-					'apigateway.createDeployment'
-				]);
+					'apigateway.createDeployment']);
 				expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			}).then(done, done.fail);
 		});
@@ -1449,10 +1447,8 @@ describe('rebuildWebApi', () => {
 		let logger;
 		beforeEach(done => {
 			logger = new ArrayLogger();
-			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			create({name: testRunName, version: stageName, role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
-				genericLambdaName = result.lambda && result.lambda.name;
-			}).then(done, done.fail);
+			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			.then(done, done.fail);
 		});
 		it('stores the configuration hash in a stage variable', done => {
 			underTest(genericLambdaName, stageName, apiId, apiRouteConfig, awsRegion, logger, 'configHash').then(() => {
@@ -1499,10 +1495,9 @@ describe('rebuildWebApi', () => {
 			}).then(result => {
 				expect(result.cacheReused).toBeTruthy();
 				expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
-					'apigateway.getRestApi',
+					'apigateway.getStage',
 					'apigateway.setupRequestListeners',
-					'apigateway.setAcceptHeader',
-					'apigateway.getStage'
+					'apigateway.setAcceptHeader'
 				]);
 				expect(logger.getStageLog(true)).toContain('Reusing cached API configuration');
 			}).then(done, done.fail);
