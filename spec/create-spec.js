@@ -239,8 +239,11 @@ describe('create', () => {
 				config.role = `${testRunName}-manual`;
 				createFromDir('hello-world', logger)
 				.then(createResult => {
+					const savedFile = JSON.parse(fs.readFileSync(path.join(workingdir, 'claudia.json'), 'utf8'));
 					expect(createResult.lambda.role).toEqual(`${testRunName}-manual`);
 					expect(createResult.lambda.sharedRole).toBeTruthy();
+					expect(savedFile.lambda.role).toEqual(`${testRunName}-manual`);
+					expect(savedFile.lambda.sharedRole).toBeTruthy();
 				})
 				.then(getLambdaConfiguration)
 				.then(lambdaMetadata => expect(lambdaMetadata.Role).toEqual(createdRole.Arn))
