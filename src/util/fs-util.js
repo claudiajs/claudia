@@ -9,6 +9,14 @@ const fs = require('fs'),
 		} catch (e) {
 			return false;
 		}
+	},
+	safeLStats = function (filePath) {
+		'use strict';
+		try {
+			return fs.lstatSync(filePath);
+		} catch (e) {
+			return false;
+		}
 	};
 
 exports.ensureCleanDir = function (dirPath) {
@@ -35,13 +43,8 @@ exports.isFile = function (filePath) {
 };
 exports.isLink = function (filePath) {
 	'use strict';
-	try {
-		const stats = fs.lstatSync(filePath);
-		return stats && stats.isSymbolicLink();
-	} catch (e) {
-		return false;
-	}
-
+	const stats = safeLStats(filePath);
+	return stats && stats.isSymbolicLink();
 };
 exports.copy = function (from, to) {
 	'use strict';
@@ -61,14 +64,11 @@ exports.recursiveList = function (filePath) {
 			const entries = fs.readdirSync(dirPath);
 			entries.forEach(entry => {
 				const realEntryPath = path.join(dirPath, entry),
-					entryStat = safeStats(realEntryPath);
-				if (prefix) {
-					result.push(path.join(prefix, entry));
-				} else {
-					result.push(entry);
-				}
+					entryStat = safeStats(realEntryPath),
+					logicalPath = prefix ? path.join(prefix, entry) : entry;
+				result.push(logicalPath);
 				if (entryStat.isDirectory()) {
-					addDir(realEntryPath, entry);
+					addDir(realEntryPath, logicalPath);
 				}
 			});
 		},
