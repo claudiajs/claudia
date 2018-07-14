@@ -1,70 +1,91 @@
-const shell = require('shelljs'),
-	fs = require('fs');
+const fs = require('fs'),
+	path = require('path'),
+	fsExtra = require('fs-extra'),
+	glob = require('glob'),
+	safeStats = function (filePath) {
+		'use strict';
+		try {
+			return fs.statSync(filePath);
+		} catch (e) {
+			return false;
+		}
+	};
+
 exports.ensureCleanDir = function (dirPath) {
 	'use strict';
-	shell.rm('-rf', dirPath);
-	shell.mkdir('-p', dirPath);
+	fsExtra.emptyDirSync(dirPath);
 };
 exports.silentRemove = exports.rmDir = function (dirPath) {
 	'use strict';
-	shell.rm('-rf', dirPath);
+	fsExtra.removeSync(dirPath);
 };
 exports.fileExists = function (filePath) {
 	'use strict';
-	return shell.test('-e', filePath);
+	return fs.existsSync(filePath);
 };
 exports.isDir = function (filePath) {
 	'use strict';
-	return shell.test('-d', filePath);
+	const stats = safeStats(filePath);
+	return stats && stats.isDirectory();
 };
 exports.isFile = function (filePath) {
 	'use strict';
-	return shell.test('-f', filePath);
+	const stats = safeStats(filePath);
+	return stats && stats.isFile();
 };
 exports.isLink = function (filePath) {
 	'use strict';
-	return shell.test('-L', filePath);
+	try {
+		const stats = fs.lstatSync(filePath);
+		return stats && stats.isSymbolicLink();
+	} catch (e) {
+		return false;
+	}
+
 };
 exports.copy = function (from, to) {
 	'use strict';
-	return shell.cp('-rf', from, to);
+	const stats = safeStats(to);
+	if (!stats) {
+		throw new Error(`${to} does not exist`);
+	}
+	if (!stats.isDirectory()) {
+		throw new Error(`${to} is not a directory`);
+	}
+	fsExtra.copySync(from, path.join(to, path.basename(from)), {dereference: true});
 };
-exports.recursiveList = function (dirPath) {
+exports.recursiveList = function (filePath) {
 	'use strict';
-	return shell.ls('-R', dirPath);
+	const result = [],
+		addDir = function (dirPath, prefix) {
+			const entries = fs.readdirSync(dirPath);
+			entries.forEach(entry => {
+				const realEntryPath = path.join(dirPath, entry),
+					entryStat = safeStats(realEntryPath);
+				if (prefix) {
+					result.push(path.join(prefix, entry));
+				} else {
+					result.push(entry);
+				}
+				if (entryStat.isDirectory()) {
+					addDir(realEntryPath, entry);
+				}
+			});
+		},
+		filePathStats = safeStats(filePath);
+	if (!filePathStats) {
+		return glob.sync(filePath);
+	}
+	if (filePathStats.isFile()) {
+		return [filePath];
+	}
+	if (filePathStats.isDirectory()) {
+		addDir(filePath);
+		return result;
+	}
+	return [];
 };
 exports.move = function (fromPath, toPath) {
 	'use strict';
-	return shell.mv('-f', fromPath, toPath);
-};
-exports.replaceStringInFile = function (searchPattern, replacePattern, filePath) {
-	'use strict';
-	shell.sed('-i', searchPattern, replacePattern, filePath);
-	return Promise.resolve();
-};
-exports.copyFile = function (fromFile, toFile) {
-	'use strict';
-	const readStream = fs.createReadStream(fromFile);
-	readStream.pipe(fs.createWriteStream(toFile));
-	return new Promise((resolve, reject) => {
-		readStream.once('error', (err) => reject(err));
-		readStream.once('end', () => resolve());
-	});
-};
-exports.copyAndReplaceInFile = function (searchFor, replaceWith, fromFile, toFile) {
-	'use strict';
-	const readStream = fs.createReadStream(fromFile, 'utf8'),
-		writeStream = fs.createWriteStream(toFile);
-	let fileContents = '';
-	readStream.once('data', (chunk) => {
-		fileContents += chunk.toString().replace(searchFor, replaceWith);
-		writeStream.write(fileContents);
-	});
-	return new Promise((resolve, reject) => {
-		readStream.once('error', (err) => reject(err));
-		readStream.once('end', () => {
-			writeStream.end();
-			resolve();
-		});
-	});
+	fsExtra.moveSync(fromPath, toPath, {overwrite: true});
 };

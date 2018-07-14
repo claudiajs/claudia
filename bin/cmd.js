@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 const minimist = require('minimist'),
-	shell = require('shelljs'),
 	path = require('path'),
 	readCommands = require('../src/util/read-commands'),
 	ConsoleLogger = require('../src/util/console-logger'),
@@ -13,7 +12,7 @@ const minimist = require('minimist'),
 			alias: { h: 'help', v: 'version' },
 			string: ['source', 'name', 'region', 'profile'],
 			boolean: ['quiet', 'force'],
-			default: { 'source': shell.pwd().toString() }
+			default: { 'source': process.cwd() }
 		});
 	},
 	main = function () {

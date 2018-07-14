@@ -1,8 +1,8 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
+	fsExtra = require('fs-extra'),
 	path = require('path'),
-	shell = require('shelljs'),
 	fsUtil = require('../src/util/fs-util');
 describe('fsUtil', () => {
 	'use strict';
@@ -10,8 +10,9 @@ describe('fsUtil', () => {
 	beforeEach(() => {
 		pathName = tmppath();
 	});
-	afterEach(() => {
-		shell.rm('-rf', pathName);
+	afterEach(done => {
+		fsExtra.remove(pathName)
+		.then(done);
 	});
 	describe('rmDir', () => {
 		it('silently ignores empty directories', () => {
@@ -131,7 +132,6 @@ describe('fsUtil', () => {
 
 			expect(fs.readFileSync(path.join(pathName, 'copy', 'content', 'subdir', 'subfile.txt'), 'utf8')).toEqual('456');
 			expect(fs.readFileSync(path.join(pathName, 'copy', 'content', 'file.txt'), 'utf8')).toEqual('123');
-
 			expect(fs.readFileSync(path.join(pathName, 'content', 'subdir', 'subfile.txt'), 'utf8')).toEqual('456');
 			expect(fs.readFileSync(path.join(pathName, 'content', 'file.txt'), 'utf8')).toEqual('123');
 		});
@@ -145,6 +145,17 @@ describe('fsUtil', () => {
 			expect(fs.readFileSync(path.join(pathName, 'copy', 'file.txt'), 'utf8')).toEqual('123');
 
 			expect(fs.readFileSync(path.join(pathName, 'file.txt'), 'utf8')).toEqual('123');
+		});
+		it('throws if the target directory does not exist', () => {
+			fs.mkdirSync(pathName);
+			fs.writeFileSync(path.join(pathName, 'file.txt'), '123', 'utf8');
+			expect(() => fsUtil.copy(path.join(pathName, 'file.txt'), path.join(pathName, 'copy'))).toThrowError(/copy does not exist/);
+		});
+		it('throws if the target is a file', () => {
+			fs.mkdirSync(pathName);
+			fs.writeFileSync(path.join(pathName, 'file.txt'), '123', 'utf8');
+			fs.writeFileSync(path.join(pathName, 'copy'), '123', 'utf8');
+			expect(() => fsUtil.copy(path.join(pathName, 'file.txt'), path.join(pathName, 'copy'))).toThrowError(/copy is not a directory/);
 		});
 	});
 	describe('recursiveList', () => {
@@ -173,6 +184,8 @@ describe('fsUtil', () => {
 			});
 			it('lists a single file', () => {
 				expect(fsUtil.recursiveList(path.join(pathName, 'content', 'file.txt'))).toEqual([path.join(pathName, 'content', 'file.txt')]);
+			});
+			it('lists a single file with globbing patterns', () => {
 				expect(fsUtil.recursiveList(path.join(pathName, 'content', 'file*'))).toEqual([path.join(pathName, 'content', 'file.txt')]);
 			});
 			it('returns an empty array if no matching files', () => {
@@ -202,6 +215,8 @@ describe('fsUtil', () => {
 			});
 			it('lists a single file', () => {
 				expect(fsUtil.recursiveList(path.join('content', 'file.txt'))).toEqual([path.join('content', 'file.txt')]);
+			});
+			it('lists a single file with globbing patterns', () => {
 				expect(fsUtil.recursiveList(path.join('content', 'file*'))).toEqual([path.join('content', 'file.txt')]);
 			});
 			it('returns an empty array if no matching files', () => {
