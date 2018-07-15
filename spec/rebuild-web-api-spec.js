@@ -904,8 +904,6 @@ describe('rebuildWebApi', () => {
 		let authorizerLambdaName;
 		beforeEach(done => {
 			const authorizerLambdaDir = path.join(workingdir, 'authorizer');
-
-			fs.mkdirSync(workingdir);
 			fs.mkdirSync(authorizerLambdaDir);
 			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			fsUtil.copy('spec/test-projects/echo', authorizerLambdaDir, true);

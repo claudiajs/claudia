@@ -313,7 +313,7 @@ describe('update', () => {
 		beforeEach(done => {
 			originaldir =  path.join(workingdir, 'original');
 			updateddir = path.join(workingdir, 'updated');
-			process.chdir(originaldir);
+			fs.mkdirSync(originaldir);
 			fs.mkdirSync(updateddir);
 			fsUtil.copy('spec/test-projects/api-gw-hello-world', originaldir, true);
 			fsUtil.copy('spec/test-projects/api-gw-echo', updateddir, true);

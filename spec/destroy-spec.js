@@ -98,7 +98,7 @@ describe('destroy', () => {
 		});
 		it('removes specified config if --config is provided', done => {
 			const otherPath = tmppath();
-			fsUtil.copy(path.join(workingdir, 'claudia.json'), otherPath);
+			fs.writeFileSync(otherPath, fs.readFileSync(path.join(workingdir, 'claudia.json')));
 			underTest({ source: workingdir, config: otherPath})
 			.then(() => {
 				expect(fs.existsSync(path.join(workingdir, 'claudia.json'))).toBeTruthy();
