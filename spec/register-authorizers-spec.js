@@ -3,9 +3,10 @@ const underTest = require('../src/tasks/register-authorizers'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),
 	create = require('../src/commands/create'),
-	shell = require('shelljs'),
 	path = require('path'),
+	fs = require('fs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	aws = require('aws-sdk'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	cognitoUserPool = require('./util/cognito-user-pool'),
@@ -31,8 +32,8 @@ describe('registerAuthorizers', () => {
 		testRunName = 'test' + Date.now();
 
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
-		shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+		fs.mkdirSync(workingdir);
+		fsUtil.copy('spec/test-projects/echo', workingdir, true);
 		create({ name: testRunName, version: 'original', role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler' })
 		.then(result => {
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -44,8 +45,8 @@ describe('registerAuthorizers', () => {
 		})
 		.then(() => {
 			authorizerLambdaDir = path.join(workingdir, 'authorizer');
-			shell.mkdir(authorizerLambdaDir);
-			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
+			fs.mkdirSync(authorizerLambdaDir);
+			fsUtil.copy('spec/test-projects/echo', authorizerLambdaDir, true);
 			return create({ name: testRunName + 'auth', version: 'original', role: genericTestRole.get(), region: awsRegion, source: authorizerLambdaDir, handler: 'main.handler' });
 		})
 		.then(result => {

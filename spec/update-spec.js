@@ -3,12 +3,12 @@ const underTest = require('../src/commands/update'),
 	limits = require('../src/util/limits.json'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	callApi = require('../src/util/call-api'),
 	ArrayLogger = require('../src/util/array-logger'),
 	fs = require('fs'),
 	fsPromise = require('../src/util/fs-promise'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
@@ -31,7 +31,7 @@ describe('update', () => {
 		testRunName = 'test' + Date.now();
 		lambda = new aws.Lambda({region: awsRegion});
 		newObjects = {workingdir: workingdir};
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
@@ -43,7 +43,7 @@ describe('update', () => {
 		});
 	});
 	it('fails if the source folder is same as os tmp folder', done => {
-		shell.cp('-rf', 'spec/test-projects/hello-world/*', os.tmpdir());
+		fsUtil.copy('spec/test-projects/hello-world', os.tmpdir(), true);
 		fs.writeFileSync(path.join(os.tmpdir(), 'claudia.json'), JSON.stringify({lambda: {name: 'xxx', region: 'us-east-1'}}), 'utf8');
 		underTest({source: os.tmpdir()}).then(done.fail, message => {
 			expect(message).toEqual('Source directory is the Node temp directory. Cowardly refusing to fill up disk with recursive copy.');
@@ -65,7 +65,7 @@ describe('update', () => {
 		});
 	});
 	it('fails if local dependencies and optional dependencies are mixed', done => {
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		underTest({source: workingdir, 'use-local-dependencies': true, 'optional-dependencies': false}).then(done.fail, message => {
 			expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
 			done();
@@ -74,11 +74,11 @@ describe('update', () => {
 
 	describe('when the config exists', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
-				shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+				fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			}).then(done, done.fail);
 		});
 		it('fails if the lambda no longer exists', done => {
@@ -97,7 +97,7 @@ describe('update', () => {
 			}).then(done);
 		});
 		it('validates the package before updating the lambda', done => {
-			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo-dependency-problem', workingdir, true);
 			underTest({source: workingdir})
 			.then(done.fail, reason => {
 				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
@@ -131,16 +131,15 @@ describe('update', () => {
 		it('keeps the archive on the disk if --keep is specified', done => {
 			underTest({source: workingdir, keep: true}).then(result => {
 				expect(result.archive).toBeTruthy();
-				expect(shell.test('-e', result.archive));
+				expect(fsUtil.isFile(result.archive)).toBeTruthy();
 			}).then(done, done.fail);
 		});
 
 		it('uses local dependencies if requested', done => {
-			shell.cp('-rf', path.join(__dirname, 'test-projects', 'local-dependencies', '*'), workingdir);
-
-			shell.rm('-rf', path.join(workingdir, 'node_modules'));
-			shell.mkdir(path.join(workingdir, 'node_modules'));
-			shell.cp('-r', path.join(workingdir, 'local_modules', '*'),  path.join(workingdir, 'node_modules'));
+			fsUtil.copy(path.join(__dirname, 'test-projects', 'local-dependencies'), workingdir, true);
+			fsUtil.silentRemove(path.join(workingdir, 'node_modules'));
+			fs.mkdirSync(path.join(workingdir, 'node_modules'));
+			fsUtil.copy(path.join(workingdir, 'local_modules'),  path.join(workingdir, 'node_modules'), true);
 
 			underTest({source: workingdir, 'use-local-dependencies': true}).then(() => {
 				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
@@ -150,7 +149,7 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('removes optional dependencies after validation if requested', done => {
-			shell.cp('-rf', path.join(__dirname, '/test-projects/optional-dependencies/*'), workingdir);
+			fsUtil.copy(path.join(__dirname, '/test-projects/optional-dependencies'), workingdir, true);
 			underTest({source: workingdir, 'optional-dependencies': false}).then(() => {
 				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(lambdaResult => {
@@ -159,8 +158,8 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('rewires relative dependencies to reference original location after copy', done => {
-			shell.cp('-r', path.join(__dirname, 'test-projects/relative-dependencies/*'), workingdir);
-			shell.cp('-r', path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
+			fsUtil.copy(path.join(__dirname, 'test-projects/relative-dependencies'), workingdir, true);
+			fsUtil.copy(path.join(workingdir, 'claudia.json'), path.join(workingdir, 'lambda'));
 			underTest({source: path.join(workingdir, 'lambda')}).then(() => {
 				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(lambdaResult => {
@@ -275,7 +274,7 @@ describe('update', () => {
 		});
 
 		it('checks the current dir if the source is not provided', done => {
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			underTest().then(lambdaFunc => {
 				expect(new RegExp('^arn:aws:lambda:' + awsRegion + ':[0-9]+:function:' + testRunName + ':2$').test(lambdaFunc.FunctionArn)).toBeTruthy();
 				expect(lambdaFunc.FunctionName).toEqual(testRunName);
@@ -285,7 +284,7 @@ describe('update', () => {
 	});
 	describe('when the lambda project contains a proxy api', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/apigw-proxy-echo', workingdir, true);
 			create({name: testRunName, version: 'original', region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -314,15 +313,15 @@ describe('update', () => {
 		beforeEach(done => {
 			originaldir =  path.join(workingdir, 'original');
 			updateddir = path.join(workingdir, 'updated');
-			shell.mkdir(originaldir);
-			shell.mkdir(updateddir);
-			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', originaldir);
-			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', updateddir);
+			process.chdir(originaldir);
+			fs.mkdirSync(updateddir);
+			fsUtil.copy('spec/test-projects/api-gw-hello-world', originaldir, true);
+			fsUtil.copy('spec/test-projects/api-gw-echo', updateddir, true);
 			create({name: testRunName, version: 'original', region: awsRegion, source: originaldir, 'api-module': 'main'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
-				shell.cp(path.join(originaldir, 'claudia.json'), updateddir);
+				fsUtil.copy(path.join(originaldir, 'claudia.json'), updateddir);
 			}).then(done, done.fail);
 		});
 		it('fails if the api no longer exists', done => {
@@ -347,7 +346,7 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('validates the package before creating a new lambda version', done => {
-			shell.cp('-rf', 'spec/test-projects/echo-dependency-problem/*', updateddir);
+			fsUtil.copy('spec/test-projects/echo-dependency-problem', updateddir, true);
 			underTest({source: updateddir}).then(done.fail, reason => {
 				expect(reason).toEqual('cannot require ./main after clean installation. Check your dependencies.');
 			}).then(() => {
@@ -397,7 +396,7 @@ describe('update', () => {
 		});
 
 		it('works when the source is a relative path', done => {
-			shell.cd(path.dirname(updateddir));
+			process.chdir(path.dirname(updateddir));
 			updateddir = './' + path.basename(updateddir);
 			return underTest({source: updateddir}).then(result => {
 				expect(result.url).toEqual('https://' + newObjects.restApi + '.execute-api.' + awsRegion + '.amazonaws.com/latest');
@@ -416,7 +415,7 @@ describe('update', () => {
 
 		it('works with non-reentrant modules', done => {
 			global.MARKED = false;
-			shell.cp('-rf', 'spec/test-projects/non-reentrant/*', updateddir);
+			fsUtil.copy('spec/test-projects/non-reentrant', updateddir, true);
 			underTest({source: updateddir}).then(done, done.fail);
 		});
 		it('when the version is provided, creates the deployment with that name', done => {
@@ -472,7 +471,7 @@ describe('update', () => {
 		});
 
 		it('executes post-deploy if provided with the api', done => {
-			shell.cp('-rf', 'spec/test-projects/api-gw-postdeploy/*', updateddir);
+			fsUtil.copy('spec/test-projects/api-gw-postdeploy', updateddir, true);
 			underTest({
 				source: updateddir,
 				version: 'development',
@@ -502,7 +501,7 @@ describe('update', () => {
 			});
 		});
 		it('passes cache check results to the post-deploy step', done => {
-			shell.cp('-rf', 'spec/test-projects/api-gw-postdeploy/*', updateddir);
+			fsUtil.copy('spec/test-projects/api-gw-postdeploy', updateddir, true);
 			underTest({
 				source: updateddir,
 				version: 'development',
@@ -525,7 +524,7 @@ describe('update', () => {
 	});
 	it('logs call execution', done => {
 		const logger = new ArrayLogger();
-		shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
+		fsUtil.copy('spec/test-projects/api-gw-hello-world', workingdir, true);
 		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main'}).then(result => {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.restApi = result.api && result.api.id;
@@ -567,7 +566,7 @@ describe('update', () => {
 	});
 	describe('handler option support', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -582,7 +581,7 @@ describe('update', () => {
 			.then(done, done.fail);
 		});
 		it('can specify the new handler --handler argument', done => {
-			shell.cp('-rf', 'spec/test-projects/api-gw-echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/api-gw-echo', workingdir, true);
 			underTest({source: workingdir, version: 'new', handler: 'main.proxyRouter'})
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.Handler).toEqual('main.proxyRouter'))
@@ -602,7 +601,7 @@ describe('update', () => {
 
 	describe('timeout option support', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -641,7 +640,7 @@ describe('update', () => {
 	});
 	describe('runtime', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, runtime: 'nodejs4.3', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -666,7 +665,7 @@ describe('update', () => {
 	});
 	describe('memory', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, memory: 256, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -725,7 +724,7 @@ describe('update', () => {
 		beforeEach(done => {
 			logger = new ArrayLogger();
 			standardEnvKeys = require('./util/standard-env-keys');
-			shell.cp('-r', 'spec/test-projects/env-vars/*', workingdir);
+			fsUtil.copy('spec/test-projects/env-vars', workingdir, true);
 			create({
 				name: testRunName,
 				version: 'original',
@@ -887,7 +886,7 @@ describe('update', () => {
 		});
 
 		it('loads up the environment variables while validating the package to allow any code that expects them to initialize -- fix for https://github.com/claudiajs/claudia/issues/96', done => {
-			shell.cp('-rf', 'spec/test-projects/throw-if-not-env/*', workingdir);
+			fsUtil.copy('spec/test-projects/throw-if-not-env', workingdir, true);
 			process.env.TEST_VAR = '';
 			underTest({source: workingdir, version: 'new', 'set-env': 'TEST_VAR=abc'}, logger).then(done, done.fail);
 		});

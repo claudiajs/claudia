@@ -1,7 +1,7 @@
 /*global describe, it, beforeEach, afterEach, require, it, expect */
 const underTest = require('../src/util/run-npm'),
-	shell = require('shelljs'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	ArrayLogger = require('../src/util/array-logger'),
 	tmppath = require('../src/util/tmppath'),
 	path = require('path');
@@ -16,14 +16,14 @@ describe('runNpm', () => {
 
 	beforeEach(() => {
 		sourcedir = tmppath();
-		shell.mkdir(sourcedir);
+		fs.mkdirSync(sourcedir);
 		logger = new ArrayLogger();
-		pwd = shell.pwd();
+		pwd = process.cwd();
 	});
 	afterEach(() => {
-		shell.cd(pwd);
+		process.chdir(pwd);
 		if (sourcedir) {
-			shell.rm('-rf', sourcedir);
+			fsUtil.silentRemove(sourcedir);
 		}
 	});
 	it('executes NPM in a folder with arguments as a string', done => {
@@ -37,9 +37,9 @@ describe('runNpm', () => {
 		});
 		underTest(sourcedir, 'install -s --production', logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
-			expect(shell.pwd()).toEqual(pwd);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			expect(process.cwd()).toEqual(pwd);
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
 			done();
 		}, done.fail);
 	});
@@ -54,9 +54,9 @@ describe('runNpm', () => {
 		});
 		underTest(sourcedir, ['install', '-s', '--production'], logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
-			expect(shell.pwd()).toEqual(pwd);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			expect(process.cwd()).toEqual(pwd);
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
 			done();
 		}, done.fail);
 	});
@@ -73,9 +73,9 @@ describe('runNpm', () => {
 		fs.writeFileSync(path.join(sourcedir, '.npmrc'), 'optional = false', 'utf8');
 		underTest(sourcedir, 'install -s --production', logger, true).then(packagePath => {
 			expect(packagePath).toEqual(sourcedir);
-			expect(shell.pwd()).toEqual(pwd);
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
-			expect(shell.test('-e', path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
+			expect(process.cwd()).toEqual(pwd);
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'uuid'))).toBeTruthy();
+			expect(fs.existsSync(path.join(sourcedir, 'node_modules', 'minimist'))).toBeFalsy();
 			done();
 		}, done.fail);
 

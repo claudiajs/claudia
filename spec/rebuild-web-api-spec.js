@@ -3,12 +3,13 @@ const underTest = require('../src/tasks/rebuild-web-api'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),
 	create = require('../src/commands/create'),
-	shell = require('shelljs'),
 	querystring = require('querystring'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
+	fs = require('fs'),
 	callApi = require('../src/util/call-api'),
+	fsUtil = require('../src/util/fs-util'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	ArrayLogger = require('../src/util/array-logger'),
 	awsRegion = require('./util/test-aws-region'),
@@ -33,7 +34,7 @@ describe('rebuildWebApi', () => {
 			})
 			.then(() => {
 				if (!genericLambdaName) {
-					shell.cp('-r', codePath, workingdir);
+					fsUtil.copy(codePath, workingdir, true);
 					return create({name: testRunName, version: version, role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 						genericLambdaName = result.lambda && result.lambda.name;
 						genericLambdaPath = codePath;
@@ -74,7 +75,7 @@ describe('rebuildWebApi', () => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		apiRouteConfig = {version: 4, routes: { echo: {'GET': {} } }};
 		stageName = `original${Date.now()}`;
 		if (!apiId) {
@@ -101,7 +102,7 @@ describe('rebuildWebApi', () => {
 		beforeEach(done => {
 			apiRouteConfig.corsHandlers = false;
 
-			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			createGenericLambda('spec/test-projects/apigw-proxy-echo', stageName)
 			.then(done, done.fail);
 		});
 		it('creates and links an API to a lambda version', done => {
@@ -611,7 +612,7 @@ describe('rebuildWebApi', () => {
 	describe('custom gateway response support', () => {
 		beforeEach(done => {
 			apiRouteConfig.corsHandlers = false;
-			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			createGenericLambda('spec/test-projects/apigw-proxy-echo', stageName)
 			.then(done, done.fail);
 		});
 		afterEach(done => {
@@ -757,7 +758,7 @@ describe('rebuildWebApi', () => {
 				},
 				corsHandlers: false
 			};
-			createGenericLambda('spec/test-projects/api-gw-binary/*', stageName)
+			createGenericLambda('spec/test-projects/api-gw-binary', stageName)
 			.then(done, done.fail);
 		});
 		it('does not install any binary media support to an API if no specific types are requested', done => {
@@ -904,10 +905,10 @@ describe('rebuildWebApi', () => {
 		beforeEach(done => {
 			const authorizerLambdaDir = path.join(workingdir, 'authorizer');
 
-			shell.mkdir('-p', workingdir);
-			shell.mkdir('-p', authorizerLambdaDir);
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
-			shell.cp('-r', 'spec/test-projects/echo/*', authorizerLambdaDir);
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(authorizerLambdaDir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
+			fsUtil.copy('spec/test-projects/echo', authorizerLambdaDir, true);
 
 			apiRouteConfig.corsHandlers = false;
 			create({name: testRunName, version: stageName, role: genericTestRole.get(), region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
@@ -973,7 +974,7 @@ describe('rebuildWebApi', () => {
 
 	describe('CORS handling', () => {
 		beforeEach(done => {
-			createGenericLambda('spec/test-projects/api-gw-proxy-headers/*', stageName)
+			createGenericLambda('spec/test-projects/api-gw-proxy-headers', stageName)
 			.then(done, done.fail);
 		});
 		describe('without custom CORS options', () => {
@@ -1214,7 +1215,7 @@ describe('rebuildWebApi', () => {
 
 	describe('when working with an existing api', () => {
 		beforeEach(done => {
-			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			createGenericLambda('spec/test-projects/apigw-proxy-echo', stageName)
 			.then(() => {
 				apiRouteConfig.routes.hello = {POST: {}};
 				apiRouteConfig.routes[''] = {GET: {}, PUT: {}};
@@ -1340,7 +1341,7 @@ describe('rebuildWebApi', () => {
 			});
 		};
 		beforeEach(done => {
-			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			createGenericLambda('spec/test-projects/apigw-proxy-echo', stageName)
 			.then(done, done.fail);
 		});
 		it('sets no request parameters if path params are not present', done => {
@@ -1423,7 +1424,7 @@ describe('rebuildWebApi', () => {
 		let logger;
 		beforeEach(done => {
 			logger = new ArrayLogger();
-			createGenericLambda('spec/test-projects/echo/*', stageName)
+			createGenericLambda('spec/test-projects/echo', stageName)
 			.then(done, done.fail);
 		});
 		it('logs execution', done => {
@@ -1447,7 +1448,7 @@ describe('rebuildWebApi', () => {
 		let logger;
 		beforeEach(done => {
 			logger = new ArrayLogger();
-			createGenericLambda('spec/test-projects/apigw-proxy-echo/*', stageName)
+			createGenericLambda('spec/test-projects/apigw-proxy-echo', stageName)
 			.then(done, done.fail);
 		});
 		it('stores the configuration hash in a stage variable', done => {

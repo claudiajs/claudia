@@ -2,10 +2,10 @@
 const underTest = require('../src/commands/add-sns-event-source'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	retry = require('oh-no-i-insist'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region');
@@ -19,7 +19,7 @@ describe('addSNSEventSource', () => {
 		sns = new aws.SNS({ region: awsRegion });
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		config = {
 			topic: 'test-topic',
 			source: workingdir
@@ -70,7 +70,7 @@ describe('addSNSEventSource', () => {
 		};
 		beforeEach(done => {
 			createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			sns.createTopic({
 				Name: `${testRunName}-topic`
 			}).promise()

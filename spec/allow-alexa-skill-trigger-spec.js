@@ -2,9 +2,10 @@
 const underTest = require('../src/commands/allow-alexa-skill-trigger'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
+	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	awsRegion = require('./util/test-aws-region');
 
 describe('allowAlexaSkillTrigger', () => {
@@ -16,7 +17,7 @@ describe('allowAlexaSkillTrigger', () => {
 		lambda = new aws.Lambda({ region: awsRegion });
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
@@ -33,7 +34,7 @@ describe('allowAlexaSkillTrigger', () => {
 				source: workingdir,
 				version: 'dev'
 			};
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		create(createConfig)
 			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;

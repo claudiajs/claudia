@@ -1,8 +1,8 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/util/loadconfig'),
 	tmppath = require('../src/util/tmppath'),
-	shell = require('shelljs'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path');
 describe('loadConfig', () => {
 	'use strict';
@@ -10,15 +10,15 @@ describe('loadConfig', () => {
 	beforeEach(() => {
 		exampleConfig = { name: 'config' };
 		workingdir = tmppath();
-		shell.mkdir(workingdir);
-		cwd = shell.pwd().toString();
+		fs.mkdirSync(workingdir);
+		cwd = process.cwd();
 	});
 	afterEach(() => {
-		shell.cd(cwd);
-		shell.rm('-rf', workingdir);
+		process.chdir(cwd);
+		fsUtil.silentRemove(workingdir);
 	});
 	it('loads config from the current directory if no directory provided', done => {
-		shell.cd(workingdir);
+		process.chdir(workingdir);
 		fs.writeFileSync(path.join(workingdir, 'claudia.json'), JSON.stringify(exampleConfig), 'utf8');
 		underTest()
 		.then(config => expect(config).toEqual(exampleConfig))
@@ -37,7 +37,7 @@ describe('loadConfig', () => {
 		.then(done, done.fail);
 	});
 	it('loads config from an alternative file in the current dir, if config is provided', done => {
-		shell.cd(workingdir);
+		process.chdir(workingdir);
 		fs.writeFileSync(path.join(workingdir, 'lambda.json'), JSON.stringify(exampleConfig), 'utf8');
 		underTest({ config: 'lambda.json' })
 		.then(config => expect(config).toEqual(exampleConfig))

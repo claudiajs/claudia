@@ -1,10 +1,11 @@
 /*global describe, it, expect, beforeEach, afterEach, require */
-const shell = require('shelljs'),
-	fs = require('fs'),
+const fs = require('fs'),
 	os = require('os'),
 	path = require('path'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	trimSlash = require('../src/util/trimslash'),
+	childProcess = require('child_process'),
 	underTest = require('../src/tasks/zipdir');
 
 describe('zipdir', () => {
@@ -12,15 +13,15 @@ describe('zipdir', () => {
 	let workingdir, zipfile, pwd;
 	beforeEach(() => {
 		workingdir = tmppath();
-		shell.mkdir(workingdir);
-		pwd = shell.pwd();
+		fs.mkdirSync(workingdir);
+		pwd = process.cwd();
 		zipfile = false;
 	});
 	afterEach(() => {
-		shell.cd(pwd);
-		shell.rm('-rf', workingdir);
+		process.chdir(pwd);
+		fsUtil.silentRemove(workingdir);
 		if (zipfile) {
-			shell.rm('-rf', zipfile);
+			fsUtil.silentRemove(zipfile);
 		}
 	});
 	it('rejects if the path does not exist', done => {
@@ -39,23 +40,26 @@ describe('zipdir', () => {
 		});
 	});
 	it('zips up files and subfolders into a temporary path', done => {
-		const original = path.join(workingdir, 'original');
-		shell.mkdir(original);
+		const original = path.join(workingdir, 'original'),
+			unpacked = path.join(workingdir, 'unpacked');
+		fs.mkdirSync(original);
 		fs.writeFileSync(path.join(original, 'root.txt'), 'text1', 'utf8');
-		shell.mkdir(path.join(original, 'subdir'));
+		fs.mkdirSync(path.join(original, 'subdir'));
 		fs.writeFileSync(path.join(original, 'subdir', 'sub.txt'), 'text2', 'utf8');
 
 		underTest(original).then(argpath => {
-			const unpacked = path.join(workingdir, 'unpacked');
-
 			zipfile = argpath;
-			shell.mkdir(unpacked);
-			shell.cd(unpacked);
-			if (shell.exec('unzip ' + argpath).code !== 0) {
-				done.fail('invalid archive');
-			}
-
-			expect(trimSlash(path.dirname(argpath))).toEqual(trimSlash(os.tmpdir()));
+			fs.mkdirSync(unpacked);
+			return new Promise((resolve, reject) => {
+				childProcess.execFile('unzip', [argpath], {cwd: unpacked, env: process.env}, (error) => {
+					if (error) {
+						return reject(error);
+					}
+					resolve();
+				});
+			});
+		}).then(() => {
+			expect(trimSlash(path.dirname(zipfile))).toEqual(trimSlash(os.tmpdir()));
 			expect(fs.readFileSync(path.join(unpacked, 'root.txt'), 'utf8')).toEqual('text1');
 			expect(fs.readFileSync(path.join(unpacked, 'subdir', 'sub.txt'), 'utf8')).toEqual('text2');
 		}).then(done, done.fail);
@@ -63,10 +67,10 @@ describe('zipdir', () => {
 	it('removes the original dir if successful', done => {
 		const original = path.join(workingdir, 'original');
 
-		shell.mkdir(original);
+		fs.mkdirSync(original);
 		fs.writeFileSync(path.join(original, 'root.txt'), 'text1', 'utf8');
 		underTest(original).then(() => {
-			expect(shell.test('-e', original)).toBeFalsy();
+			expect(fs.existsSync(original)).toBeFalsy();
 		}).then(done, done.fail);
 	});
 });

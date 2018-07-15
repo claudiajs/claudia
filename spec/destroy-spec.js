@@ -1,7 +1,6 @@
 /*global describe, require, it, expect, beforeEach, console */
 const underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
-	shell = require('shelljs'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
@@ -9,6 +8,7 @@ const underTest = require('../src/commands/destroy'),
 	aws = require('aws-sdk'),
 	readjson = require('../src/util/readjson'),
 	fsPromise = require('../src/util/fs-promise'),
+	fsUtil = require('../src/util/fs-util'),
 	awsRegion = require('./util/test-aws-region');
 describe('destroy', () => {
 	'use strict';
@@ -18,7 +18,7 @@ describe('destroy', () => {
 		testRunName = 'test' + Date.now();
 		iam = new aws.IAM();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 	it('fails when the source dir does not contain the project config file', done => {
 		underTest({ source: workingdir })
@@ -39,7 +39,7 @@ describe('destroy', () => {
 	});
 	describe('when only a lambda function exists', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -83,7 +83,7 @@ describe('destroy', () => {
 	});
 	describe('removing the config file', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -93,16 +93,16 @@ describe('destroy', () => {
 		});
 		it('removes claudia.json if --config is not provided', done => {
 			underTest({ source: workingdir })
-			.then(() => expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy())
+			.then(() => expect(fs.existsSync(path.join(workingdir, 'claudia.json'))).toBeFalsy())
 			.then(done, done.fail);
 		});
 		it('removes specified config if --config is provided', done => {
 			const otherPath = tmppath();
-			shell.cp(path.join(workingdir, 'claudia.json'), otherPath);
+			fsUtil.copy(path.join(workingdir, 'claudia.json'), otherPath);
 			underTest({ source: workingdir, config: otherPath})
 			.then(() => {
-				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeTruthy();
-				expect(shell.test('-e', path.join(workingdir, otherPath))).toBeFalsy();
+				expect(fs.existsSync(path.join(workingdir, 'claudia.json'))).toBeTruthy();
+				expect(fs.existsSync(path.join(workingdir, otherPath))).toBeFalsy();
 			})
 			.then(done, e => {
 				console.log(e.stack || e.message || e);
@@ -112,7 +112,7 @@ describe('destroy', () => {
 	});
 	describe('when the lambda project contains a web api', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/api-gw-hello-world', workingdir, true);
 			create({ name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main' })
 			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;

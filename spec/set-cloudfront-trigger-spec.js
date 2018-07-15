@@ -3,9 +3,10 @@ const underTest = require('../src/commands/set-cloudfront-trigger'),
 	create = require('../src/commands/create'),
 	findCloudfrontBehavior = require('../src/tasks/find-cloudfront-behavior'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	aws = require('aws-sdk'),
+	fs = require('fs'),
 	awsRegion = require('./util/test-aws-region'),
 	distributionId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
 if (!distributionId) {
@@ -20,7 +21,7 @@ describe('setCloudfrontTrigger', () => {
 		iam = new aws.IAM({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		config = {
 			quiet: true,
 			version: 1,
@@ -74,7 +75,7 @@ describe('setCloudfrontTrigger', () => {
 			};
 		beforeEach(() => {
 			createConfig = { version: 'dev', name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		});
 		describe('when the version is an alias', () => {
 			beforeEach(done => {

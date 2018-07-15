@@ -4,8 +4,8 @@ const underTest = require('../src/commands/set-version'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	fs = require('fs'),
 	path = require('path'),
@@ -29,7 +29,7 @@ describe('setVersion', () => {
 		lambda = new aws.Lambda({region: awsRegion});
 		apiGateway = retriableWrap(new aws.APIGateway({region: awsRegion}));
 		newObjects = {workingdir: workingdir};
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 
 	afterEach(done => {
@@ -63,7 +63,7 @@ describe('setVersion', () => {
 	});
 	describe('when the lambda project does not contain a web api', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', role: genericTestRole.get()}).then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
@@ -76,7 +76,7 @@ describe('setVersion', () => {
 			}).then(done, done.fail);
 		});
 		it('uses the latest numeric version', done => {
-			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			update({source: workingdir}).then(() => {
 				return underTest({source: workingdir, version: 'dev'});
 			}).then(() => {
@@ -86,7 +86,7 @@ describe('setVersion', () => {
 			}).then(done, done.fail);
 		});
 		it('migrates an alias if it already exists', done => {
-			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			lambda.createAlias({
 				FunctionName: testRunName,
 				FunctionVersion: '1',
@@ -104,7 +104,7 @@ describe('setVersion', () => {
 	});
 	describe('when the lambda project contains a web api', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/api-gw-echo', workingdir, true);
 			create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: genericTestRole.get()}).then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
@@ -153,7 +153,7 @@ describe('setVersion', () => {
 	});
 	describe('when the lambda project contains a proxy api', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/apigw-proxy-echo', workingdir, true);
 			create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', 'deploy-proxy-api': true, role: genericTestRole.get()}).then(result => {
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 				newObjects.restApi = result.api && result.api.id;
@@ -205,7 +205,7 @@ describe('setVersion', () => {
 
 	it('logs progress', done => {
 		const logger = new ArrayLogger();
-		shell.cp('-r', 'spec/test-projects/api-gw-echo/*', workingdir);
+		fsUtil.copy('spec/test-projects/api-gw-echo', workingdir, true);
 		create({name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main', role: genericTestRole.get()}).then(result => {
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			newObjects.restApi = result.api && result.api.id;
@@ -234,7 +234,7 @@ describe('setVersion', () => {
 		beforeEach(done => {
 			logger = new ArrayLogger();
 			standardEnvKeys = require('./util/standard-env-keys');
-			shell.cp('-r', 'spec/test-projects/env-vars/*', workingdir);
+			fsUtil.copy('spec/test-projects/env-vars', workingdir, true);
 			create({
 				name: testRunName,
 				version: 'original',

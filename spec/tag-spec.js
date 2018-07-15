@@ -2,7 +2,8 @@
 const underTest = require('../src/commands/tag'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
+	fsUtil = require('../src/util/fs-util'),
+	fs = require('fs'),
 	tmppath = require('../src/util/tmppath'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region');
@@ -14,7 +15,8 @@ describe('tag', () => {
 		lambda = new aws.Lambda({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fs.mkdirSync(workingdir);
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);

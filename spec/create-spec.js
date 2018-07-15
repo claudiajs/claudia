@@ -6,8 +6,8 @@ const underTest = require('../src/commands/create'),
 	callApi = require('../src/util/call-api'),
 	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
-	shell = require('shelljs'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	fsPromise = require('../src/util/fs-promise'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
@@ -19,15 +19,16 @@ describe('create', () => {
 	'use strict';
 	let workingdir, testRunName, iam, lambda, newObjects, config, logs, apiGatewayPromise;
 	const createFromDir = function (dir, logger) {
-			if (!shell.test('-e', workingdir)) {
-				shell.mkdir('-p', workingdir);
+			if (!fs.existsSync(workingdir)) {
+				fs.mkdirSync(workingdir);
 			}
-			shell.cp('-r',
-				path.join(__dirname, 'test-projects/', (dir || 'hello-world')) + '/*',
-				workingdir
+			fsUtil.copy(
+				path.join(__dirname, 'test-projects/', (dir || 'hello-world')),
+				workingdir,
+				true
 			);
-			if (shell.test('-e', path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'))) {
-				shell.cp(
+			if (fs.existsSync(path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'))) {
+				fsUtil.copy(
 					path.join(__dirname, 'test-projects/', (dir || 'hello-world'), '.npmrc'),
 					workingdir
 				);
@@ -64,8 +65,8 @@ describe('create', () => {
 			.then(done);
 		});
 		it('fails if name is not given either as an option or package.json name', done => {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.mkdirSync(workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			fs.writeFileSync(path.join(workingdir, 'package.json'), '{"name": ""}', 'utf8');
 			config.name = undefined;
 			underTest(config)
@@ -127,36 +128,36 @@ describe('create', () => {
 			.then(done);
 		});
 		it('fails if claudia.json already exists in the source folder', done => {
-			shell.mkdir(workingdir);
+			fs.mkdirSync(workingdir);
 			fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
 			underTest(config)
 			.then(done.fail, message => expect(message).toEqual('claudia.json already exists in the source folder'))
 			.then(done);
 		});
 		it('works if claudia.json already exists in the source folder but alternative config provided', done => {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.mkdirSync(workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			fs.writeFileSync(path.join(workingdir, 'claudia.json'), '{}', 'utf8');
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			config.config = 'lambda.json';
 			underTest(config)
 			.then(done, done.fail);
 		});
 		it('fails if the alternative config is provided but the file already exists', done => {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.mkdirSync(workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			config.config = 'lambda.json';
 			underTest(config)
 			.then(done.fail, message => expect(message).toEqual('lambda.json already exists'))
 			.then(done);
 		});
 		it('fails if the alternative config is requested in a non-existent directory', done => {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fs.mkdirSync(workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			fs.writeFileSync(path.join(workingdir, 'lambda.json'), '{}', 'utf8');
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			config.config = path.join('non-existent', 'lambda.json');
 			underTest(config)
 			.then(done.fail, message => expect(message).toEqual('cannot write to non-existent/lambda.json'))
@@ -164,17 +165,17 @@ describe('create', () => {
 		});
 
 		it('checks the current folder if the source parameter is not defined', done => {
-			shell.mkdir(workingdir);
-			shell.cd(workingdir);
+			fs.mkdirSync(workingdir);
+			process.chdir(workingdir);
 			fs.writeFileSync(path.join('claudia.json'), '{}', 'utf8');
 			underTest(config)
 			.then(done.fail, message => expect(message).toEqual('claudia.json already exists in the source folder'))
 			.then(done);
 		});
 		it('fails if package.json does not exist in the target folder', done => {
-			shell.mkdir(workingdir);
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
-			shell.rm(path.join(workingdir, 'package.json'));
+			fs.mkdirSync(workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+			fsUtil.silentRemove(path.join(workingdir, 'package.json'));
 			underTest(config)
 			.then(done.fail, message => expect(message).toEqual('package.json does not exist in the source folder'))
 			.then(done);
@@ -471,7 +472,9 @@ describe('create', () => {
 					}]
 				},
 				policiesDir = path.join(workingdir, 'policies');
-			shell.mkdir('-p', path.join(policiesDir, 'subdir'));
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(policiesDir);
+			fs.mkdirSync(path.join(policiesDir, 'subdir'));
 			fs.writeFileSync(path.join(workingdir, 'policies', 'subdir', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
 			config.policies = policiesDir;
 			createFromDir('hello-world')
@@ -493,7 +496,8 @@ describe('create', () => {
 					}]
 				},
 				policiesDir = path.join(workingdir, 'policies');
-			shell.mkdir('-p', path.join(policiesDir));
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(path.join(policiesDir));
 			fs.writeFileSync(path.join(workingdir, 'policies', 'ses policy.json'), JSON.stringify(sesPolicy), 'utf8');
 			config.policies = path.join(policiesDir, '*.json');
 			createFromDir('hello-world')
@@ -610,11 +614,12 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('wires up handlers from subfolders', done => {
-			shell.mkdir('-p', path.join(workingdir, 'subdir'));
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
-			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(path.join(workingdir, 'subdir'));
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
+			fsUtil.move(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
 			config.handler = 'subdir/mainfromsub.handler';
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			underTest(config)
 			.then(() => {
 				return lambda.invoke({
@@ -690,7 +695,7 @@ describe('create', () => {
 			config.config = path.join(workingdir, 'lambda.json');
 			createFromDir('hello-world')
 			.then(creationResult => {
-				expect(shell.test('-e', path.join(workingdir, 'claudia.json'))).toBeFalsy();
+				expect(fs.existsSync(path.join(workingdir, 'claudia.json'))).toBeFalsy();
 				expect(JSON.parse(fs.readFileSync(path.join(workingdir, 'lambda.json'), 'utf8'))).toEqual(creationResult);
 			})
 			.then(done, done.fail);
@@ -731,9 +736,9 @@ describe('create', () => {
 		it('uses local dependencies if requested', done => {
 			const projectDir =  path.join(__dirname, 'test-projects', 'local-dependencies');
 			config['use-local-dependencies'] = true;
-			shell.rm('-rf', path.join(projectDir, 'node_modules'));
-			shell.mkdir(path.join(projectDir, 'node_modules'));
-			shell.cp('-r', path.join(projectDir, 'local_modules', '*'),  path.join(projectDir, 'node_modules'));
+			fsUtil.silentRemove(path.join(projectDir, 'node_modules'));
+			fs.mkdirSync(path.join(projectDir, 'node_modules'));
+			fsUtil.copy(path.join(projectDir, 'local_modules'),  path.join(projectDir, 'node_modules'), true);
 			createFromDir('local-dependencies')
 			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
 			.then(lambdaResult => {
@@ -743,8 +748,8 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('rewires relative local dependencies to reference original location after copy', done => {
-			shell.mkdir('-p', workingdir);
-			shell.cp('-r', path.join(__dirname, 'test-projects',  'relative-dependencies/*'), workingdir);
+			fs.mkdirSync(workingdir);
+			fsUtil.copy(path.join(__dirname, 'test-projects',  'relative-dependencies'), workingdir, true);
 			config.source = path.join(workingdir, 'lambda');
 			underTest(config)
 			.then(result => {
@@ -784,7 +789,7 @@ describe('create', () => {
 			createFromDir('hello-world')
 			.then(result => {
 				expect(result.archive).toBeTruthy();
-				expect(shell.test('-e', result.archive));
+				expect(fs.existsSync(result.archive)).toBeTruthy();
 			})
 			.then(done, done.fail);
 		});
@@ -908,11 +913,12 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('creates a proxy web API using a handler from a subfolder', done => {
-			shell.mkdir('-p', path.join(workingdir, 'subdir'));
-			shell.cp('-r', 'spec/test-projects/apigw-proxy-echo/*', workingdir);
-			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(path.join(workingdir, 'subdir'));
+			fsUtil.copy('spec/test-projects/apigw-proxy-echo', workingdir, true);
+			fsUtil.move(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
 			config.handler = 'subdir/mainfromsub.handler';
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 			underTest(config)
 			.then(creationResult => creationResult.api.id)
 			.then(apiId => callApi(apiId, awsRegion, 'latest?abc=xkcd&dd=yy'))
@@ -1005,7 +1011,7 @@ describe('create', () => {
 		it('works when the source is a relative path', done => {
 			const workingParent = path.dirname(workingdir),
 				relativeWorkingDir = './' + path.basename(workingdir);
-			shell.cd(workingParent);
+			process.chdir(workingParent);
 			config.source = relativeWorkingDir;
 			createFromDir('api-gw-hello-world')
 			.then(creationResult => {
@@ -1035,11 +1041,12 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('wires up the api module from a subfolder', done => {
-			shell.mkdir('-p', path.join(workingdir, 'subdir'));
-			shell.cp('-r', 'spec/test-projects/api-gw-hello-world/*', workingdir);
-			shell.mv(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
+			fs.mkdirSync(workingdir);
+			fs.mkdirSync(path.join(workingdir, 'subdir'));
+			fsUtil.copy('spec/test-projects/api-gw-hello-world', workingdir, true);
+			fsUtil.move(path.join(workingdir, 'main.js'), path.join(workingdir, 'subdir', 'mainfromsub.js'));
 			config['api-module'] = 'subdir/mainfromsub';
-			shell.cd(workingdir);
+			process.chdir(workingdir);
 
 			underTest(config)
 			.then(creationResult => creationResult.api.id)
@@ -1239,7 +1246,7 @@ describe('create', () => {
 		});
 		it('adds env variables specified in a JSON file', done => {
 			const envpath = path.join(workingdir, 'env.json');
-			shell.mkdir('-p', workingdir);
+			fs.mkdirSync(workingdir);
 			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/var/www', 'YPATH': '/var/lib'}), 'utf8');
 			config['set-env-from-json'] = envpath;
 			createFromDir('env-vars')

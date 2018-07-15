@@ -2,8 +2,8 @@
 const underTest = require('../src/commands/add-scheduled-event'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	fs = require('fs'),
 	path = require('path'),
 	aws = require('aws-sdk'),
@@ -17,7 +17,7 @@ describe('addScheduledEvent', () => {
 		lambda = new aws.Lambda({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		const eventFile = path.join(workingdir, 'test-event.json');
 		eventConfig = {
 			name: 'Mike'
@@ -91,7 +91,7 @@ describe('addScheduledEvent', () => {
 		};
 		beforeEach(() => {
 			createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 		});
 		it('uses the schedule expression to configure the rule', done => {
 			createLambda()
