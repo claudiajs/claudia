@@ -1,4 +1,5 @@
 /*global require */
-if (require('shelljs').test('-e', '.env')) {
+const fs = require('fs');
+if (fs.existsSync('.env')) {
 	require('dotenv').load();
 }

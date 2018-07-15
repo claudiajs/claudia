@@ -46,16 +46,17 @@ exports.isLink = function (filePath) {
 	const stats = safeLStats(filePath);
 	return stats && stats.isSymbolicLink();
 };
-exports.copy = function (from, to) {
+exports.copy = function (from, to, doNotPrependPath) {
 	'use strict';
-	const stats = safeStats(to);
+	const stats = safeStats(to),
+		target = doNotPrependPath ? to : path.join(to, path.basename(from));
 	if (!stats) {
 		throw new Error(`${to} does not exist`);
 	}
 	if (!stats.isDirectory()) {
 		throw new Error(`${to} is not a directory`);
 	}
-	fsExtra.copySync(from, path.join(to, path.basename(from)), {dereference: true});
+	fsExtra.copySync(from, target, {dereference: true});
 };
 exports.recursiveList = function (filePath) {
 	'use strict';

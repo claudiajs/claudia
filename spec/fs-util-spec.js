@@ -135,6 +135,22 @@ describe('fsUtil', () => {
 			expect(fs.readFileSync(path.join(pathName, 'content', 'subdir', 'subfile.txt'), 'utf8')).toEqual('456');
 			expect(fs.readFileSync(path.join(pathName, 'content', 'file.txt'), 'utf8')).toEqual('123');
 		});
+		it('does not prepend source basename path if third arg is truthy', () => {
+			fs.mkdirSync(pathName);
+			fs.mkdirSync(path.join(pathName, 'content'));
+			fs.mkdirSync(path.join(pathName, 'copy'));
+			fs.mkdirSync(path.join(pathName, 'content', 'subdir'));
+			fs.writeFileSync(path.join(pathName, 'content', 'file.txt'), '123', 'utf8');
+			fs.writeFileSync(path.join(pathName, 'content', 'subdir', 'subfile.txt'), '456', 'utf8');
+
+			fsUtil.copy(path.join(pathName, 'content'), path.join(pathName, 'copy'), true);
+
+			expect(fs.readFileSync(path.join(pathName, 'copy', 'subdir', 'subfile.txt'), 'utf8')).toEqual('456');
+			expect(fs.readFileSync(path.join(pathName, 'copy', 'file.txt'), 'utf8')).toEqual('123');
+			expect(fs.readFileSync(path.join(pathName, 'content', 'subdir', 'subfile.txt'), 'utf8')).toEqual('456');
+			expect(fs.readFileSync(path.join(pathName, 'content', 'file.txt'), 'utf8')).toEqual('123');
+		});
+
 		it('copies a file to an existing dir', () => {
 			fs.mkdirSync(pathName);
 			fs.mkdirSync(path.join(pathName, 'copy'));

@@ -3,9 +3,9 @@ const underTest = require('../src/commands/test-lambda'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path'),
 	awsRegion = require('./util/test-aws-region');
 describe('testLambda', () => {
@@ -15,7 +15,7 @@ describe('testLambda', () => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 	afterEach(done => {
 		destroyObjects(newObjects).then(done, done.fail);
@@ -42,7 +42,7 @@ describe('testLambda', () => {
 	});
 
 	it('invokes a lambda function and returns the result', done => {
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -54,12 +54,12 @@ describe('testLambda', () => {
 		}, done.fail);
 	});
 	it('tests a specific version of the lambda function and returns the result', done => {
-		shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler', version: 'original'}).then(result => {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
 		}).then(() => {
-			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			return update({source: workingdir, version: 'updated'});
 		}).then(() => {
 			return underTest({source: workingdir, version: 'original'});
@@ -74,7 +74,7 @@ describe('testLambda', () => {
 			who: 'me',
 			sub: {name: 'good', val: 2}
 		};
-		shell.cp('-r', 'spec/test-projects/echo/*', workingdir);
+		fsUtil.copy('spec/test-projects/echo', workingdir, true);
 		create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;

@@ -1,7 +1,7 @@
 /*global describe, it, expect, beforeEach, afterEach */
 const tmppath = require('../src/util/tmppath'),
-	shell = require('shelljs'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	underTest = require('../src/util/readjson');
 describe('readjson', () => {
 	'use strict';
@@ -10,9 +10,7 @@ describe('readjson', () => {
 		workingfile = tmppath();
 	});
 	afterEach(() => {
-		if (shell.test('-e', workingfile)) {
-			shell.rm('-rf', workingfile);
-		}
+		fsUtil.silentRemove(workingfile);
 	});
 	it('fails if the file is not provided', done => {
 		underTest()

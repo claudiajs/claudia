@@ -2,9 +2,9 @@
 const underTest = require('../src/commands/add-iot-topic-rule'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
+	fsUtil = require('../src/util/fs-util'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	pollForLogEvents = require('./util/poll-for-log-events'),
@@ -28,7 +28,7 @@ describe('addIOTTopicRuleEventSource', () => {
 		iot = new aws.Iot({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		config = {
 			sql: 'SELECT * FROM \'iot/+\'',
 			source: workingdir
@@ -79,7 +79,7 @@ describe('addIOTTopicRuleEventSource', () => {
 		};
 		beforeEach(() => {
 			createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		});
 		it('sets up privileges and rule notifications if no version given', done => {
 			let functionArn;

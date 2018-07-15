@@ -3,8 +3,9 @@ const underTest = require('../src/tasks/mark-alias'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
 	update = require('../src/commands/update'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
+	fs = require('fs'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region');
 describe('markAlias', () => {
@@ -15,7 +16,7 @@ describe('markAlias', () => {
 		testRunName = 'test' + Date.now();
 		lambda = new aws.Lambda({ region: awsRegion });
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 	});
 	afterEach(done => {
 		destroyObjects(newObjects)
@@ -23,7 +24,7 @@ describe('markAlias', () => {
 	});
 	describe('when the lambda project exists', () => {
 		beforeEach(done => {
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' })
 			.then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
@@ -38,7 +39,7 @@ describe('markAlias', () => {
 			.then(done, done.fail);
 		});
 		it('migrates an alias if it already exists', done => {
-			shell.cp('-rf', 'spec/test-projects/echo/*', workingdir);
+			fsUtil.copy('spec/test-projects/echo', workingdir, true);
 			lambda.createAlias({
 				FunctionName: testRunName,
 				FunctionVersion: '1',

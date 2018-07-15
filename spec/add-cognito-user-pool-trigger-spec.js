@@ -2,8 +2,9 @@
 const underTest = require('../src/commands/add-cognito-user-pool-trigger'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
+	fs = require('fs'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region');
 
@@ -16,7 +17,7 @@ describe('addCognitoUserPoolTrigger', () => {
 		lambda = new aws.Lambda({ region: awsRegion });
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		cognitoIdentityServiceProvider.createUserPool({
 			PoolName: testRunName
 		}).promise().then(result => {
@@ -64,7 +65,7 @@ describe('addCognitoUserPoolTrigger', () => {
 		};
 		beforeEach(() => {
 			createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/cognito-trigger-reject/*', workingdir);
+			fsUtil.copy('spec/test-projects/cognito-trigger-reject', workingdir, true);
 		});
 		it('wires up the unqualified lambda function if no version requested', done => {
 			config.events = 'PreAuthentication';

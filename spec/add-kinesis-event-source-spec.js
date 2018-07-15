@@ -2,8 +2,8 @@
 const underTest = require('../src/commands/add-kinesis-event-source'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),
-	shell = require('shelljs'),
 	tmppath = require('../src/util/tmppath'),
+	fsUtil = require('../src/util/fs-util'),
 	retry = require('oh-no-i-insist'),
 	fs = require('fs'),
 	path = require('path'),
@@ -54,7 +54,7 @@ describe('addKinesisEventSource', () => {
 		lambda = new aws.Lambda({ region: awsRegion });
 		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
-		shell.mkdir(workingdir);
+		fs.mkdirSync(workingdir);
 		config = {
 			stream: streamName,
 			source: workingdir,
@@ -114,7 +114,7 @@ describe('addKinesisEventSource', () => {
 			};
 		beforeEach(() => {
 			createConfig = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
-			shell.cp('-r', 'spec/test-projects/hello-world/*', workingdir);
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		});
 		it('sets up privileges if role is given with name', done => {
 			createLambda()
