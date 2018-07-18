@@ -1,0 +1,11 @@
+{
+  "name": "hello-world2",
+  "version": "1.0.0",
+  "private": true,
+  "files": [
+    "main.js"
+  ],
+  "optionalDependencies": {
+    "aws-sdk": "^2.277.1"
+  }
+}

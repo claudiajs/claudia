@@ -4,7 +4,7 @@ const loadConfig = require('../util/loadconfig'),
 	retry = require('oh-no-i-insist'),
 	aws = require('aws-sdk');
 
-module.exports = function addKinesisEventSource(options) {
+module.exports = function addKinesisEventSource(options, logger) {
 	'use strict';
 	let lambdaConfig,
 		lambda,
@@ -66,8 +66,8 @@ module.exports = function addKinesisEventSource(options) {
 				awsRetries,
 				failure => failure.code === 'InvalidParameterValueException',
 				() => {
-					if (!options.quiet) {
-						console.log('waiting for IAM role propagation');
+					if (logger) {
+						logger.logStage('waiting for IAM role propagation');
 					}
 				},
 				Promise

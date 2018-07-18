@@ -4,7 +4,7 @@ const loadConfig = require('../util/loadconfig'),
 	retry = require('oh-no-i-insist'),
 	aws = require('aws-sdk');
 
-module.exports = function addSQSEventSource(options) {
+module.exports = function addSQSEventSource(options, logger) {
 	'use strict';
 	let lambdaConfig,
 		lambda,
@@ -91,8 +91,8 @@ module.exports = function addSQSEventSource(options) {
 				awsRetries,
 				failure => failure.code === 'InvalidParameterValueException',
 				() => {
-					if (!options.quiet) {
-						console.log('waiting for IAM role propagation');
+					if (logger) {
+						logger.logStage('waiting for IAM role propagation');
 					}
 				},
 				Promise
