@@ -14,6 +14,7 @@ module.exports = function destroyObjects(newObjects) {
 		s3 = new aws.S3(),
 		iot = new aws.Iot({ region: awsRegion }),
 		sns = new aws.SNS({ region: awsRegion }),
+		sqs = new aws.SQS({ region: awsRegion }),
 		events = new aws.CloudWatchEvents({ region: awsRegion }),
 		cognitoIdentityServiceProvider = new aws.CognitoIdentityServiceProvider({ region: awsRegion }),
 		destroyRule = function (ruleName) {
@@ -91,6 +92,11 @@ module.exports = function destroyObjects(newObjects) {
 			if (newObjects.userPoolId) {
 				return cognitoIdentityServiceProvider.deleteUserPool({ UserPoolId: newObjects.userPoolId }).promise();
 			}
+		},
+		removeSQSQueue = () => {
+			if (newObjects.sqsQueueUrl) {
+				return sqs.deleteQueue({QueueUrl: newObjects.sqsQueueUrl}).promise();
+			}
 		};
 
 
@@ -113,6 +119,7 @@ module.exports = function destroyObjects(newObjects) {
 		removeIamRole(),
 		removeCustomLogs(),
 		removeS3Bucket(),
-		removeCognitoPool()
+		removeCognitoPool(),
+		removeSQSQueue()
 	]).catch(e => console.log('error cleaning up', e.stack || e.message || e));
 };
