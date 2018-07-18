@@ -36,7 +36,11 @@ module.exports.waitForMessage = function (contents) {
 					const match = response && response.Messages &&
 						response.Messages.find(message => message.Body.indexOf(contents) > -1);
 					if (match) {
-						return Promise.resolve(match);
+						return sqs.deleteMessage({
+							QueueUrl: queueUrl,
+							ReceiptHandle: match.ReceiptHandle
+						}).promise()
+						.then(() => Promise.resolve(match));
 					}
 					return Promise.reject('message not received');
 				});
