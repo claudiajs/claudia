@@ -33,11 +33,10 @@ module.exports.waitForMessage = function (contents) {
 					MaxNumberOfMessages: 1,
 					WaitTimeSeconds: 5
 				}).promise().then(response => {
-					if (response &&
-						response.Messages &&
-						response.Messages.find(message => message.Body.indexOf(contents) >= -1)
-					) {
-						return Promise.resolve();
+					const match = response && response.Messages &&
+						response.Messages.find(message => message.Body.indexOf(contents) > -1);
+					if (match) {
+						return Promise.resolve(match);
 					}
 					return Promise.reject('message not received');
 				});

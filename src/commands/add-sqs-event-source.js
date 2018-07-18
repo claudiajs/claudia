@@ -54,14 +54,6 @@ module.exports = function addSQSEventSource(options, logger) {
 			}).promise()
 			.then(() => queueArn);
 		},
-		/*upgradeRolePolicy = function () {
-			if (!isRoleArn(lambdaConfig.role) && !options['skip-iam']) {
-				return iam.attachRolePolicy({
-					RoleName: lambdaConfig.role,
-					PolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole'
-				}).promise();
-			};
-		},*/
 		getSQSArn = function () {
 			if (isSQSArn(options.queue)) {
 				return options.queue;
@@ -76,10 +68,10 @@ module.exports = function addSQSEventSource(options, logger) {
 				.then(result => result.Attributes.QueueArn);
 			}
 		},
-		addEventSource = function (kinesisArn) {
+		addEventSource = function (sqsArn) {
 			const params = {
 				FunctionName: lambdaConfig.arn,
-				EventSourceArn: kinesisArn,
+				EventSourceArn: sqsArn,
 				BatchSize: options['batch-size']
 			};
 			return lambda.createEventSourceMapping(params).promise();

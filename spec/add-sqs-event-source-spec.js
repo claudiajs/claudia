@@ -174,6 +174,10 @@ describe('addSQSEventSource', () => {
 					.then(() => underTest(config))
 					.then(() => sendMessage(testRunName))
 					.then(() => genericQueue.waitForMessage(testRunName))
+					.then(message => {
+						const body = JSON.parse(message.Body);
+						expect(body.invokedFunctionArn).toMatch(new RegExp(testRunName + '$'));
+					})
 					.then(done, done.fail);
 			});
 			it('invokes lambda from SQS when version is provided', done => {
@@ -181,8 +185,12 @@ describe('addSQSEventSource', () => {
 				config.version = 'special';
 				createLambda()
 					.then(() => underTest(config))
-					.then(() => sendMessage(testRunName + ':special'))
-					.then(() => genericQueue.waitForMessage(testRunName + ':special'))
+					.then(() => sendMessage(testRunName + 'special'))
+					.then(() => genericQueue.waitForMessage(testRunName + 'special'))
+					.then(message => {
+						const body = JSON.parse(message.Body);
+						expect(body.invokedFunctionArn).toMatch(new RegExp(testRunName + ':special$'));
+					})
 					.then(done, done.fail);
 			});
 		});
