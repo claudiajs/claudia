@@ -1,5 +1,11 @@
 # Release history
 
+### 5.1.0, 19 July 2018
+
+- support for [add-sqs-event-source](https://github.com/claudiajs/claudia/blob/master/docs/add-sqs-event-source.md)
+- better handling of KMS timeouts when creating a function and setting environment variables at the same time
+- removed shelljs as a dependency from the project, which reduces file size and makes it easier to maintain the code
+
 ### 5.0.1 
 
 - bug fix for add-cognito-user-pool-trigger, when user pool has custom domain, thanks to [Christian Sepulveda](https://github.com/csepulv)
