@@ -113,7 +113,7 @@ module.exports.doc = {
 			optional: true,
 			description: 'The batch size for the Lambda event source mapping',
 			example: 2,
-			default: 1
+			default: 10
 		},
 		{
 			argument: 'skip-iam',
