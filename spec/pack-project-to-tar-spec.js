@@ -59,7 +59,7 @@ describe('packProjectToTar', () => {
 		packProjectToTar(sourcedir, workingdir, [], logger)
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
-				['call', `npm pack ${sourcedir}`]
+				['call', `npm pack -q ${sourcedir}`]
 			]);
 		})
 		.then(done, done.fail);
