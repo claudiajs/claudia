@@ -79,10 +79,8 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			if (authConfig.credentials) {
 				params.authorizerCredentials = authConfig.credentials;
 			}
-			if (authConfig.resultTtl > 0) {
+			if (authConfig.resultTtl) {
 				params.authorizerResultTtlInSeconds = authConfig.resultTtl;
-			} else {
-				params.authorizerResultTtlInSeconds = 0;
 			}
 			return params;
 		},
