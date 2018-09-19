@@ -225,6 +225,24 @@ describe('registerAuthorizers', () => {
 		})
 		.then(done, done.fail);
 	});
+	it('assigns authorizer ttl in 0 seconds if no value supplied', done => {
+		const authorizerConfig = {
+			first: { lambdaName: authorizerLambdaName }
+		};
+		let result;
+		underTest(authorizerConfig, apiId, awsRegion)
+		.then(createResult => {
+			result = createResult;
+		})
+		.then(() => apiGateway.getAuthorizersPromise({ restApiId: apiId }))
+		.then(authorizers => {
+			expect(authorizers.items.length).toEqual(1);
+			expect(result.first).toEqual(authorizers.items[0].id);
+			expect(authorizers.items[0].authorizerResultTtlInSeconds).toEqual(0);
+			checkAuthUri(authorizers.items[0].authorizerUri);
+		})
+		.then(done, done.fail);
+	});
 	it('uses the Authorization header by default', done => {
 		const authorizerConfig = {
 			first: { lambdaName: authorizerLambdaName }
