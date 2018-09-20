@@ -66,7 +66,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 					name: authName,
 					restApiId: apiId,
 					type: type,
-					authorizerResultTtlInSeconds: 0
+					authorizerResultTtlInSeconds: 300
 				};
 			if (type === 'COGNITO_USER_POOLS') {
 				params.providerARNs = authConfig.providerARNs;
@@ -79,7 +79,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			if (authConfig.credentials) {
 				params.authorizerCredentials = authConfig.credentials;
 			}
-			if (authConfig.resultTtl) {
+			if (authConfig.resultTtl !== undefined) {
 				params.authorizerResultTtlInSeconds = authConfig.resultTtl;
 			}
 			return params;
