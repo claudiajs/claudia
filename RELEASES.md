@@ -1,5 +1,9 @@
 # Release history
 
+### 5.1.2, 25 September 2018
+
+- using 0 as resultTtl for authorisers disables authoriser caching, thanks to [Savramis Sartios](https://github.com/sartios)
+
 ### 5.1.0, 19 July 2018
 
 - support for [add-sqs-event-source](https://github.com/claudiajs/claudia/blob/master/docs/add-sqs-event-source.md)
