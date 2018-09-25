@@ -14,7 +14,7 @@ claudia add-sqs-event-source {OPTIONS}
     * _For example_: analytics-events
 *  `--batch-size`:  (_optional_) The batch size for the Lambda event source mapping
     * _For example_: 2
-    * _Defaults to_: 1
+    * _Defaults to_: 10
 *  `--skip-iam`:  (_optional_) Do not try to modify the IAM role for Lambda to allow SQS execution
     * _For example_: true
 *  `--version`:  (_optional_) Alias or numerical version of the lambda function to execute the trigger
