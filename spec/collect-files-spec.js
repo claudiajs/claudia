@@ -721,7 +721,7 @@ describe('collectFiles', () => {
 		.then(() => {
 			expect(logger.getCombinedLog()).toEqual([
 				['stage', 'packaging files'],
-				['call', `npm pack ${sourcedir}`],
+				['call', `npm pack -q ${sourcedir}`],
 				['call', 'npm install -q --no-audit --production']
 			]);
 		})
