@@ -1,5 +1,9 @@
 # Release history
 
+### 5.2.0, 15 November 2018
+
+- allow up to 900 second timeouts with Lambda, thanks to [Steven Chadwick](https://github.com/sschadwick)
+
 ### 5.1.2, 25 September 2018
 
 - using 0 as resultTtl for authorisers disables authoriser caching, thanks to [Savramis Sartios](https://github.com/sartios)
