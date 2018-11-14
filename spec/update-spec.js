@@ -622,9 +622,9 @@ describe('update', () => {
 			.then(configuration => expect(configuration.Timeout).toEqual(10))
 			.then(done, done.fail);
 		});
-		it('fails if timeout value is > 300', done => {
-			underTest({source: workingdir, version: 'new', timeout: 301})
-			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the timeout value provided must be less than or equal to 300'))
+		it('fails if timeout value is > 900', done => {
+			underTest({source: workingdir, version: 'new', timeout: 901})
+			.then(() => done.fail('update succeeded'), error => expect(error).toEqual('the timeout value provided must be less than or equal to 900'))
 			.then(() => getLambdaConfiguration())
 			.then(configuration => expect(configuration.Timeout).toEqual(10))
 			.then(done, done.fail);

@@ -131,8 +131,8 @@ module.exports = function update(options, optionalLogger) {
 				if (options.timeout < 1) {
 					return Promise.reject('the timeout value provided must be greater than or equal to 1');
 				}
-				if (options.timeout > 300) {
-					return Promise.reject('the timeout value provided must be less than or equal to 300');
+				if (options.timeout > 900) {
+					return Promise.reject('the timeout value provided must be less than or equal to 900');
 				}
 			}
 			if (options.memory || options.memory === 0) {

@@ -113,8 +113,8 @@ module.exports = function create(options, optionalLogger) {
 				if (options.timeout < 1) {
 					return 'the timeout value provided must be greater than or equal to 1';
 				}
-				if (options.timeout > 300) {
-					return 'the timeout value provided must be less than or equal to 300';
+				if (options.timeout > 900) {
+					return 'the timeout value provided must be less than or equal to 900';
 				}
 			}
 			if (options['allow-recursion'] && options.role && isRoleArn(options.role)) {
