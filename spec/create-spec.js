@@ -578,10 +578,10 @@ describe('create', () => {
 			.then(done.fail, error => expect(error).toEqual('the timeout value provided must be greater than or equal to 1'))
 			.then(done, done.fail);
 		});
-		it('fails if timeout value is > 300', done => {
-			config.timeout = 301;
+		it('fails if timeout value is > 900', done => {
+			config.timeout = 901;
 			createFromDir('hello-world')
-			.then(done.fail, error => expect(error).toEqual('the timeout value provided must be less than or equal to 300'))
+			.then(done.fail, error => expect(error).toEqual('the timeout value provided must be less than or equal to 900'))
 			.then(done, done.fail);
 		});
 		it('creates timeout of 3 seconds by default', done => {
@@ -591,10 +591,10 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('can specify timeout using the --timeout argument', done => {
-			config.timeout = 300;
+			config.timeout = 900;
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Timeout).toEqual(300))
+			.then(lambdaResult => expect(lambdaResult.Timeout).toEqual(900))
 			.then(done, done.fail);
 		});
 	});
