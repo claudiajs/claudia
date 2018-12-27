@@ -153,6 +153,12 @@ module.exports = function update(options, optionalLogger) {
 					return Promise.reject('the memory value provided must be a multiple of 64');
 				}
 			}
+			if (options['add-layers'] && options.layers) {
+				return Promise.reject('incompatible arguments --layers and --add-layers');
+			}
+			if (options['remove-layers'] && options.layers) {
+				return Promise.reject('incompatible arguments --layers and --remove-layers');
+			}
 			return Promise.resolve();
 		};
 	options = options || {};
@@ -357,6 +363,24 @@ module.exports.doc = {
 			argument: 'env-kms-key-arn',
 			optional: true,
 			description: 'KMS Key ARN to encrypt/decrypt environment variables'
+		},
+		{
+			argument: 'layers',
+			optional: true,
+			description: 'A comma-delimited list of Lambda layers to attach to this function. Setting this during an update replaces all previous layers.',
+			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
+		},
+		{
+			argument: 'add-layers',
+			optional: true,
+			description: 'A comma-delimited list of additional Lambda layers to attach to this function. Setting this during an update leaves old layers in place, and just adds new layers.',
+			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
+		},
+		{
+			argument: 'remove-layers',
+			optional: true,
+			description: 'A comma-delimited list of Lambda layers to remove from this function. It will not remove any layers apart from the ones specified in the argument.',
+			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
 		}
 	]
 };

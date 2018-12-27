@@ -1,4 +1,3 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname, beforeAll, afterAll */
 const underTest = require('../src/commands/update'),
 	limits = require('../src/util/limits.json'),
 	destroyObjects = require('./util/destroy-objects'),
@@ -71,6 +70,21 @@ describe('update', () => {
 		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 		underTest({source: workingdir, 'use-local-dependencies': true, 'optional-dependencies': false}).then(done.fail, message => {
 			expect(message).toEqual('incompatible arguments --use-local-dependencies and --no-optional-dependencies');
+			done();
+		});
+	});
+
+	it('fails when --layers and --remove-layers are mixed', done => {
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+		underTest({source: workingdir, 'layers': 'a1', 'remove-layers': 'a2'}).then(done.fail, reason => {
+			expect(reason).toEqual('incompatible arguments --layers and --remove-layers');
+			done();
+		});
+	});
+	it('fails when --layers and --add-layers are mixed', done => {
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+		underTest({source: workingdir, 'layers': 'a1', 'add-layers': 'a2'}).then(done.fail, reason => {
+			expect(reason).toEqual('incompatible arguments --layers and --add-layers');
 			done();
 		});
 	});
