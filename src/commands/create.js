@@ -152,6 +152,7 @@ module.exports = function create(options, optionalLogger) {
 						Role: roleArn,
 						Runtime: options.runtime || 'nodejs8.10',
 						Publish: true,
+						Layers: options.layers && options.layers.split(','),
 						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
 							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),
 							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(','))
@@ -600,6 +601,12 @@ module.exports.doc = {
 			argument: 'env-kms-key-arn',
 			optional: true,
 			description: 'KMS Key ARN to encrypt/decrypt environment variables'
+		},
+		{
+			argument: 'layers',
+			optional: true,
+			description: 'A comma-delimited list of Lambda layers to attach to this function',
+			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
 		}
 	]
 };

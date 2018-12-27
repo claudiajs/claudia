@@ -14,9 +14,12 @@ const underTest = require('../src/commands/create'),
 	os = require('os'),
 	aws = require('aws-sdk'),
 	pollForLogEvents = require('./util/poll-for-log-events'),
-	awsRegion = require('./util/test-aws-region');
+	awsRegion = require('./util/test-aws-region'),
+	lambdaCode = require('../src/tasks/lambda-code');
 describe('create', () => {
 	'use strict';
+
+
 	let workingdir, testRunName, iam, lambda, newObjects, config, logs, apiGatewayPromise;
 	const createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
@@ -44,13 +47,15 @@ describe('create', () => {
 		getLambdaConfiguration = function () {
 			return lambda.getFunctionConfiguration({ FunctionName: testRunName }).promise();
 		};
-	beforeEach(() => {
-		workingdir = tmppath();
-		testRunName = 'test' + Date.now();
+	beforeAll(() => {
 		iam = new aws.IAM();
 		lambda = new aws.Lambda({ region: awsRegion });
 		apiGatewayPromise = retriableWrap(new aws.APIGateway({ region: awsRegion }));
 		logs = new aws.CloudWatchLogs({ region: awsRegion });
+	});
+	beforeEach(() => {
+		workingdir = tmppath();
+		testRunName = 'test' + Date.now();
 		newObjects = { workingdir: workingdir };
 		config = { name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' };
 	});
@@ -1297,5 +1302,59 @@ describe('create', () => {
 			process.env.TEST_VAR = '';
 			createFromDir('throw-if-not-env').then(done, done.fail);
 		});
+	});
+	describe('layer support', () => {
+		let layers;
+		const createLayer = function (layerName, filePath) {
+				return lambdaCode(filePath)
+					.then(contents => lambda.publishLayerVersion({LayerName: layerName, Content: contents}).promise());
+			}, deleteLayer = function (layer) {
+				return lambda.deleteLayerVersion({
+					LayerName: layer.LayerArn,
+					VersionNumber: layer.Version
+				}).promise();
+					// LayerArn
+					// LayerVersionArn
+					// Version
+			};
+		beforeAll((done) => {
+			const prefix = 'test' + Date.now();
+			Promise.all([
+				createLayer(prefix + '-layer-node', path.join(__dirname, 'test-layers', 'nodejs-layer.zip')),
+				createLayer(prefix + '-layer-text', path.join(__dirname, 'test-layers', 'text-layer.zip'))
+			])
+			.then(results => layers = results)
+			.then(done, done.fail);
+		});
+		afterAll((done) => {
+			Promise.all(layers.map(deleteLayer)).then(done, done.fail);
+		});
+		it('attaches no layers by default', (done) => {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.Layers).toBeFalsy();
+			})
+			.then(done, done.fail);
+		});
+		it('attaches a single layer if requested', (done) => {
+			config.layers = layers[0].LayerVersionArn;
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
+			})
+			.then(done, done.fail);
+		});
+		it('attaches multiple layers if requested', (done) => {
+			config.layers = layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn;
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.Layers.map(l => l.Arn)).toEqual(layers.map(l => l.LayerVersionArn));
+			})
+			.then(done, done.fail);
+		});
+
 	});
 });

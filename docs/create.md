@@ -85,3 +85,5 @@ claudia create {OPTIONS}
 *  `--set-env-from-json`:  (_optional_) file path to a JSON file containing environment variables to set
     * _For example_: production-env.json
 *  `--env-kms-key-arn`:  (_optional_) KMS Key ARN to encrypt/decrypt environment variables
+*  `--layers`:  (_optional_) A comma-delimited list of Lambda layers to attach to this function
+    * _For example_: arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4
