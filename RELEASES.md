@@ -1,5 +1,9 @@
 # Release history
 
+### 5.3.0, 27 December 2018
+
+- support for using Lambda Layers. Use `--layers` with `create`, or `--layers`, `--add-layers` and `--remove-layers` with `update`. 
+
 ### 5.2.0, 15 November 2018
 
 - allow up to 900 second timeouts with Lambda, thanks to [Steven Chadwick](https://github.com/sschadwick)
