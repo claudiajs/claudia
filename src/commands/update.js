@@ -20,7 +20,8 @@ const zipdir = require('../tasks/zipdir'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),
-	loadConfig = require('../util/loadconfig');
+	loadConfig = require('../util/loadconfig'),
+	combineLists = require('../util/combine-lists');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
 	let lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
@@ -102,6 +103,12 @@ module.exports = function update(options, optionalLogger) {
 			}
 			if (options.memory) {
 				configurationPatch.MemorySize = options.memory;
+			}
+			if (options.layers) {
+				configurationPatch.Layers = options.layers.split(',');
+			}
+			if (options['add-layers'] || options['remove-layers']) {
+				configurationPatch.Layers = combineLists(functionConfig.Layers && functionConfig.Layers.map(l => l.Arn), options['add-layers'], options['remove-layers']);
 			}
 			if (Object.keys(configurationPatch).length > 0) {
 				configurationPatch.FunctionName = lambdaConfig.name;

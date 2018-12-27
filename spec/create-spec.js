@@ -1313,9 +1313,6 @@ describe('create', () => {
 					LayerName: layer.LayerArn,
 					VersionNumber: layer.Version
 				}).promise();
-					// LayerArn
-					// LayerVersionArn
-					// Version
 			};
 		beforeAll((done) => {
 			const prefix = 'test' + Date.now();

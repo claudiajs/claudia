@@ -1,4 +1,4 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname */
+/*global describe, require, it, expect, beforeEach, afterEach, console, global, __dirname, beforeAll, afterAll */
 const underTest = require('../src/commands/update'),
 	limits = require('../src/util/limits.json'),
 	destroyObjects = require('./util/destroy-objects'),
@@ -12,7 +12,8 @@ const underTest = require('../src/commands/update'),
 	path = require('path'),
 	aws = require('aws-sdk'),
 	os = require('os'),
-	awsRegion = require('./util/test-aws-region');
+	awsRegion = require('./util/test-aws-region'),
+	lambdaCode = require('../src/tasks/lambda-code');
 describe('update', () => {
 	'use strict';
 	let workingdir, testRunName,  lambda, newObjects;
@@ -26,10 +27,12 @@ describe('update', () => {
 		getLambdaConfiguration = function (qualifier) {
 			return lambda.getFunctionConfiguration({ FunctionName: testRunName, Qualifier: qualifier }).promise();
 		};
+	beforeAll(() => {
+		lambda = new aws.Lambda({region: awsRegion});
+	});
 	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		lambda = new aws.Lambda({region: awsRegion});
 		newObjects = {workingdir: workingdir};
 		fs.mkdirSync(workingdir);
 	});
@@ -889,6 +892,162 @@ describe('update', () => {
 			fsUtil.copy('spec/test-projects/throw-if-not-env', workingdir, true);
 			process.env.TEST_VAR = '';
 			underTest({source: workingdir, version: 'new', 'set-env': 'TEST_VAR=abc'}, logger).then(done, done.fail);
+		});
+
+	});
+	describe('layer support', () => {
+		let layers;
+		const createLayer = function (layerName, filePath) {
+				return lambdaCode(filePath)
+					.then(contents => lambda.publishLayerVersion({LayerName: layerName, Content: contents}).promise());
+			},
+			deleteLayer = function (layer) {
+				return lambda.deleteLayerVersion({
+					LayerName: layer.LayerArn,
+					VersionNumber: layer.Version
+				}).promise();
+			},
+			getFunctionConfiguration = function (qualifier) {
+				return lambda.getFunctionConfiguration({
+					FunctionName: testRunName,
+					Qualifier: qualifier
+				}).promise();
+			};
+		beforeAll((done) => {
+			const prefix = 'test' + Date.now();
+			Promise.all([
+				createLayer(prefix + '-layer-node', path.join(__dirname, 'test-layers', 'nodejs-layer.zip')),
+				createLayer(prefix + '-layer-text', path.join(__dirname, 'test-layers', 'text-layer.zip')),
+				createLayer(prefix + '-layer-text2', path.join(__dirname, 'test-layers', 'text-layer.zip')),
+				createLayer(prefix + '-layer-text3', path.join(__dirname, 'test-layers', 'text-layer.zip'))
+			])
+			.then(results => layers = results)
+			.then(done, done.fail);
+		});
+		afterAll((done) => {
+			Promise.all(layers.map(deleteLayer)).then(done, done.fail);
+		});
+		describe('when updating a function without layers', () => {
+			beforeEach(done => {
+				fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+				create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+					newObjects.lambdaRole = result.lambda && result.lambda.role;
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				}).then(done, done.fail);
+			});
+			it('attaches no layers by default', (done) => {
+				return underTest({source: workingdir, version: 'new'})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => expect(configuration.Layers).toBeFalsy())
+					.then(done, done.fail);
+			});
+			it('can replace layer with --layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'layers': layers[0].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can replace multple layers with --layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'layers': layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn })
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can add a single layer with --add-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'add-layers': layers[0].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+
+			it('can add multiple layers with --add-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'add-layers': layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+		});
+		describe('when updating a function with a layers', () => {
+			beforeEach(done => {
+				fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+				create({name: testRunName, timeout: 10, region: awsRegion, source: workingdir, handler: 'main.handler', layers: layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn})
+				.then(result => {
+					newObjects.lambdaRole = result.lambda && result.lambda.role;
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				}).then(done, done.fail);
+			});
+			it('retains old layers if no layer options specified', (done) => {
+				return underTest({source: workingdir, version: 'new'})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('replaces all layers with --layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'layers': layers[2].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[2].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can replace multple layers with --layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'layers': layers[2].LayerVersionArn + ',' + layers[3].LayerVersionArn })
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[2].LayerVersionArn, layers[3].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can add a single layer with --add-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'add-layers': layers[2].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn, layers[2].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can add multiple layers with --add-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'add-layers': layers[2].LayerVersionArn + ',' + layers[3].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn, layers[2].LayerVersionArn, layers[3].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can remove a layer with --remove-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
+			it('can remove multiple layers with --remove-layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn + ',' + layers[0].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers).toBeFalsy();
+					})
+					.then(done, done.fail);
+			});
+			it('can mix adding and removing layers', (done) => {
+				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn, 'add-layers': layers[2].LayerVersionArn})
+					.then(() => getFunctionConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[2].LayerVersionArn]);
+					})
+					.then(done, done.fail);
+			});
 		});
 
 	});
