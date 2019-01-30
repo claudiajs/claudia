@@ -20,7 +20,8 @@ const minimist = require('minimist'),
 		const args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0],
-			logger = (!args.quiet) && new ConsoleLogger();
+			logger = (!args.quiet) && new ConsoleLogger(),
+			RoleArn = process.env.AWS_ROLE_ARN || args['sts-role-arn'];
 		if (args.version && !command) {
 			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
@@ -50,6 +51,19 @@ const minimist = require('minimist'),
 			AWS.config.httpOptions = AWS.config.httpOptions || {};
 			AWS.config.httpOptions.timeout = args['aws-client-timeout'];
 		}
+		if (RoleArn) {
+			const params = { RoleArn };
+			console.log(`Assuming Role ${RoleArn}`);
+			if (args['mfa-serial'] && args['mfa-token']) {
+				Object.assign(params, {
+					SerialNumber: args['mfa-serial'],
+					TokenCode: args['mfa-token'],
+					DurationSeconds: args['mfa-duration'] || 3600
+				});
+			}
+			AWS.config.credentials = new AWS.ChainableTemporaryCredentials({ params }, AWS.config.credentials);
+		}
+
 		if (args.proxy) {
 			AWS.config.httpOptions = AWS.config.httpOptions || {};
 			AWS.config.httpOptions.agent = new HttpsProxyAgent(args.proxy);
