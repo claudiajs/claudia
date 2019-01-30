@@ -1,5 +1,9 @@
 # Release history
 
+### 5.4.0, 30 January 2018
+
+- support for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).
+
 ### 5.3.0, 27 December 2018
 
 - support for using Lambda Layers. Use `--layers` with `create`, or `--layers`, `--add-layers` and `--remove-layers` with `update`. 
