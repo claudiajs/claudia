@@ -29,12 +29,16 @@ claudia [command] {OPTIONS}
 
 ## Options:
 
- * --help           print this help screen
- * --version        print out the current version
- * --quiet          suppress output when executing commands
- * --profile		set AWS credentials profile
+ * --help               print this help screen
+ * --version            print out the current version
+ * --quiet              suppress output when executing commands
+ * --profile            set AWS credentials profile
+ * --sts-role-arn       set AWS STS Role for token-based authentication
+ * --mfa-serial         set AWS MFA Serial Number (requires --sts-role-arn)
+ * --mfa-token          set AWS MFA Token Code (requires --sts-role-arn)
+ * --mfa-duration       set AWS MFA Duration in seconds (requires --sts-role-arn). Defaults to 3600
  * --aws-client-timeout The number of milliseconds to wait before connection time out on AWS SDK Client. Defaults to two minutes (120000)
- * --proxy			set HTTP proxy for AWS commands
+ * --proxy              set HTTP proxy for AWS commands
 
 Run with a command name to see options of a specific command, for example:
 ```bash
