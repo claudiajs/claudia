@@ -1,6 +1,6 @@
 # Release history
 
-### 5.4.0, 30 January 2018
+### 5.4.0, 30 January 2019
 
 - support for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).
 
