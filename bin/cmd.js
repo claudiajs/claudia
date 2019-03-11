@@ -15,17 +15,24 @@ const minimist = require('minimist'),
 			default: { 'source': process.cwd() }
 		});
 	},
-	tokenCodeFn = function (mfaSerial, callback) {
+	tokenCodeFn = function (code) {
 		'use strict';
-		const readline = require('readline').createInterface({
-			input: process.stdin,
-			output: process.stdout
-		});
+		return function (mfaSerial, callback) {
 
-		readline.question(`Please enter the code for MFA device ${mfaSerial}:`, (code) => {
-			readline.close();
-			callback(null, code);
-		});
+			if (code) {
+				return callback(null, String(code));
+			}
+			const readline = require('readline').createInterface({
+				input: process.stdin,
+				output: process.stdout
+			});
+
+			readline.question(`Please enter the code for MFA device ${mfaSerial}:`, (value) => {
+				readline.close();
+				return callback(null, String(value));
+			});
+
+		};
 	},
 	main = function () {
 		'use strict';
@@ -76,7 +83,7 @@ const minimist = require('minimist'),
 				SerialNumber,
 				DurationSeconds: process.env.AWS_MFA_DURATION || args['mfa-duration'] || 3600
 			});
-			Object.assign(TemporaryCredentialsParams, {tokenCodeFn});
+			Object.assign(TemporaryCredentialsParams, {tokenCodeFn: tokenCodeFn(args['mfa-token'])});
 		}
 
 		if (RoleArn) {
