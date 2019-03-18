@@ -15,13 +15,34 @@ const minimist = require('minimist'),
 			default: { 'source': process.cwd() }
 		});
 	},
+	tokenCodeFn = function (code) {
+		'use strict';
+		return function (mfaSerial, callback) {
+
+			if (code) {
+				return callback(null, String(code));
+			}
+			const readline = require('readline').createInterface({
+				input: process.stdin,
+				output: process.stdout
+			});
+
+			readline.question(`Please enter the code for MFA device ${mfaSerial}:`, (value) => {
+				readline.close();
+				return callback(null, String(value));
+			});
+
+		};
+	},
 	main = function () {
 		'use strict';
 		const args = readArgs(),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0],
 			logger = (!args.quiet) && new ConsoleLogger(),
-			RoleArn = process.env.AWS_ROLE_ARN || args['sts-role-arn'];
+			RoleArn = process.env.AWS_ROLE_ARN || args['sts-role-arn'],
+			SerialNumber = process.env.AWS_MFA_SERIAL || args['mfa-serial'],
+			TemporaryCredentialsParams = { params: {RoleArn}};
 		if (args.version && !command) {
 			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
@@ -51,22 +72,27 @@ const minimist = require('minimist'),
 			AWS.config.httpOptions = AWS.config.httpOptions || {};
 			AWS.config.httpOptions.timeout = args['aws-client-timeout'];
 		}
-		if (RoleArn) {
-			const params = { RoleArn };
-			console.log(`Assuming Role ${RoleArn}`);
-			if (args['mfa-serial'] && args['mfa-token']) {
-				Object.assign(params, {
-					SerialNumber: args['mfa-serial'],
-					TokenCode: args['mfa-token'],
-					DurationSeconds: args['mfa-duration'] || 3600
-				});
-			}
-			AWS.config.credentials = new AWS.ChainableTemporaryCredentials({ params }, AWS.config.credentials);
-		}
 
 		if (args.proxy) {
 			AWS.config.httpOptions = AWS.config.httpOptions || {};
 			AWS.config.httpOptions.agent = new HttpsProxyAgent(args.proxy);
+		}
+
+		if (SerialNumber) {
+			Object.assign(TemporaryCredentialsParams.params, {
+				SerialNumber,
+				DurationSeconds: process.env.AWS_MFA_DURATION || args['mfa-duration'] || 3600
+			});
+			Object.assign(TemporaryCredentialsParams, {tokenCodeFn: tokenCodeFn(args['mfa-token'])});
+		}
+
+		if (RoleArn) {
+			console.log(`Assuming Role ${RoleArn}`);
+			Object.assign(TemporaryCredentialsParams.params, {RoleArn});
+		}
+
+		if (SerialNumber || RoleArn) {
+			AWS.config.credentials = new AWS.ChainableTemporaryCredentials(TemporaryCredentialsParams);
 		}
 		commands[command](args, logger).then(result => {
 			if (result && !args.quiet) {
