@@ -3,6 +3,8 @@ const minimist = require('minimist'),
 	path = require('path'),
 	readCommands = require('../src/util/read-commands'),
 	ConsoleLogger = require('../src/util/console-logger'),
+	stsParams = require('../src/util/sts-params'),
+	ask = require('../src/util/ask'),
 	docTxt = require('../src/util/doc-txt'),
 	AWS = require('aws-sdk'),
 	HttpsProxyAgent = require('https-proxy-agent'),
@@ -10,29 +12,15 @@ const minimist = require('minimist'),
 		'use strict';
 		return minimist(process.argv.slice(2), {
 			alias: { h: 'help', v: 'version' },
-			string: ['source', 'name', 'region', 'profile'],
+			string: ['source', 'name', 'region', 'profile', 'mfa-serial', 'mfa-token'],
 			boolean: ['quiet', 'force'],
-			default: { 'source': process.cwd() }
-		});
-	},
-	tokenCodeFn = function (code) {
-		'use strict';
-		return function (mfaSerial, callback) {
-
-			if (code) {
-				return callback(null, String(code));
+			default: {
+				'source': process.cwd(),
+				'mfa-serial': process.env.AWS_MFA_SERIAL,
+				'sts-role-arn': process.env.AWS_ROLE_ARN,
+				'mfa-duration': (process.env.AWS_MFA_DURATION || 3600)
 			}
-			const readline = require('readline').createInterface({
-				input: process.stdin,
-				output: process.stdout
-			});
-
-			readline.question(`Please enter the code for MFA device ${mfaSerial}:`, (value) => {
-				readline.close();
-				return callback(null, String(value));
-			});
-
-		};
+		});
 	},
 	main = function () {
 		'use strict';
@@ -40,9 +28,7 @@ const minimist = require('minimist'),
 			commands = readCommands(),
 			command = args._ && args._.length && args._[0],
 			logger = (!args.quiet) && new ConsoleLogger(),
-			RoleArn = process.env.AWS_ROLE_ARN || args['sts-role-arn'],
-			SerialNumber = process.env.AWS_MFA_SERIAL || args['mfa-serial'],
-			TemporaryCredentialsParams = { params: {RoleArn}};
+			stsConfig = stsParams(args, ask);
 		if (args.version && !command) {
 			console.log(require(path.join(__dirname, '..', 'package.json')).version);
 			return;
@@ -78,22 +64,10 @@ const minimist = require('minimist'),
 			AWS.config.httpOptions.agent = new HttpsProxyAgent(args.proxy);
 		}
 
-		if (SerialNumber) {
-			Object.assign(TemporaryCredentialsParams.params, {
-				SerialNumber,
-				DurationSeconds: process.env.AWS_MFA_DURATION || args['mfa-duration'] || 3600
-			});
-			Object.assign(TemporaryCredentialsParams, {tokenCodeFn: tokenCodeFn(args['mfa-token'])});
+		if (stsConfig) {
+			AWS.config.credentials = new AWS.ChainableTemporaryCredentials(Object.assign(stsConfig, {masterCredentials: AWS.config.credentials}));
 		}
 
-		if (RoleArn) {
-			console.log(`Assuming Role ${RoleArn}`);
-			Object.assign(TemporaryCredentialsParams.params, {RoleArn});
-		}
-
-		if (SerialNumber || RoleArn) {
-			AWS.config.credentials = new AWS.ChainableTemporaryCredentials(TemporaryCredentialsParams);
-		}
 		commands[command](args, logger).then(result => {
 			if (result && !args.quiet) {
 				console.log(JSON.stringify(result, null, 2));
