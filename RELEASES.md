@@ -1,5 +1,10 @@
 # Release history
 
+### 5.4.1
+
+- workaround for regression bug introduced by aws-sdk 2.424.0 (https://github.com/aws/aws-sdk-js/issues/2588)
+- support for command line prompts for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).
+
 ### 5.4.0, 30 January 2019
 
 - support for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).

@@ -102,13 +102,17 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 						httpMethod: methodName,
 						statusCode: '200'
 					})
-					.then(() => apiGateway.putIntegrationResponsePromise({
-						restApiId: restApiId,
-						resourceId: resourceId,
-						httpMethod: methodName,
-						contentHandling: methodOptions && methodOptions.success && methodOptions.success.contentHandling,
-						statusCode: '200'
-					}));
+					.then(() => {
+						const p = {
+							restApiId: restApiId,
+							resourceId: resourceId,
+							httpMethod: methodName,
+							contentHandling: methodOptions && methodOptions.success && methodOptions.success.contentHandling,
+							statusCode: '200',
+							responseTemplates: {} /*workaround for https://github.com/aws/aws-sdk-js/issues/2588 */
+						};
+						return apiGateway.putIntegrationResponsePromise(p);
+					});
 				},
 				authorizerId = function () {
 					const authorizerName = methodOptions.customAuthorizer || methodOptions.cognitoAuthorizer;
