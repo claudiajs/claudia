@@ -1,5 +1,9 @@
 # Release history
 
+### 5.4.1
+
+- support for command line prompts for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).  
+
 ### 5.4.0, 30 January 2019
 
 - support for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).

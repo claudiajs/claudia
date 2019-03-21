@@ -23,9 +23,9 @@
       "resolved": "https://registry.npmjs.org/async/-/async-2.6.1.tgz"
     },
     "aws-sdk": {
-      "version": "2.395.0",
-      "from": "aws-sdk@latest",
-      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.395.0.tgz",
+      "version": "2.426.0",
+      "from": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.426.0.tgz",
+      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.426.0.tgz",
       "dependencies": {
         "buffer": {
           "version": "4.9.1",
@@ -435,7 +435,7 @@
     },
     "xmlbuilder": {
       "version": "9.0.7",
-      "from": "xmlbuilder@>=9.0.1 <9.1.0",
+      "from": "xmlbuilder@~9.0.1",
       "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-9.0.7.tgz"
     },
     "xtend": {
