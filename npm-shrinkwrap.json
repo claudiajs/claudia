@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "5.4.0",
+  "version": "5.4.1",
   "dependencies": {
     "agent-base": {
       "version": "4.2.1",
