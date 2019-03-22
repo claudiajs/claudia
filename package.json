@@ -54,7 +54,7 @@
   ],
   "dependencies": {
     "archiver": "^2.0.0",
-    "aws-sdk": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.426.0.tgz",
+    "aws-sdk": "^2.426.0",
     "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
     "gunzip-maybe": "^1.4.0",
