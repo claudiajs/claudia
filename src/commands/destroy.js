@@ -26,8 +26,9 @@ module.exports = function destroy(options) {
 			}
 		})
 		.then(() => {
+			const iam = new aws.IAM({ region: lambdaConfig.region });
 			if (lambdaConfig.role && !lambdaConfig.sharedRole) {
-				return destroyRole(lambdaConfig.role);
+				return destroyRole(iam, lambdaConfig.role);
 			}
 		})
 		.then(() => {

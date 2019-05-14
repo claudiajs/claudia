@@ -18,17 +18,17 @@ describe('destroyRole', () => {
 				AssumeRolePolicyDocument: lambdaRolePolicy
 			}).promise();
 		})
-		.then(() => addPolicy('log-writer', testRunName))
+		.then(() => addPolicy(iam, 'log-writer', testRunName))
 		.then(done, done.fail);
 	});
 	it('destroys the role', done => {
-		underTest(testRunName)
+		underTest(iam, testRunName)
 		.then(() => iam.getRole({ RoleName: testRunName }).promise())
 		.catch(expectedException => expect(expectedException.code).toEqual('NoSuchEntity'))
 		.then(done, done.fail);
 	});
 	it('destroys the policies', done => {
-		underTest(testRunName)
+		underTest(iam, testRunName)
 		.then(() => iam.listRolePolicies({ RoleName: testRunName }).promise())
 		.catch(expectedException => expect(expectedException.message).toContain(testRunName))
 		.then(done, done.fail);
@@ -38,7 +38,7 @@ describe('destroyRole', () => {
 			RoleName: testRunName,
 			PolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole'
 		}).promise()
-		.then(() => underTest(testRunName))
+		.then(() => underTest(iam, testRunName))
 		.then(() => iam.getRole({ RoleName: testRunName }).promise())
 		.catch(expectedException => expect(expectedException.code).toEqual('NoSuchEntity'))
 		.then(done, done.fail);

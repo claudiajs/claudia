@@ -39,7 +39,7 @@ module.exports = function create(options, optionalLogger) {
 		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = loggingWrap(new aws.IAM(), {log: logger.logApiCall, logName: 'iam'}),
+		iam = loggingWrap(new aws.IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		apiGatewayPromise = retriableWrap(
 			loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
@@ -300,7 +300,7 @@ module.exports = function create(options, optionalLogger) {
 		addExtraPolicies = function () {
 			return Promise.all(policyFiles().map(fileName => {
 				const policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
-				return addPolicy(policyName, roleMetadata.Role.RoleName, fileName);
+				return addPolicy(iam, policyName, roleMetadata.Role.RoleName, fileName);
 			}));
 		},
 		recursivePolicy = function (functionName) {
@@ -359,7 +359,7 @@ module.exports = function create(options, optionalLogger) {
 	})
 	.then(() => {
 		if (!options.role) {
-			return addPolicy('log-writer', roleMetadata.Role.RoleName);
+			return addPolicy(iam, 'log-writer', roleMetadata.Role.RoleName);
 		}
 	})
 	.then(() => {

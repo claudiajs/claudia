@@ -15,6 +15,7 @@ module.exports = function destroyObjects(newObjects) {
 		iot = new aws.Iot({ region: awsRegion }),
 		sns = new aws.SNS({ region: awsRegion }),
 		sqs = new aws.SQS({ region: awsRegion }),
+		iam = new aws.IAM({ region: awsRegion }),
 		events = new aws.CloudWatchEvents({ region: awsRegion }),
 		cognitoIdentityServiceProvider = new aws.CognitoIdentityServiceProvider({ region: awsRegion }),
 		destroyRule = function (ruleName) {
@@ -75,7 +76,7 @@ module.exports = function destroyObjects(newObjects) {
 		},
 		removeIamRole = () => {
 			if (newObjects.lambdaRole) {
-				return destroyRole(newObjects.lambdaRole);
+				return destroyRole(iam, newObjects.lambdaRole);
 			}
 		},
 		removeCustomLogs = () => {

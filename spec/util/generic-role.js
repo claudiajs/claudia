@@ -18,7 +18,7 @@ module.exports.create = function create(name) {
 };
 module.exports.destroy = function () {
 	'use strict';
-	return destroyRole(genericRoleName);
+	return destroyRole(iam, genericRoleName);
 };
 
 module.exports.get = function () {

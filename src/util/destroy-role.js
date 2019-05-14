@@ -1,8 +1,6 @@
-const aws = require('aws-sdk');
-module.exports = function destroyRole(roleName) {
+module.exports = function destroyRole(iam, roleName) {
 	'use strict';
-	const iam = new aws.IAM(),
-		deleteSinglePolicy = function (policyName) {
+	const deleteSinglePolicy = function (policyName) {
 			return iam.deleteRolePolicy({
 				PolicyName: policyName,
 				RoleName: roleName

@@ -29,7 +29,7 @@ describe('addPolicy', () => {
 	});
 	it('appends a policy from the templates folder to the role', done => {
 		const expectedPolicy = require('../json-templates/log-writer');
-		underTest('log-writer', testRunName)
+		underTest(iam, 'log-writer', testRunName)
 		.then(() =>
 			iam.getRolePolicy({
 				PolicyName: 'log-writer',

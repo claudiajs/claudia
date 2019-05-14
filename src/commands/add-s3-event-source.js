@@ -32,7 +32,7 @@ module.exports = function addS3EventSource(options) {
 					return JSON.stringify(policy);
 				})
 				.then(policyContents => {
-					const iam = new aws.IAM();
+					const iam = new aws.IAM({region: lambdaConfig.region});
 					return iam.putRolePolicy({
 						RoleName: lambdaConfig.role,
 						PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
