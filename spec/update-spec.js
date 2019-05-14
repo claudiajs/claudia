@@ -656,9 +656,11 @@ describe('update', () => {
 		});
 	});
 	describe('runtime', () => {
+		const initialRuntime = 'nodejs8.10',
+			newRuntime = 'nodejs10.x';
 		beforeEach(done => {
 			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
-			create({name: testRunName, runtime: 'nodejs6.10', region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
+			create({name: testRunName, runtime: initialRuntime, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {
 				newObjects.lambdaRole = result.lambda && result.lambda.role;
 				newObjects.lambdaFunction = result.lambda && result.lambda.name;
 			}).then(done, done.fail);
@@ -666,17 +668,17 @@ describe('update', () => {
 		it('does not change the runtime if not provided', done => {
 			underTest({source: workingdir, version: 'new'})
 			.then(() => getLambdaConfiguration('new'))
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(initialRuntime))
 			.then(() => getLambdaConfiguration())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(initialRuntime))
 			.then(done, done.fail);
 		});
 		it('can update the runtime when requested', done => {
-			underTest({source: workingdir, version: 'new', runtime: 'nodejs8.10'})
+			underTest({source: workingdir, version: 'new', runtime: newRuntime})
 			.then(() => getLambdaConfiguration('new'))
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(newRuntime))
 			.then(() => getLambdaConfiguration())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(newRuntime))
 			.then(done, done.fail);
 		});
 	});

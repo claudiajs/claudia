@@ -523,17 +523,17 @@ describe('create', () => {
 		});
 	});
 	describe('runtime support', () => {
-		it('creates node 8.10 deployments by default', done => {
+		it('creates node 10 deployments by default', done => {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs10.x'))
+			.then(done, done.fail);
+		});
+		it('can create nodejs8.10 when requested', done => {
+			config.runtime = 'nodejs8.10';
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
-			.then(done, done.fail);
-		});
-		it('can create nodejs6.10 when requested', done => {
-			config.runtime = 'nodejs6.10';
-			createFromDir('hello-world')
-			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs6.10'))
 			.then(done, done.fail);
 		});
 	});
