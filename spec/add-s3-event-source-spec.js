@@ -13,7 +13,7 @@ const underTest = require('../src/commands/add-s3-event-source'),
 	awsRegion = require('./util/test-aws-region');
 describe('addS3EventSource', () => {
 	'use strict';
-	const s3 = new aws.S3();
+	const s3 = new aws.S3({region: awsRegion});
 	describe('validation', () => {
 		let workingdir;
 		beforeEach(() => {

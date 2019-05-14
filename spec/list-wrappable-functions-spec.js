@@ -1,8 +1,9 @@
 /*global describe, expect, it */
 const aws = require('aws-sdk'),
+	awsRegion = require('./util/test-aws-region'),
 	listWrappableFunctions = require('../src/util/list-wrappable-functions'),
-	iam = new aws.IAM(),
-	s3 = new aws.S3();
+	iam = new aws.IAM({region: awsRegion}),
+	s3 = new aws.S3({region: awsRegion});
 describe('listWrappableFunctions', () => {
 	'use strict';
 	it('should identify methods', () => {

@@ -24,7 +24,7 @@ const zipdir = require('../tasks/zipdir'),
 	combineLists = require('../util/combine-lists');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
-	let lambda, apiGateway, lambdaConfig, apiConfig, updateResult,
+	let lambda, s3, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig, packageDir, packageArchive, s3Key,
 		workingDir,
 		requiresHandlerUpdate = false;
@@ -173,6 +173,7 @@ module.exports = function update(options, optionalLogger) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		s3 = loggingWrap(new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'});
 		apiGateway = retriableWrap(
 				loggingWrap(
 					new aws.APIGateway({region: lambdaConfig.region}),
@@ -220,7 +221,7 @@ module.exports = function update(options, optionalLogger) {
 	})
 	.then(zipFile => {
 		packageArchive = zipFile;
-		return lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger);
+		return lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse'], logger);
 	})
 	.then(functionCode => {
 		logger.logStage('updating Lambda');

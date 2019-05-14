@@ -11,7 +11,6 @@ const	path = require('path'),
 	uploadToS3 = function (filePath, bucket, serverSideEncryption, logger) {
 		'use strict';
 		const fileKey = path.basename(filePath),
-			s3 = loggingWrap(new aws.S3({signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'}),
 			params = {
 				Bucket: bucket,
 				Key: fileKey,
@@ -27,11 +26,11 @@ const	path = require('path'),
 			S3Key: fileKey
 		}));
 	};
-module.exports = function lambdaCode(zipArchive, s3Bucket, s3ServerSideEncryption, logger) {
+module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption, logger) {
 	'use strict';
 	if (!s3Bucket) {
 		return readFromDisk(zipArchive);
 	} else {
-		return uploadToS3(zipArchive, s3Bucket, s3ServerSideEncryption, logger);
+		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption, logger);
 	}
 };

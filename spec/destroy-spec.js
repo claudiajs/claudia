@@ -16,7 +16,7 @@ describe('destroy', () => {
 	beforeEach(() => {
 		workingdir = tmppath();
 		testRunName = 'test' + Date.now();
-		iam = new aws.IAM();
+		iam = new aws.IAM({ region: awsRegion });
 		newObjects = { workingdir: workingdir };
 		fs.mkdirSync(workingdir);
 	});

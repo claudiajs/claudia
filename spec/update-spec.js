@@ -15,7 +15,7 @@ const underTest = require('../src/commands/update'),
 	lambdaCode = require('../src/tasks/lambda-code');
 describe('update', () => {
 	'use strict';
-	let workingdir, testRunName,  lambda, newObjects;
+	let workingdir, testRunName,  lambda, s3, newObjects;
 	const invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -28,6 +28,7 @@ describe('update', () => {
 		};
 	beforeAll(() => {
 		lambda = new aws.Lambda({region: awsRegion});
+		s3 = new aws.S3({region: awsRegion, signatureVersion: 'v4'});
 	});
 	beforeEach(() => {
 		workingdir = tmppath();
@@ -186,8 +187,7 @@ describe('update', () => {
 		});
 
 		it('uses a s3 bucket if provided', done => {
-			const s3 = new aws.S3(),
-				logger = new ArrayLogger(),
+			const logger = new ArrayLogger(),
 				bucketName = testRunName + '-bucket';
 			let archivePath;
 			s3.createBucket({
@@ -217,8 +217,7 @@ describe('update', () => {
 		});
 
 		it('uses a s3 bucket with server side encryption if provided', done => {
-			const s3 = new aws.S3(),
-				logger = new ArrayLogger(),
+			const logger = new ArrayLogger(),
 				bucketName = testRunName + '-bucket',
 				serverSideEncryption = 'AES256';
 			let archivePath;
@@ -914,7 +913,7 @@ describe('update', () => {
 	describe('layer support', () => {
 		let layers;
 		const createLayer = function (layerName, filePath) {
-				return lambdaCode(filePath)
+				return lambdaCode(s3, filePath)
 					.then(contents => lambda.publishLayerVersion({LayerName: layerName, Content: contents}).promise());
 			},
 			deleteLayer = function (layer) {

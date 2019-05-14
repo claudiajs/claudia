@@ -53,7 +53,7 @@ module.exports = function addS3EventSource(options) {
 		},
 		addBucketNotificationConfig = function () {
 			const events = options.events ? options.events.split(',') : ['s3:ObjectCreated:*'],
-				s3 = new aws.S3({signatureVersion: 'v4'}),
+				s3 = new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}),
 				eventConfig = {
 					LambdaFunctionArn: lambdaConfig.arn,
 					Events: events

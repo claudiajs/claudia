@@ -3,13 +3,14 @@ const underTest = require('../src/util/destroy-role'),
 	addPolicy = require('../src/tasks/add-policy'),
 	fsPromise = require('../src/util/fs-promise'),
 	aws = require('aws-sdk'),
+	awsRegion = require('./util/test-aws-region'),
 	templateFile = require('../src/util/template-file');
 describe('destroyRole', () => {
 	'use strict';
 	let testRunName, iam;
 	beforeEach(done => {
 		testRunName = `test${Date.now()}-executor`;
-		iam = new aws.IAM();
+		iam = new aws.IAM({region: awsRegion});
 
 		fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
 		.then(lambdaRolePolicy => {

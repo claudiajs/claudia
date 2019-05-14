@@ -1,9 +1,10 @@
 /*global require */
 const aws = require('aws-sdk'),
-	iam = new aws.IAM(),
 	templateFile = require('../../src/util/template-file'),
 	destroyRole = require('../../src/util/destroy-role'),
 	fsPromise = require('../../src/util/fs-promise.js'),
+	awsRegion = require('./test-aws-region'),
+	iam = new aws.IAM({region: awsRegion}),
 	genericRoleName = 'test-generic-role-' + Date.now();
 
 module.exports.create = function create(name) {

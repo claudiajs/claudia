@@ -41,6 +41,7 @@ module.exports = function create(options, optionalLogger) {
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
 		iam = loggingWrap(new aws.IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
+		s3 = loggingWrap(new aws.S3({region: options.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'}),
 		apiGatewayPromise = retriableWrap(
 			loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
@@ -386,7 +387,7 @@ module.exports = function create(options, optionalLogger) {
 			}).promise();
 		}
 	})
-	.then(() => lambdaCode(packageArchive, options['use-s3-bucket'], options['s3-sse'], logger))
+	.then(() => lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse'], logger))
 	.then(functionCode => {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);

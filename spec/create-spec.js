@@ -20,7 +20,7 @@ describe('create', () => {
 	'use strict';
 
 
-	let workingdir, testRunName, iam, lambda, newObjects, config, logs, apiGatewayPromise;
+	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise;
 	const createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
 				fs.mkdirSync(workingdir);
@@ -48,8 +48,9 @@ describe('create', () => {
 			return lambda.getFunctionConfiguration({ FunctionName: testRunName }).promise();
 		};
 	beforeAll(() => {
-		iam = new aws.IAM();
+		iam = new aws.IAM({ region: awsRegion });
 		lambda = new aws.Lambda({ region: awsRegion });
+		s3 = new aws.S3({region: awsRegion, signatureVersion: 'v4'});
 		apiGatewayPromise = retriableWrap(new aws.APIGateway({ region: awsRegion }));
 		logs = new aws.CloudWatchLogs({ region: awsRegion });
 	});
@@ -799,8 +800,7 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('uses a s3 bucket if provided', done => {
-			const s3 = new aws.S3(),
-				logger = new ArrayLogger(),
+			const logger = new ArrayLogger(),
 				bucketName = `${testRunName}-bucket`;
 			let archivePath;
 			config.keep = true;
@@ -831,8 +831,7 @@ describe('create', () => {
 			.then(done, done.fail);
 		});
 		it('uses a s3 bucket with server side encryption if provided', done => {
-			const s3 = new aws.S3(),
-				logger = new ArrayLogger(),
+			const logger = new ArrayLogger(),
 				bucketName = `${testRunName}-bucket`,
 				serverSideEncryption = 'AES256';
 			let archivePath;
@@ -1306,7 +1305,7 @@ describe('create', () => {
 	describe('layer support', () => {
 		let layers;
 		const createLayer = function (layerName, filePath) {
-				return lambdaCode(filePath)
+				return lambdaCode(s3, filePath)
 					.then(contents => lambda.publishLayerVersion({LayerName: layerName, Content: contents}).promise());
 			}, deleteLayer = function (layer) {
 				return lambda.deleteLayerVersion({
