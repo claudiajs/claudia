@@ -387,7 +387,7 @@ module.exports = function create(options, optionalLogger) {
 			}).promise();
 		}
 	})
-	.then(() => lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse'], logger))
+	.then(() => lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse']))
 	.then(functionCode => {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);

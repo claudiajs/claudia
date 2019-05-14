@@ -221,7 +221,7 @@ module.exports = function update(options, optionalLogger) {
 	})
 	.then(zipFile => {
 		packageArchive = zipFile;
-		return lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse'], logger);
+		return lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse']);
 	})
 	.then(functionCode => {
 		logger.logStage('updating Lambda');

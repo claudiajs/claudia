@@ -1,14 +1,12 @@
 const	path = require('path'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
-	loggingWrap = require('../util/logging-wrap'),
-	aws = require('aws-sdk'),
 	readFromDisk = function (packageArchive) {
 		'use strict';
 		return fsPromise.readFileAsync(packageArchive)
 		.then(fileContents => ({ ZipFile: fileContents }));
 	},
-	uploadToS3 = function (filePath, bucket, serverSideEncryption, logger) {
+	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption) {
 		'use strict';
 		const fileKey = path.basename(filePath),
 			params = {
@@ -26,11 +24,11 @@ const	path = require('path'),
 			S3Key: fileKey
 		}));
 	};
-module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption, logger) {
+module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption) {
 	'use strict';
 	if (!s3Bucket) {
 		return readFromDisk(zipArchive);
 	} else {
-		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption, logger);
+		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption);
 	}
 };
