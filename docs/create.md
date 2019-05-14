@@ -39,7 +39,7 @@ claudia create {OPTIONS}
     * _For example_: arn:aws:iam::123456789012:role/FileConverter
 *  `--runtime`:  (_optional_) Node.js runtime to use. For supported values, see
     http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html
-    * _Defaults to_: nodejs8.10
+    * _Defaults to_: nodejs10.x
 *  `--description`:  (_optional_) Textual description of the lambda function
     * _Defaults to_: the project description from package.json
 *  `--memory`:  (_optional_) The amount of memory, in MB, your Lambda function is given.

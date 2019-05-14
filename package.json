@@ -1,6 +1,6 @@
 {
   "name": "claudia",
-  "version": "5.4.2",
+  "version": "5.5.0",
   "description": "Deploy Node.js projects to AWS Lambda and API Gateway easily.",
   "license": "MIT",
   "repository": {
@@ -54,7 +54,7 @@
   ],
   "dependencies": {
     "archiver": "^2.0.0",
-    "aws-sdk": "^2.426.0",
+    "aws-sdk": "^2.454.0",
     "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
     "gunzip-maybe": "^1.4.0",

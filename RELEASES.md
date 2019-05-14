@@ -1,5 +1,10 @@
 # Release history
 
+### 5.5.0 (14 May 2019)
+
+- nodejs10.x used by default, removed support for node6.10
+- fix deployment to AWS China regions (https://github.com/claudiajs/claudia/issues/187)
+
 ### 5.4.2 (22 March 2019)
 
 - support for command line prompts for MFA/STS authentication, thanks to [Grégory Horion](https://github.com/gregory).  
