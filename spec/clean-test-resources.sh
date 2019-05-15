@@ -52,9 +52,9 @@ for log in $apiLogs; do
   aws logs delete-log-group --log-group-name $log --profile $AWS_PROFILE  --region $AWS_REGION
 done
 
-buckets=`aws s3api list-buckets --output text --query 'Buckets[?starts_with(Name,\`test\`)].Name'`
+buckets=`aws s3api list-buckets --output text --query 'Buckets[?starts_with(Name,\`test\`)].Name' --profile $AWS_PROFILE --region $AWS_REGION`
 for bucket in $buckets; do
   echo deleting bucket $bucket
-  aws s3 rm --recursive s3://$bucket
-  aws s3 rb s3://$bucket
+  aws s3 rm --recursive s3://$bucket --profile $AWS_PROFILE --region $AWS_REGION
+  aws s3 rb s3://$bucket --profile $AWS_PROFILE --region $AWS_REGION
 done
