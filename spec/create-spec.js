@@ -21,7 +21,8 @@ describe('create', () => {
 
 
 	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise;
-	const createFromDir = function (dir, logger) {
+	const defaultRuntime = 'nodejs10.x',
+		createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
 				fs.mkdirSync(workingdir);
 			}
@@ -527,7 +528,7 @@ describe('create', () => {
 		it('creates node 10 deployments by default', done => {
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs10.x'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(defaultRuntime))
 			.then(done, done.fail);
 		});
 		it('can create nodejs8.10 when requested', done => {
@@ -662,7 +663,7 @@ describe('create', () => {
 				});
 			})
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'hello-world2' }).promise())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(defaultRuntime))
 			.then(done, done.fail);
 		});
 		it('renames scoped NPM packages to a sanitized Lambda name', done => {
@@ -676,7 +677,7 @@ describe('create', () => {
 				});
 			})
 			.then(() => lambda.getFunctionConfiguration({ FunctionName: 'test_hello-world' }).promise())
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
+			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(defaultRuntime))
 			.then(done, done.fail);
 		});
 		it('uses the package.json description field if --description is not provided', done => {
@@ -1164,7 +1165,7 @@ describe('create', () => {
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
 				'lambda.createFunction',  'lambda.setupRequestListeners', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
-			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole']);
+			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.putRolePolicy']);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',

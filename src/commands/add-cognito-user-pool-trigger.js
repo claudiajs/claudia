@@ -44,6 +44,9 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 			 * from describeUserPool are not accepted back into the configuration, so they have to be removed
 			 */
 			['Id', 'Name', 'LastModifiedDate', 'CreationDate', 'SchemaAttributes', 'EstimatedNumberOfUsers', 'AliasAttributes', 'UsernameAttributes', 'Arn', 'Domain'].forEach(n => delete data[n]);
+			if (data.AdminCreateUserConfig && data.AdminCreateUserConfig.UnusedAccountValidityDays) {
+				delete data.AdminCreateUserConfig.UnusedAccountValidityDays;
+			}
 			if (Object.keys(data.UserPoolAddOns || {}).length === 0) {
 				delete data.UserPoolAddOns;
 			}
