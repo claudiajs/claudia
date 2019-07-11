@@ -10,7 +10,8 @@ module.exports = function deployProxyApi(lambdaMetadata, options, apiGatewayProm
 				'{proxy+}': { ANY: {}},
 				'': { ANY: {}}
 			},
-			binaryMediaTypes: ['*/*']
+			binaryMediaTypes: typeof options['binary-media-types'] === 'string'
+				?	options['binary-media-types'].split(',').filter(a => a) : ['*/*']
 		},
 		alias = options.version || 'latest';
 	logger.logStage('creating REST API');
