@@ -113,6 +113,14 @@ describe('create', () => {
 			.then(done.fail, message => expect(message).toEqual('deploy-proxy-api requires a handler. please specify with --handler'))
 			.then(done);
 		});
+		it('fails if binary-media-types is specified but deploy-proxy-api is not', done => {
+			config['binary-media-types'] = 'image/jpeg';
+			config.handler = 'main.handler';
+			config['deploy-proxy-api'] = undefined;
+			createFromDir('hello-world')
+			.then(done.fail, message => expect(message).toEqual('binary-media-types only works with --deploy-proxy-api'))
+			.then(done);
+		});
 		it('fails if subnetIds is specified without securityGroupIds', done => {
 			config['subnet-ids'] = 'subnet-abcdef12';
 			config['security-group-ids'] = null;
@@ -983,6 +991,29 @@ describe('create', () => {
 				expect(params.path).toEqual('/hello/there');
 				expect(params.requestContext.stage).toEqual('development');
 			})
+			.then(done, done.fail);
+		});
+		it('sets up binary media types corresponding to the binary-media-types options', done => {
+			config['binary-media-types'] = 'image/png,image/jpeg';
+			createFromDir('apigw-proxy-echo')
+			.then(creationResult => creationResult.api.id)
+			.then(apiId => apiGatewayPromise.getRestApiPromise({ restApiId: apiId }))
+			.then(restApi => expect(restApi.binaryMediaTypes).toEqual(['image/png', 'image/jpeg']))
+			.then(done, done.fail);
+		});
+		it('sets up binary media types to */* if binary-media-types option is not provided', done => {
+			createFromDir('apigw-proxy-echo')
+			.then(creationResult => creationResult.api.id)
+			.then(apiId => apiGatewayPromise.getRestApiPromise({ restApiId: apiId }))
+			.then(restApi => expect(restApi.binaryMediaTypes).toEqual(['*/*']))
+			.then(done, done.fail);
+		});
+		it('sets up binary media types to undefined if binary-media-types option is provided as an empty string', done => {
+			config['binary-media-types'] = '';
+			createFromDir('apigw-proxy-echo')
+			.then(creationResult => creationResult.api.id)
+			.then(apiId => apiGatewayPromise.getRestApiPromise({ restApiId: apiId }))
+			.then(restApi => expect(restApi.binaryMediaTypes).toBeUndefined([]))
 			.then(done, done.fail);
 		});
 	});

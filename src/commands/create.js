@@ -72,6 +72,9 @@ module.exports = function create(options, optionalLogger) {
 			if (!options.handler && options['deploy-proxy-api']) {
 				return 'deploy-proxy-api requires a handler. please specify with --handler';
 			}
+			if (options['binary-media-types'] && !options['deploy-proxy-api']) {
+				return 'binary-media-types only works with --deploy-proxy-api';
+			}
 			if (!options['security-group-ids'] && options['subnet-ids']) {
 				return 'VPC access requires at least one security group id *and* one subnet id';
 			}
@@ -436,6 +439,15 @@ module.exports.doc = {
 			description: 'If specified, a proxy API will be created for the Lambda \n' +
 				' function on API Gateway, and forward all requests to function. \n' +
 				' This is an alternative way to create web APIs to --api-module.'
+		},
+		{
+			argument: 'binary-media-types',
+			optional: true,
+			description: 'A comma-delimited list of binary-media-types to \n' +
+				'set when using --deploy-proxy-api. Use an empty string in quotes \n' +
+				'to not set any binary media types.',
+			example: 'image/png,image/jpeg',
+			'default': '*/*'
 		},
 		{
 			argument: 'name',
