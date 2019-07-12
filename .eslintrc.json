@@ -11,7 +11,7 @@
     "semi": ["error", "always"],
     "strict": ["error", "function"],
     "no-unused-vars": "error",
-    "indent": ["error", "tab" ],
+    "indent": ["error", "tab", {"MemberExpression": "off"}],
     "no-const-assign": "error",
     "one-var": "error",
     "prefer-const": "error",

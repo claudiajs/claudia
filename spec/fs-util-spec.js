@@ -188,14 +188,14 @@ describe('fsUtil', () => {
 		describe('with absolute paths', () => {
 			it('lists contents of a directory recursively', () => {
 				expect(fsUtil.recursiveList(path.join(pathName, 'content')).sort()).toEqual(
-						['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
+					['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
 				);
 			});
 			it('appends paths at each level of depth', () => {
 				fs.mkdirSync(path.join(pathName, 'content', 'subdir', 'subsub'));
 				fs.writeFileSync(path.join(pathName, 'content', 'subdir', 'subsub', 'subsubfile.txt'), '456', 'utf8');
 				expect(fsUtil.recursiveList(path.join(pathName, 'content')).sort()).toEqual(
-						['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt', 'subdir/subsub', 'subdir/subsub/subsubfile.txt']
+					['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt', 'subdir/subsub', 'subdir/subsub/subsubfile.txt']
 				);
 
 			});
@@ -227,7 +227,7 @@ describe('fsUtil', () => {
 			afterEach(() => process.chdir(cwd));
 			it('lists contents of a directory recursively', () => {
 				expect(fsUtil.recursiveList('content').sort()).toEqual(
-						['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
+					['file.txt', 'numbers.txt', 'subdir', 'subdir/subfile.txt']
 				);
 			});
 			it('uses globbing patterns', () => {

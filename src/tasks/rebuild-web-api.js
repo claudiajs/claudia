@@ -19,11 +19,12 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		authorizerIds;
 	const logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
-						loggingWrap(
-							new aws.APIGateway({region: awsRegion}),
-							{log: logger.logApiCall, logName: 'apigateway'}
-						),
-						() => logger.logApiCall('rate-limited by AWS, waiting before retry')),
+			loggingWrap(
+				new aws.APIGateway({region: awsRegion}),
+				{log: logger.logApiCall, logName: 'apigateway'}
+			),
+			() => logger.logApiCall('rate-limited by AWS, waiting before retry')
+		),
 		configHash = safeHash(apiConfig),
 		knownIds = {},
 		supportsCors = function () {

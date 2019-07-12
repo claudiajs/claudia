@@ -140,19 +140,6 @@ module.exports = function collectFiles(sourcePath, workingDir, options, optional
 			})
 			.then(() => targetDir);
 		},
-		traverse = function (object, predicate) {
-			Object.keys(object).forEach((key) => {
-				const val = object[key];
-				if (!object) {
-					return false;
-				}
-				if (typeof val === 'object') {
-					traverse(val, predicate);
-				} else {
-					predicate(object, key);
-				}
-			});
-		},
 		validationError = checkPreconditions(sourcePath);
 	logger.logStage('packaging files');
 	if (validationError) {

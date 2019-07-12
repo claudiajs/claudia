@@ -1,4 +1,4 @@
-/*global exports, console*/
+/*global exports */
 const aws = require('aws-sdk'),
 	sqs = new aws.SQS();
 exports.handler = function (event, context) {

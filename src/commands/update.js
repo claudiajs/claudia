@@ -175,11 +175,11 @@ module.exports = function update(options, optionalLogger) {
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		s3 = loggingWrap(new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'});
 		apiGateway = retriableWrap(
-				loggingWrap(
-					new aws.APIGateway({region: lambdaConfig.region}),
-					{log: logger.logApiCall, logName: 'apigateway'}
-				),
-				() => logger.logStage('rate-limited by AWS, waiting before retry')
+			loggingWrap(
+				new aws.APIGateway({region: lambdaConfig.region}),
+				{log: logger.logApiCall, logName: 'apigateway'}
+			),
+			() => logger.logStage('rate-limited by AWS, waiting before retry')
 		);
 	})
 	.then(() => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise())
