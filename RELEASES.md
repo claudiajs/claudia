@@ -1,5 +1,9 @@
 # Release history
 
+### 5.6.0 (12 July 2019)
+
+- add option to specify binary media types when deploying a proxy API, thanks to [Primož Verdnik](https://github.com/drye)
+
 ### 5.5.0 (14 May 2019)
 
 - nodejs10.x used by default, removed support for node6.10
