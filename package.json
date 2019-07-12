@@ -53,7 +53,7 @@
     "Alexander Simovic (https://github.com/simalexan)"
   ],
   "dependencies": {
-    "archiver": "^2.0.0",
+    "archiver": "^3.0.0",
     "aws-sdk": "^2.454.0",
     "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
@@ -70,7 +70,7 @@
   "devDependencies": {
     "decompress": "^4.2.0",
     "dotenv": "^2.0.0",
-    "eslint": "^3.12.2",
+    "eslint": "^6.0.1",
     "eslint-config-crockford": "^0.2.0",
     "eslint-config-defaults": "^9.0.0",
     "jasmine": "^2.5.2",
