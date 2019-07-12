@@ -21,6 +21,11 @@ claudia create {OPTIONS}
 *  `--deploy-proxy-api`:  (_optional_) If specified, a proxy API will be created for the Lambda 
     function on API Gateway, and forward all requests to function.
     This is an alternative way to create web APIs to --api-module.
+*  `--binary-media-types`:  (_optional_) A comma-delimited list of binary-media-types to 
+    set when using --deploy-proxy-api. Use an empty string in quotes
+    to not set any binary media types.
+    * _For example_: image/png,image/jpeg
+    * _Defaults to_: */*
 *  `--name`:  (_optional_) lambda function name
     * _For example_: awesome-microservice
     * _Defaults to_: the project name from package.json
