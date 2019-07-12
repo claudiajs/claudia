@@ -138,7 +138,7 @@ describe('destroy', () => {
 				return apiGateway.getRestApi({ restApiId: newObjects.restApi }).promise();
 			})
 			.catch(expectedException => {
-				expect(expectedException.message).toMatch(/^Invalid REST API identifier specified/);
+				expect(expectedException.message).toMatch(/^Invalid API identifier specified/);
 				expect(expectedException.code).toEqual('NotFoundException');
 			})
 			.then(done, done.fail);
