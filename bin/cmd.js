@@ -18,6 +18,7 @@ const minimist = require('minimist'),
 				'source': process.cwd(),
 				'mfa-serial': process.env.AWS_MFA_SERIAL,
 				'sts-role-arn': process.env.AWS_ROLE_ARN,
+				'mfa-token': process.env.AWS_MFA_TOKEN,
 				'mfa-duration': (process.env.AWS_MFA_DURATION || 3600)
 			}
 		});
