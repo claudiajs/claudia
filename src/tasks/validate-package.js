@@ -77,6 +77,12 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 				if (methodConfig.authorizationType && methodConfig.authorizationType !== 'AWS_IAM' && methodConfig.invokeWithCredentials) {
 					throw routeMessage + 'authorization type ' + methodConfig.authorizationType + ' is incompatible with invokeWithCredentials';
 				}
+				if (!methodConfig.cognitoAuthorizer && methodConfig.authorizationScopes) {
+					throw routeMessage + 'authorizer is incompatible with authorizationScopes';
+				}
+				if (methodConfig.cognitoAuthorizer && !Array.isArray(methodConfig.authorizationScopes)) {
+					throw routeMessage + "method parameter 'authorizationScopes' must be an array";
+				}
 			});
 		});
 		if (apiConfig.authorizers) {

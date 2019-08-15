@@ -121,6 +121,20 @@ describe('validatePackage', () => {
 
 		});
 
+		it('fails when OAuth2 scopes are not used with Cognito user pools', () => {
+			expect(() => {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'invalid_authorizer_with_oauth2_scopes.proxyRouter', 'invalid_authorizer_with_oauth2_scopes');
+			}).toThrow('invalid_authorizer_with_oauth2_scopes.js GET /echo authorizer is incompatible with authorizationScopes');
+
+		});
+
+		it('fails when OAuth2 scopes are not specified with an array', () => {
+			expect(() => {
+				underTest(path.join(__dirname, 'test-projects/api-gw-error-authorization'), 'invalid_oauth2_scopes.proxyRouter', 'invalid_oauth2_scopes');
+			}).toThrow("invalid_oauth2_scopes.js GET /echo method parameter 'authorizationScopes' must be an array");
+
+		});
+
 		it('does not fail when the api is well configured', () => {
 			expect(() => {
 				underTest(path.join(__dirname, 'test-projects/api-gw-validation-kitchen-sink'), 'main.proxyRouter', 'main');

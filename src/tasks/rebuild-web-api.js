@@ -73,6 +73,9 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				apiKeyRequired = function () {
 					return methodOptions && methodOptions.apiKeyRequired;
 				},
+				authorizationScopes = function () {
+					return methodOptions && methodOptions.authorizationScopes;
+				},
 				authorizationType = function () {
 					if (methodOptions && methodOptions.authorizationType && validAuthType(methodOptions.authorizationType.toUpperCase())) {
 						return methodOptions.authorizationType.toUpperCase();
@@ -123,7 +126,8 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				resourceId: resourceId,
 				restApiId: restApiId,
 				requestParameters: parameters,
-				apiKeyRequired: apiKeyRequired()
+				apiKeyRequired: apiKeyRequired(),
+				authorizationScopes: authorizationScopes()
 			})
 			.then(() => putLambdaIntegration(resourceId, methodName, credentials(), parameters && Object.keys(parameters), methodOptions.requestContentHandling))
 			.then(addMethodResponse);
