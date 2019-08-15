@@ -1,5 +1,9 @@
 # Release history
 
+### 5.7.0 (15 August 2019)
+
+- support for oauth2 authorization scopes, thanks to [Kevin Coleman](https://github.com/kevintechie).
+
 ### 5.6.0 (12 July 2019)
 
 - add option to specify binary media types when deploying a proxy API, thanks to [Primož Verdnik](https://github.com/drye)
