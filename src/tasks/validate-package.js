@@ -80,7 +80,7 @@ module.exports = function validatePackage(dir, functionHandler, restApiModule) {
 				if (!methodConfig.cognitoAuthorizer && methodConfig.authorizationScopes) {
 					throw routeMessage + 'authorizer is incompatible with authorizationScopes';
 				}
-				if (methodConfig.cognitoAuthorizer && !Array.isArray(methodConfig.authorizationScopes)) {
+				if (methodConfig.authorizationScopes && !Array.isArray(methodConfig.authorizationScopes)) {
 					throw routeMessage + "method parameter 'authorizationScopes' must be an array";
 				}
 			});
