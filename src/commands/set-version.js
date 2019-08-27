@@ -8,14 +8,14 @@ const aws = require('aws-sdk'),
 	apiGWUrl = require('../util/apigw-url'),
 	NullLogger = require('../util/null-logger'),
 	markAlias = require('../tasks/mark-alias'),
-	getOwnerId = require('../tasks/get-owner-account-id');
+	getOwnerInfo = require('../tasks/get-owner-info');
 module.exports = function setVersion(options, optionalLogger) {
 	'use strict';
 	let lambdaConfig, lambda, apiGateway, apiConfig;
 	const logger = optionalLogger || new NullLogger(),
 		updateApi = function () {
-			return getOwnerId(optionalLogger)
-			.then(ownerId => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerId, lambdaConfig.region))
+			return getOwnerInfo(logger)
+			.then(ownerInfo => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerInfo.account, ownerInfo.partition, lambdaConfig.region))
 			.then(() => apiGateway.createDeploymentPromise({
 				restApiId: apiConfig.id,
 				stageName: options.version,

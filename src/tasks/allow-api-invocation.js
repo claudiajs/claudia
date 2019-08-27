@@ -1,5 +1,5 @@
 const aws = require('aws-sdk');
-module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsRegion, path) {
+module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsPartition, awsRegion, path) {
 	'use strict';
 	const lambda = new aws.Lambda({region: awsRegion}),
 		activePath = path || '*/*/*',
@@ -7,7 +7,7 @@ module.exports = function allowApiInvocation(functionName, functionVersion, rest
 			Action: 'lambda:InvokeFunction',
 			FunctionName: functionName,
 			Principal: 'apigateway.amazonaws.com',
-			SourceArn: 'arn:aws:execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/' + activePath,
+			SourceArn: 'arn:' + awsPartition + ':execute-api:' + awsRegion + ':' + ownerId + ':' + restApiId + '/' + activePath,
 			Qualifier: functionVersion,
 			StatementId: 'web-api-access-' + functionVersion + '-' + Date.now()
 		},

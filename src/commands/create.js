@@ -7,7 +7,6 @@ const path = require('path'),
 	cleanUpPackage = require('../tasks/clean-up-package'),
 	addPolicy = require('../tasks/add-policy'),
 	markAlias = require('../tasks/mark-alias'),
-	templateFile = require('../util/template-file'),
 	validatePackage = require('../tasks/validate-package'),
 	retriableWrap = require('../util/retriable-wrap'),
 	loggingWrap = require('../util/logging-wrap'),
@@ -23,6 +22,7 @@ const path = require('path'),
 	isRoleArn = require('../util/is-role-arn'),
 	lambdaCode = require('../tasks/lambda-code'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
+	getOwnerInfo = require('../tasks/get-owner-info'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -33,6 +33,8 @@ module.exports = function create(options, optionalLogger) {
 		customEnvVars,
 		functionName,
 		workingDir,
+		ownerAccount,
+		awsPartition,
 		packageFileDir;
 	const logger = optionalLogger || new NullLogger(),
 		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || (process.env.AWS_DELAY && parseInt(process.env.AWS_DELAY, 10)) || 5000,
@@ -211,7 +213,7 @@ module.exports = function create(options, optionalLogger) {
 					module: options['api-module'],
 					url: apiGWUrl(result.id, options.region, alias)
 				};
-				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, options.region, logger, options['cache-api-config']);
+				return rebuildWebApi(lambdaMetadata.FunctionName, alias, result.id, apiConfig, ownerAccount, awsPartition, options.region, logger, options['cache-api-config']);
 			})
 			.then(() => {
 				if (apiModule.postDeploy) {
@@ -279,6 +281,16 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
+		executorPolicy = function () {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Effect': 'Allow',
+					'Principal': {'Service': 'lambda.amazonaws.com'},
+					'Action': 'sts:AssumeRole'
+				}]
+			});
+		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
@@ -292,13 +304,10 @@ module.exports = function create(options, optionalLogger) {
 				}
 				return iam.getRole({RoleName: options.role}).promise();
 			} else {
-				return fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-					.then(lambdaRolePolicy => {
-						return iam.createRole({
-							RoleName: functionName + '-executor',
-							AssumeRolePolicyDocument: lambdaRolePolicy
-						}).promise();
-					});
+				return iam.createRole({
+					RoleName: functionName + '-executor',
+					AssumeRolePolicyDocument: executorPolicy()
+				}).promise();
 			}
 		},
 		addExtraPolicies = function () {
@@ -316,7 +325,41 @@ module.exports = function create(options, optionalLogger) {
 					'Action': [
 						'lambda:InvokeFunction'
 					],
-					'Resource': 'arn:aws:lambda:' + options.region + ':*:function:' + functionName
+					'Resource': 'arn:' + awsPartition + ':lambda:' + options.region + ':*:function:' + functionName
+				}]
+			});
+		},
+		loggingPolicy = function () {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [
+					{
+						'Effect': 'Allow',
+						'Action': [
+							'logs:CreateLogGroup',
+							'logs:CreateLogStream',
+							'logs:PutLogEvents'
+						],
+						'Resource': `arn:${awsPartition}:logs:*:*:*`
+					}
+				]
+			});
+		},
+		vpcPolicy = function () {
+			return JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Sid': 'VPCAccessExecutionPermission',
+					'Effect': 'Allow',
+					'Action': [
+						'logs:CreateLogGroup',
+						'logs:CreateLogStream',
+						'logs:PutLogEvents',
+						'ec2:CreateNetworkInterface',
+						'ec2:DeleteNetworkInterface',
+						'ec2:DescribeNetworkInterfaces'
+					],
+					'Resource': '*'
 				}]
 			});
 		},
@@ -338,6 +381,11 @@ module.exports = function create(options, optionalLogger) {
 	.then(packageInfo => {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
+	})
+	.then(() => getOwnerInfo(logger))
+	.then(ownerInfo => {
+		ownerAccount = ownerInfo.account;
+		awsPartition = ownerInfo.partition;
 	})
 	.then(() => fsPromise.mkdtempAsync(os.tmpdir() + path.sep))
 	.then(dir => workingDir = dir)
@@ -363,7 +411,11 @@ module.exports = function create(options, optionalLogger) {
 	})
 	.then(() => {
 		if (!options.role) {
-			return addPolicy(iam, 'log-writer', roleMetadata.Role.RoleName);
+			return iam.putRolePolicy({
+				RoleName: roleMetadata.Role.RoleName,
+				PolicyName: 'log-writer',
+				PolicyDocument: loggingPolicy()
+			}).promise();
 		}
 	})
 	.then(() => {
@@ -373,12 +425,11 @@ module.exports = function create(options, optionalLogger) {
 	})
 	.then(() => {
 		if (options['security-group-ids'] && !isRoleArn(options.role)) {
-			return fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
-			.then(vpcPolicy => iam.putRolePolicy({
+			return iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'vpc-access-execution',
-				PolicyDocument: vpcPolicy
-			}).promise());
+				PolicyDocument: vpcPolicy()
+			}).promise();
 		}
 	})
 	.then(() => {
@@ -400,7 +451,7 @@ module.exports = function create(options, optionalLogger) {
 		if (options['api-module']) {
 			return createWebApi(lambdaMetadata, packageFileDir);
 		} else if (options['deploy-proxy-api']) {
-			return deployProxyApi(lambdaMetadata, options, apiGatewayPromise, logger);
+			return deployProxyApi(lambdaMetadata, options, ownerAccount, awsPartition, apiGatewayPromise, logger);
 		} else {
 			return lambdaMetadata;
 		}

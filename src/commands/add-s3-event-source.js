@@ -1,11 +1,10 @@
 const loadConfig = require('../util/loadconfig'),
-	readJSON = require('../util/readjson'),
-	path = require('path'),
 	iamNameSanitize = require('../util/iam-name-sanitize'),
 	aws = require('aws-sdk');
 module.exports = function addS3EventSource(options) {
 	'use strict';
 	let lambdaConfig,
+		awsPartition,
 		lambda;
 	const ts = Date.now(),
 		getLambda = function (config) {
@@ -22,31 +21,37 @@ module.exports = function addS3EventSource(options) {
 				.then(getLambda)
 				.then(result => {
 					lambdaConfig.arn = result.FunctionArn;
+					awsPartition = result.FunctionArn.split(':')[1];
 					lambdaConfig.version = result.Version;
 				});
 		},
 		addS3AccessPolicy = function () {
-			return readJSON(path.join(__dirname, '..', '..', 'json-templates', 's3-bucket-access.json'))
-				.then(policy => {
-					policy.Statement[0].Resource[0] = policy.Statement[0].Resource[0].replace(/BUCKET_NAME/g, options.bucket);
-					return JSON.stringify(policy);
+			const iam = new aws.IAM({region: lambdaConfig.region});
+			return iam.putRolePolicy({
+				RoleName: lambdaConfig.role,
+				PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
+				PolicyDocument: JSON.stringify({
+					'Version': '2012-10-17',
+					'Statement': [
+						{
+							'Effect': 'Allow',
+							'Action': [
+								's3:*'
+							],
+							'Resource': [
+								`arn:${awsPartition}:s3:::${options.bucket}/*`
+							]
+						}
+					]
 				})
-				.then(policyContents => {
-					const iam = new aws.IAM({region: lambdaConfig.region});
-					return iam.putRolePolicy({
-						RoleName: lambdaConfig.role,
-						PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
-						PolicyDocument: policyContents
-					}).promise();
-				});
+			}).promise();
 		},
-
 		addInvokePermission = function () {
 			return lambda.addPermission({
 				Action: 'lambda:InvokeFunction',
 				FunctionName: lambdaConfig.name,
 				Principal: 's3.amazonaws.com',
-				SourceArn: 'arn:aws:s3:::' + options.bucket,
+				SourceArn: `arn:${awsPartition}:s3:::${options.bucket}`,
 				Qualifier: options.version,
 				StatementId: iamNameSanitize(`${options.bucket}-access-${ts}`)
 			}).promise();

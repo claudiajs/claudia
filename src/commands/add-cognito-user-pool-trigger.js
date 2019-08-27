@@ -1,7 +1,7 @@
 const loadConfig = require('../util/loadconfig'),
 	iamNameSanitize = require('../util/iam-name-sanitize'),
 	aws = require('aws-sdk'),
-	getOwnerAccount = require('../tasks/get-owner-account-id');
+	getOwnerInfo = require('../tasks/get-owner-info');
 module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 	'use strict';
 	let lambdaConfig,
@@ -36,8 +36,8 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 			}).promise().then(() => result);
 		},
 		getPoolArn = function () {
-			return getOwnerAccount(optionalLogger)
-				.then(owner => `arn:aws:cognito-idp:${lambdaConfig.region}:${owner}:userpool/${options['user-pool-id']}`);
+			return getOwnerInfo(optionalLogger)
+				.then(ownerInfo => `arn:${ownerInfo.partition}:cognito-idp:${lambdaConfig.region}:${ownerInfo.account}:userpool/${options['user-pool-id']}`);
 		},
 		cleanUpPoolConfig = function (data) {
 			/* cognito update requires the full config, not just a patch, but some attributes returned

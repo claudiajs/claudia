@@ -3,7 +3,7 @@
 'use strict';
 const aws = require('aws-sdk'),
 	awsRegion = require('./test-aws-region'),
-	getOwnerId = require('../../src/tasks/get-owner-account-id'),
+	getOwnerInfo = require('../../src/tasks/get-owner-info'),
 	userPoolName = 'test-user-pool-' + Date.now();
 
 let userPoolId, userPoolArn, idToken;
@@ -39,9 +39,9 @@ module.exports.create = function create() {
 	.then(result => {
 		userPoolId = result.UserPool.Id;
 	})
-	.then(getOwnerId)
-	.then(accountId => {
-		userPoolArn = `arn:aws:cognito-idp:${awsRegion}:${accountId}:userpool/${userPoolId}`;
+	.then(getOwnerInfo)
+	.then(owner => {
+		userPoolArn = `arn:${owner.partition}:cognito-idp:${awsRegion}:${owner.account}:userpool/${userPoolId}`;
 	})
 	.then(() => {
 		const params = {

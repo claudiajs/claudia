@@ -1,6 +1,7 @@
 const path = require('path'),
 	readjson = require('./readjson'),
 	fsUtil = require('./fs-util'),
+	isRoleArn = require('./is-role-arn'),
 	getSourceDir = function (options) {
 		'use strict';
 		if (typeof options === 'string') {
@@ -20,7 +21,7 @@ const path = require('path'),
 	},
 	toRoleName = function (roleNameOrArn) {
 		'use strict';
-		if (/^arn:aws:iam:.*/.test(roleNameOrArn)) {
+		if (isRoleArn(roleNameOrArn)) {
 			return roleNameOrArn.replace(/.*\//, '');
 		}
 		return roleNameOrArn;

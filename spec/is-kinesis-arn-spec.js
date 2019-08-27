@@ -5,6 +5,9 @@ describe('isKinesisArn', () => {
 	it('is truthy for an ARN representing a kinesis stream', () => {
 		expect(isKinesisArn('arn:aws:kinesis:us-east-1:123456789012:stream/example-stream-name')).toBeTruthy();
 	});
+	it('is truthy for an partition ARNs', () => {
+		expect(isKinesisArn('arn:aws-us-gov:kinesis:us-gov-west-1:123456789012:stream/my_stream')).toBeTruthy();
+	});
 	it('is falsy for different ARN types', () => {
 		expect(isKinesisArn('arn:aws:firehose:us-east-1:123456789012:deliverystream/example-stream-name')).toBeFalsy();
 		expect(isKinesisArn('arn:aws:kinesisanalytics:us-east-1:123456789012:application/example-application-name')).toBeFalsy();

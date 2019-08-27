@@ -1,5 +1,5 @@
 module.exports = function isSQSArn(string) {
 	'use strict';
-	return /^arn:aws:sqs:[^:]+:[^:]+:[^:]+$/.test(string);
+	return /^arn:aws[^:]*:sqs:[^:]+:[^:]+:[^:]+$/.test(string);
 };
 

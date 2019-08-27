@@ -3,11 +3,9 @@ const aws = require('aws-sdk'),
 	retriableWrap = require('../util/retriable-wrap'),
 	allowApiInvocation = require('./allow-api-invocation'),
 	NullLogger = require('../util/null-logger'),
-	sequentialPromiseMap = require('sequential-promise-map'),
-	getOwnerId = require('./get-owner-account-id');
-module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, functionVersion, optionalLogger) {
+	sequentialPromiseMap = require('sequential-promise-map');
+module.exports = function registerAuthorizers(authorizerMap, apiId, ownerAccount, awsPartition, awsRegion, functionVersion, optionalLogger) {
 	'use strict';
-	let ownerId;
 	const logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
 			loggingWrap(
@@ -52,7 +50,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 				authLambdaQualifier = functionVersion;
 			}
 			if (authConfig.lambdaName) {
-				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerId, awsRegion, 'authorizers/*');
+				return allowApiInvocation(authConfig.lambdaName, authLambdaQualifier, apiId, ownerAccount, awsPartition, awsRegion, 'authorizers/*');
 			} else {
 				return Promise.resolve();
 			}
@@ -70,7 +68,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 			if (type === 'COGNITO_USER_POOLS') {
 				params.providerARNs = authConfig.providerARNs;
 			} else {
-				params.authorizerUri = 'arn:aws:apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
+				params.authorizerUri = 'arn:' + awsPartition + ':apigateway:' + awsRegion + ':lambda:path/2015-03-31/functions/' + lambdaArn + '/invocations';
 			}
 			if (authConfig.validationExpression) {
 				params.identityValidationExpression = authConfig.validationExpression;
@@ -102,8 +100,6 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, awsRegion, f
 
 	return apiGateway.getAuthorizersPromise({restApiId: apiId})
 	.then(existingAuthorizers => sequentialPromiseMap(existingAuthorizers.items, removeAuthorizer))
-	.then(getOwnerId)
-	.then(accountId => ownerId = accountId)
 	.then(() => sequentialPromiseMap(authorizerNames, addAuthorizer))
 	.then(creationResults => {
 		let index;

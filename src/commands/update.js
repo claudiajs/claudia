@@ -16,7 +16,7 @@ const zipdir = require('../tasks/zipdir'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	NullLogger = require('../util/null-logger'),
 	updateEnvVars = require('../tasks/update-env-vars'),
-	getOwnerId = require('../tasks/get-owner-account-id'),
+	getOwnerInfo = require('../tasks/get-owner-info'),
 	fs = require('fs'),
 	fsPromise = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),
@@ -26,13 +26,13 @@ module.exports = function update(options, optionalLogger) {
 	'use strict';
 	let lambda, s3, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig, packageDir, packageArchive, s3Key,
+		ownerAccount, awsPartition,
 		workingDir,
 		requiresHandlerUpdate = false;
 	const logger = optionalLogger || new NullLogger(),
 		alias = (options && options.version) || 'latest',
 		updateProxyApi = function () {
-			return getOwnerId(logger)
-				.then(ownerId => allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerId, lambdaConfig.region))
+			return allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerAccount, awsPartition, lambdaConfig.region)
 				.then(() => apiGateway.createDeploymentPromise({
 					restApiId: apiConfig.id,
 					stageName: alias,
@@ -52,7 +52,7 @@ module.exports = function update(options, optionalLogger) {
 				return Promise.reject(`cannot load api config from ${apiModulePath}`);
 			}
 
-			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, lambdaConfig.region, logger, options['cache-api-config'])
+			return rebuildWebApi(lambdaConfig.name, alias, apiConfig.id, apiDef, ownerAccount, awsPartition, lambdaConfig.region, logger, options['cache-api-config'])
 				.then(rebuildResult => {
 					if (apiModule.postDeploy) {
 						return apiModule.postDeploy(
@@ -167,6 +167,11 @@ module.exports = function update(options, optionalLogger) {
 	.then(() => {
 		logger.logStage('loading Lambda config');
 		return initEnvVarsFromOptions(options);
+	})
+	.then(() => getOwnerInfo(logger))
+	.then(ownerInfo => {
+		ownerAccount = ownerInfo.account;
+		awsPartition = ownerInfo.partition;
 	})
 	.then(() => loadConfig(options, {lambda: {name: true, region: true}}))
 	.then(config => {

@@ -1,5 +1,5 @@
-module.exports = function isRoleArn(string) {
+module.exports = function isKinesisArn(string) {
 	'use strict';
-	return /^arn:aws:kinesis:[^:]+:[^:]+:stream\/[^:]+$/.test(string);
+	return /^arn:aws[^:]*:kinesis:[^:]+:[^:]+:stream\/[^:]+$/.test(string);
 };
 
