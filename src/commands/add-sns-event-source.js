@@ -1,4 +1,5 @@
 const loadConfig = require('../util/loadconfig'),
+	fsPromise = require('../util/fs-promise'),
 	aws = require('aws-sdk');
 
 module.exports = function addSNSEventSource(options) {
@@ -33,15 +34,33 @@ module.exports = function addSNSEventSource(options) {
 				StatementId: options.topic.split(':').slice(3).join('-')  + '-' + Date.now()
 			}).promise();
 		},
+		readPolicy = function () {
+			if (options['filter-policy-file']) {
+				return fsPromise.readFileAsync(options['filter-policy-file'], 'utf8');
+			} else {
+				return Promise.resolve(options['filter-policy']);
+			}
+		},
 		addSubscription = function () {
-			return sns.subscribe({
-				Protocol: 'lambda',
-				TopicArn: options.topic,
-				Endpoint: lambdaConfig.arn
-			}).promise();
+			return readPolicy()
+			.then(policy => {
+				const params = {
+					Protocol: 'lambda',
+					TopicArn: options.topic,
+					Endpoint: lambdaConfig.arn
+				};
+				if (policy) {
+					params.Attributes = {FilterPolicy: policy};
+				}
+				return params;
+			})
+			.then(params => sns.subscribe(params).promise());
 		};
 	if (!options.topic) {
 		return Promise.reject('SNS topic not specified. please provide it with --topic');
+	}
+	if (options['filter-policy'] && options['filter-policy-file']) {
+		return Promise.reject('Cannot use both filter-policy and filter-policy-file. Specify only one.');
 	}
 	return readConfig()
 		.then(addInvokePermission)
@@ -73,6 +92,16 @@ module.exports.doc = {
 			optional: true,
 			description: 'Config file containing the resource names',
 			default: 'claudia.json'
+		},
+		{
+			argument: 'filter-policy',
+			optional: true,
+			description: 'JSON filter policy for the subscription'
+		},
+		{
+			argument: 'filter-policy-file',
+			optional: true,
+			description: 'name of a file containing the JSON filter policy for the subscription'
 		}
 	]
 };

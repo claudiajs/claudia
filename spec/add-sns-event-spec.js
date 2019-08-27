@@ -36,6 +36,16 @@ describe('addSNSEventSource', () => {
 			done();
 		});
 	});
+	it('fails when both filter-policy and filter-policy-file are set', done => {
+		config['filter-policy'] = '{}';
+		config['filter-policy-file'] = 'x.json';
+		underTest(config)
+		.then(done.fail, reason => {
+			expect(reason).toEqual('Cannot use both filter-policy and filter-policy-file. Specify only one.');
+			done();
+		});
+	});
+
 	it('fails when the source dir does not contain the project config file', done => {
 		underTest(config).then(done.fail, reason => {
 			expect(reason).toEqual('claudia.json does not exist in the source folder');
@@ -96,6 +106,47 @@ describe('addSNSEventSource', () => {
 			.then(config => {
 				expect(config.Subscriptions.length).toBe(1);
 				expect(config.Subscriptions[0].Endpoint).toEqual(functionArn);
+			})
+			.then(done, done.fail);
+		});
+		it('does not add a filter policy if not requested', done =>	{
+			createLambda()
+			.then(() => underTest(config))
+			.then(() => sns.listSubscriptionsByTopic({TopicArn: config.topic}).promise())
+			.then(result => sns.getSubscriptionAttributes({SubscriptionArn: result.Subscriptions[0].SubscriptionArn}).promise())
+			.then(attr => {
+				expect(attr.Attributes.FilterPolicy).toBeFalsy();
+			})
+			.then(done, done.fail);
+		});
+
+		it('adds a filter policy if requested', done =>	{
+			const policy = {
+				provider: ['some-provider']
+			};
+			config['filter-policy'] = JSON.stringify(policy);
+			createLambda()
+			.then(() => underTest(config))
+			.then(() => sns.listSubscriptionsByTopic({TopicArn: config.topic}).promise())
+			.then(result => sns.getSubscriptionAttributes({SubscriptionArn: result.Subscriptions[0].SubscriptionArn}).promise())
+			.then(attr => {
+				expect(JSON.parse(attr.Attributes.FilterPolicy)).toEqual(policy);
+			})
+			.then(done, done.fail);
+		});
+		it('adds a filter policy from a file if requested', done =>	{
+			const policy = {
+					provider: ['some-provider']
+				},
+				policyFile = path.join(workingdir, 'sns-policy.json');
+			fs.writeFileSync(policyFile, JSON.stringify(policy), 'utf8');
+			config['filter-policy-file'] = policyFile;
+			createLambda()
+			.then(() => underTest(config))
+			.then(() => sns.listSubscriptionsByTopic({TopicArn: config.topic}).promise())
+			.then(result => sns.getSubscriptionAttributes({SubscriptionArn: result.Subscriptions[0].SubscriptionArn}).promise())
+			.then(attr => {
+				expect(JSON.parse(attr.Attributes.FilterPolicy)).toEqual(policy);
 			})
 			.then(done, done.fail);
 		});

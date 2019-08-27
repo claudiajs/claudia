@@ -1,5 +1,9 @@
 # Release history
 
+### 5.8.0 (?? August 2019)
+
+- support for adding SNS topic subscription filters
+
 ### 5.7.0 (15 August 2019)
 
 - support for oauth2 authorization scopes, thanks to [Kevin Coleman](https://github.com/kevintechie).
