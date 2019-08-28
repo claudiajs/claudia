@@ -36,7 +36,7 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 			}).promise().then(() => result);
 		},
 		getPoolArn = function () {
-			return getOwnerInfo(optionalLogger)
+			return getOwnerInfo(options.region, optionalLogger)
 				.then(ownerInfo => `arn:${ownerInfo.partition}:cognito-idp:${lambdaConfig.region}:${ownerInfo.account}:userpool/${options['user-pool-id']}`);
 		},
 		cleanUpPoolConfig = function (data) {

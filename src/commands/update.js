@@ -168,7 +168,7 @@ module.exports = function update(options, optionalLogger) {
 		logger.logStage('loading Lambda config');
 		return initEnvVarsFromOptions(options);
 	})
-	.then(() => getOwnerInfo(logger))
+	.then(() => getOwnerInfo(options.region, logger))
 	.then(ownerInfo => {
 		ownerAccount = ownerInfo.account;
 		awsPartition = ownerInfo.partition;

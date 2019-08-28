@@ -329,7 +329,7 @@ module.exports = function create(options, optionalLogger) {
 		functionName = packageInfo.name;
 		functionDesc = packageInfo.description;
 	})
-	.then(() => getOwnerInfo(logger))
+	.then(() => getOwnerInfo(options.region, logger))
 	.then(ownerInfo => {
 		ownerAccount = ownerInfo.account;
 		awsPartition = ownerInfo.partition;

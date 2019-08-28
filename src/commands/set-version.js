@@ -14,7 +14,7 @@ module.exports = function setVersion(options, optionalLogger) {
 	let lambdaConfig, lambda, apiGateway, apiConfig;
 	const logger = optionalLogger || new NullLogger(),
 		updateApi = function () {
-			return getOwnerInfo(logger)
+			return getOwnerInfo(options.region, logger)
 			.then(ownerInfo => allowApiInvocation(lambdaConfig.name, options.version, apiConfig.id, ownerInfo.account, ownerInfo.partition, lambdaConfig.region))
 			.then(() => apiGateway.createDeploymentPromise({
 				restApiId: apiConfig.id,
