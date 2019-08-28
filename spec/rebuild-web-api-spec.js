@@ -1447,7 +1447,6 @@ describe('rebuildWebApi', () => {
 					'apigateway.putMethodResponse',
 					'apigateway.putIntegrationResponse',
 					'apigateway.createDeployment']);
-				expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
 			}).then(done, done.fail);
 		});
 	});
