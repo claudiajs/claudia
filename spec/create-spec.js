@@ -4,11 +4,9 @@ const underTest = require('../src/commands/create'),
 	tmppath = require('../src/util/tmppath'),
 	destroyObjects = require('./util/destroy-objects'),
 	callApi = require('../src/util/call-api'),
-	templateFile = require('../src/util/template-file'),
 	ArrayLogger = require('../src/util/array-logger'),
 	fs = require('fs'),
 	fsUtil = require('../src/util/fs-util'),
-	fsPromise = require('../src/util/fs-promise'),
 	retriableWrap = require('../src/util/retriable-wrap'),
 	path = require('path'),
 	os = require('os'),
@@ -222,6 +220,16 @@ describe('create', () => {
 	});
 
 	describe('role management', () => {
+		const executorPolicy =
+			JSON.stringify({
+				'Version': '2012-10-17',
+				'Statement': [{
+					'Effect': 'Allow',
+					'Principal': {'Service': 'lambda.amazonaws.com'},
+					'Action': 'sts:AssumeRole'
+				}]
+			});
+
 		it('creates the IAM role for the lambda', done => {
 			createFromDir('hello-world')
 			.then(() => iam.getRole({ RoleName: `${testRunName}-executor` }).promise())
@@ -239,13 +247,10 @@ describe('create', () => {
 			beforeEach(done => {
 				roleName = `${testRunName}-manual`;
 				logger = new ArrayLogger();
-				fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-				.then(lambdaRolePolicy => {
-					return iam.createRole({
-						RoleName: roleName,
-						AssumeRolePolicyDocument: lambdaRolePolicy
-					}).promise();
-				})
+				return iam.createRole({
+					RoleName: roleName,
+					AssumeRolePolicyDocument: executorPolicy
+				}).promise()
 				.then(result => {
 					createdRole = result.Role;
 				})
@@ -347,7 +352,23 @@ describe('create', () => {
 			let vpc, subnet, securityGroup;
 			const securityGroupName = `${testRunName}SecurityGroup`,
 				CidrBlock = '10.0.0.0/16',
-				ec2 = new aws.EC2({ region: awsRegion });
+				ec2 = new aws.EC2({ region: awsRegion }),
+				vpcPolicy = {
+					'Version': '2012-10-17',
+					'Statement': [{
+						'Sid': 'VPCAccessExecutionPermission',
+						'Effect': 'Allow',
+						'Action': [
+							'logs:CreateLogGroup',
+							'logs:CreateLogStream',
+							'logs:PutLogEvents',
+							'ec2:CreateNetworkInterface',
+							'ec2:DeleteNetworkInterface',
+							'ec2:DescribeNetworkInterfaces'
+						],
+						'Resource': '*'
+					}]
+				};
 			beforeAll(done => {
 				ec2.createVpc({ CidrBlock: CidrBlock }).promise()
 				.then(vpcData => {
@@ -392,23 +413,7 @@ describe('create', () => {
 				.then(result => expect(result.PolicyNames).toEqual(['log-writer', 'vpc-access-execution']))
 				.then(() => iam.getRolePolicy({ PolicyName: 'vpc-access-execution', RoleName: `${testRunName}-executor` }).promise())
 				.then(policy => {
-					expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
-						{
-							'Version': '2012-10-17',
-							'Statement': [{
-								'Sid': 'VPCAccessExecutionPermission',
-								'Effect': 'Allow',
-								'Action': [
-									'logs:CreateLogGroup',
-									'logs:CreateLogStream',
-									'logs:PutLogEvents',
-									'ec2:CreateNetworkInterface',
-									'ec2:DeleteNetworkInterface',
-									'ec2:DescribeNetworkInterfaces'
-								],
-								'Resource': '*'
-							}]
-						});
+					expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(vpcPolicy);
 				})
 				.then(done, done.fail);
 			});
@@ -416,13 +421,10 @@ describe('create', () => {
 				let createdRoleArn, roleName;
 				beforeEach(done => {
 					roleName = `${testRunName}-manual`;
-					fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-					.then(lambdaRolePolicy => {
-						return iam.createRole({
-							RoleName: roleName,
-							AssumeRolePolicyDocument: lambdaRolePolicy
-						}).promise();
-					})
+					return iam.createRole({
+						RoleName: roleName,
+						AssumeRolePolicyDocument: executorPolicy
+					}).promise()
 					.then(result => {
 						createdRoleArn = result.Role.Arn;
 					})
@@ -438,34 +440,17 @@ describe('create', () => {
 					.then(result => expect(result.PolicyNames).toEqual(['vpc-access-execution']))
 					.then(() => iam.getRolePolicy({ PolicyName: 'vpc-access-execution', RoleName: roleName }).promise())
 					.then(policy => {
-						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(
-							{
-								'Version': '2012-10-17',
-								'Statement': [{
-									'Sid': 'VPCAccessExecutionPermission',
-									'Effect': 'Allow',
-									'Action': [
-										'logs:CreateLogGroup',
-										'logs:CreateLogStream',
-										'logs:PutLogEvents',
-										'ec2:CreateNetworkInterface',
-										'ec2:DeleteNetworkInterface',
-										'ec2:DescribeNetworkInterfaces'
-									],
-									'Resource': '*'
-								}]
-							});
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(vpcPolicy);
 					})
 					.then(done, done.fail);
 				});
 				it('does not try to patch IAM policies if the role is specified with an ARN', done => {
 					config.role = createdRoleArn;
-					fsPromise.readFileAsync(templateFile('vpc-policy.json'), 'utf8')
-					.then(vpcPolicy => iam.putRolePolicy({
+					return iam.putRolePolicy({
 						RoleName: roleName,
 						PolicyName: 'test-vpc-access',
-						PolicyDocument: vpcPolicy
-					}).promise())
+						PolicyDocument: JSON.stringify(vpcPolicy)
+					}).promise()
 					.then(() => createFromDir('hello-world'))
 					.then(() => iam.listRolePolicies({ RoleName: roleName }).promise())
 					.then(result => expect(result.PolicyNames).toEqual(['test-vpc-access']))

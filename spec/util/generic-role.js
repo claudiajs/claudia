@@ -1,21 +1,24 @@
 /*global require */
 const aws = require('aws-sdk'),
-	templateFile = require('../../src/util/template-file'),
 	destroyRole = require('../../src/util/destroy-role'),
-	fsPromise = require('../../src/util/fs-promise.js'),
 	awsRegion = require('./test-aws-region'),
 	iam = new aws.IAM({region: awsRegion}),
 	genericRoleName = 'test-generic-role-' + Date.now();
 
 module.exports.create = function create(name) {
 	'use strict';
-	return fsPromise.readFileAsync(templateFile('lambda-exector-policy.json'), 'utf8')
-		.then(lambdaRolePolicy => {
-			return iam.createRole({
-				RoleName: name || genericRoleName,
-				AssumeRolePolicyDocument: lambdaRolePolicy
-			}).promise();
-		});
+	const lambdaRolePolicy = JSON.stringify({
+		'Version': '2012-10-17',
+		'Statement': [{
+			'Effect': 'Allow',
+			'Principal': {'Service': 'lambda.amazonaws.com'},
+			'Action': 'sts:AssumeRole'
+		}]
+	});
+	return iam.createRole({
+		RoleName: name || genericRoleName,
+		AssumeRolePolicyDocument: lambdaRolePolicy
+	}).promise();
 };
 module.exports.destroy = function () {
 	'use strict';
