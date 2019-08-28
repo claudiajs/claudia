@@ -309,7 +309,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 		},
 		getExistingConfigHash = function () {
 			if (!configCacheStageVar) {
-				return false;
+				return Promise.resolve(false);
 			}
 			return apiGateway.getStagePromise({ restApiId: restApiId, stageName: functionVersion })
 				.then(stage => stage.variables && stage.variables[configCacheStageVar])

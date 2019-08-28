@@ -23,6 +23,10 @@ const path = require('path'),
 	lambdaCode = require('../tasks/lambda-code'),
 	initEnvVarsFromOptions = require('../util/init-env-vars-from-options'),
 	getOwnerInfo = require('../tasks/get-owner-info'),
+	executorPolicy = require('../policies/lambda-executor-policy'),
+	loggingPolicy = require('../policies/logging-policy'),
+	vpcPolicy = require('../policies/vpc-policy'),
+	lambdaInvocationPolicy = require('../policies/lambda-invocation-policy'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -281,16 +285,6 @@ module.exports = function create(options, optionalLogger) {
 			}
 			return config;
 		},
-		executorPolicy = function () {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Effect': 'Allow',
-					'Principal': {'Service': 'lambda.amazonaws.com'},
-					'Action': 'sts:AssumeRole'
-				}]
-			});
-		},
 		loadRole = function (functionName) {
 			logger.logStage('initialising IAM role');
 			if (options.role) {
@@ -315,53 +309,6 @@ module.exports = function create(options, optionalLogger) {
 				const policyName = path.basename(fileName).replace(/[^A-z0-9]/g, '-');
 				return addPolicy(iam, policyName, roleMetadata.Role.RoleName, fileName);
 			}));
-		},
-		recursivePolicy = function (functionName) {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Sid': 'InvokePermission',
-					'Effect': 'Allow',
-					'Action': [
-						'lambda:InvokeFunction'
-					],
-					'Resource': 'arn:' + awsPartition + ':lambda:' + options.region + ':*:function:' + functionName
-				}]
-			});
-		},
-		loggingPolicy = function () {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [
-					{
-						'Effect': 'Allow',
-						'Action': [
-							'logs:CreateLogGroup',
-							'logs:CreateLogStream',
-							'logs:PutLogEvents'
-						],
-						'Resource': `arn:${awsPartition}:logs:*:*:*`
-					}
-				]
-			});
-		},
-		vpcPolicy = function () {
-			return JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Sid': 'VPCAccessExecutionPermission',
-					'Effect': 'Allow',
-					'Action': [
-						'logs:CreateLogGroup',
-						'logs:CreateLogStream',
-						'logs:PutLogEvents',
-						'ec2:CreateNetworkInterface',
-						'ec2:DeleteNetworkInterface',
-						'ec2:DescribeNetworkInterfaces'
-					],
-					'Resource': '*'
-				}]
-			});
 		},
 		cleanup = function (result) {
 			if (!options.keep) {
@@ -414,7 +361,7 @@ module.exports = function create(options, optionalLogger) {
 			return iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'log-writer',
-				PolicyDocument: loggingPolicy()
+				PolicyDocument: loggingPolicy(awsPartition)
 			}).promise();
 		}
 	})
@@ -437,7 +384,7 @@ module.exports = function create(options, optionalLogger) {
 			return iam.putRolePolicy({
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'recursive-execution',
-				PolicyDocument: recursivePolicy(functionName)
+				PolicyDocument: lambdaInvocationPolicy(functionName, awsPartition, options.region)
 			}).promise();
 		}
 	})

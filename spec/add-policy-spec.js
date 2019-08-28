@@ -1,43 +1,50 @@
 /*global describe, it, expect, beforeEach, afterEach  */
 const underTest = require('../src/tasks/add-policy'),
 	destroyObjects = require('./util/destroy-objects'),
+	tmppath = require('../src/util/tmppath'),
 	awsRegion = require('./util/test-aws-region'),
-	aws = require('aws-sdk');
+	aws = require('aws-sdk'),
+	path = require('path'),
+	loggingPolicy = require('../src/policies/logging-policy'),
+	fsPromise = require('../src/util/fs-promise'),
+	lambdaRolePolicy = require('../src/policies/lambda-executor-policy');
 describe('addPolicy', () => {
 	'use strict';
-	let testRunName;
-	const iam = new aws.IAM({ region: awsRegion }),
-		lambdaRolePolicy = {
-			Version: '2012-10-17',
-			Statement: [{
-				Effect: 'Allow',
-				Principal: {
-					Service: 'lambda.amazonaws.com'
-				},
-				Action: 'sts:AssumeRole'
-			}]
-		};
+	let testRunName, workingdir;
+	const iam = new aws.IAM({ region: awsRegion });
 	beforeEach(done => {
+		workingdir = tmppath();
+
+
 		testRunName = 'role-test' + Date.now();
 		iam.createRole({
 			RoleName: testRunName,
-			AssumeRolePolicyDocument: JSON.stringify(lambdaRolePolicy)
+			AssumeRolePolicyDocument: lambdaRolePolicy()
 		}).promise()
+		.then(() => fsPromise.mkdirAsync(workingdir))
 		.then(done, done.fail);
 	});
 	afterEach((done) => {
-		destroyObjects({ lambdaRole: testRunName }).then(done, done.fail);
+		destroyObjects({
+			workingdir: workingdir,
+			lambdaRole: testRunName
+		}).then(done, done.fail);
 	});
-	it('appends a policy from the templates folder to the role', done => {
-		const expectedPolicy = require('../json-templates/log-writer');
-		underTest(iam, 'log-writer', testRunName)
+	it('appends a policy from a file to the role', done => {
+		const policyPath = path.join(workingdir, 'policy1.json');
+		fsPromise.writeFileAsync(policyPath, loggingPolicy('aws'), 'utf8')
+		.then(() => underTest(iam, 'log-writer', testRunName, policyPath))
 		.then(() =>
 			iam.getRolePolicy({
 				PolicyName: 'log-writer',
 				RoleName: testRunName
 			}).promise()
 		)
-		.then(policy => expect(JSON.parse(decodeURIComponent(policy.PolicyDocument))).toEqual(expectedPolicy))
+		.then(policy => {
+			const parsedPolicy = JSON.parse(decodeURIComponent(policy.PolicyDocument)),
+				expectedPolicy = JSON.parse(loggingPolicy('aws'));
+			expect(parsedPolicy).toEqual(expectedPolicy);
+		})
 		.then(done, done.fail);
 	});
 });

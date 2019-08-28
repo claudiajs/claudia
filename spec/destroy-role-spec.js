@@ -1,44 +1,24 @@
 /*global describe, it, expect, beforeEach */
 const underTest = require('../src/util/destroy-role'),
 	aws = require('aws-sdk'),
-	awsRegion = require('./util/test-aws-region');
+	awsRegion = require('./util/test-aws-region'),
+	executorPolicy = require('../src/policies/lambda-executor-policy'),
+	loggingPolicy = require('../src/policies/logging-policy');
 describe('destroyRole', () => {
 	'use strict';
 	let testRunName, iam;
 	beforeEach(done => {
-		const executorPolicy = JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Effect': 'Allow',
-					'Principal': {'Service': 'lambda.amazonaws.com'},
-					'Action': 'sts:AssumeRole'
-				}]
-			}),
-			loggingPolicy = JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [
-					{
-						'Effect': 'Allow',
-						'Action': [
-							'logs:CreateLogGroup',
-							'logs:CreateLogStream',
-							'logs:PutLogEvents'
-						],
-						'Resource': `arn:aws:logs:*:*:*`
-					}
-				]
-			});
 		testRunName = `test${Date.now()}-executor`;
 		iam = new aws.IAM({region: awsRegion});
 
 		iam.createRole({
 			RoleName: testRunName,
-			AssumeRolePolicyDocument: executorPolicy
+			AssumeRolePolicyDocument: executorPolicy()
 		}).promise()
 		.then(() => iam.putRolePolicy({
 			RoleName: testRunName,
 			PolicyName: 'log-writer',
-			PolicyDocument: loggingPolicy
+			PolicyDocument: loggingPolicy('aws')
 		}).promise())
 		.then(done, done.fail);
 	});
