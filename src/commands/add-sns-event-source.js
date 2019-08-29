@@ -96,11 +96,13 @@ module.exports.doc = {
 		{
 			argument: 'filter-policy',
 			optional: true,
-			description: 'JSON filter policy for the subscription'
+			description: 'JSON filter policy for the subscription',
+			example: '{"payment-type": ["card"]}'
 		},
 		{
 			argument: 'filter-policy-file',
 			optional: true,
+			example: 'sns-filter-policy.json',
 			description: 'name of a file containing the JSON filter policy for the subscription'
 		}
 	]
