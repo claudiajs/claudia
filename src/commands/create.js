@@ -26,6 +26,8 @@ const path = require('path'),
 	executorPolicy = require('../policies/lambda-executor-policy'),
 	loggingPolicy = require('../policies/logging-policy'),
 	vpcPolicy = require('../policies/vpc-policy'),
+	snsPublishPolicy = require('../policies/sns-publish-policy'),
+	isSNSArn = require('../util/is-sns-arn'),
 	lambdaInvocationPolicy = require('../policies/lambda-invocation-policy'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
@@ -48,6 +50,16 @@ module.exports = function create(options, optionalLogger) {
 		iam = loggingWrap(new aws.IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		s3 = loggingWrap(new aws.S3({region: options.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'}),
+		getSnsDLQTopic = function () {
+			const topicNameOrArn = options['dlq-sns'];
+			if (!topicNameOrArn) {
+				return false;
+			}
+			if (isSNSArn(topicNameOrArn)) {
+				return topicNameOrArn;
+			}
+			return `arn:${awsPartition}:sns:${options.region}:${ownerAccount}:${topicNameOrArn}`;
+		},
 		apiGatewayPromise = retriableWrap(
 			loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
@@ -166,7 +178,10 @@ module.exports = function create(options, optionalLogger) {
 						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
 							SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),
 							SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(','))
-						}
+						},
+						DeadLetterConfig: getSnsDLQTopic() ? {
+							TargetArn: getSnsDLQTopic()
+						} : null
 					}).promise();
 				},
 				awsDelay, awsRetries,
@@ -362,7 +377,16 @@ module.exports = function create(options, optionalLogger) {
 				RoleName: roleMetadata.Role.RoleName,
 				PolicyName: 'log-writer',
 				PolicyDocument: loggingPolicy(awsPartition)
-			}).promise();
+			}).promise()
+			.then(() => {
+				if (getSnsDLQTopic()) {
+					return iam.putRolePolicy({
+						RoleName: roleMetadata.Role.RoleName,
+						PolicyName: 'dlq-publisher',
+						PolicyDocument: snsPublishPolicy(getSnsDLQTopic())
+					}).promise();
+				}
+			});
 		}
 	})
 	.then(() => {
@@ -618,6 +642,12 @@ module.exports.doc = {
 			optional: true,
 			description: 'A comma-delimited list of Lambda layers to attach to this function',
 			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
+		},
+		{
+			argument: 'dlq-sns',
+			optional: true,
+			description: 'Dead letter queue SNS topic name or ARN',
+			example: 'arn:aws:sns:us-east-1:123456789012:my_corporate_topic'
 		}
 	]
 };

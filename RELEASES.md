@@ -3,6 +3,8 @@
 ### 5.8.0 (?? August 2019)
 
 - support for adding SNS topic subscription filters
+- support for adding dead letter queues when creating functions
+- support for AWS partitions (making claudia work with aws-us-gov and aws-cn)
 
 ### 5.7.0 (15 August 2019)
 

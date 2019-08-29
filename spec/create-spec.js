@@ -13,12 +13,14 @@ const underTest = require('../src/commands/create'),
 	aws = require('aws-sdk'),
 	pollForLogEvents = require('./util/poll-for-log-events'),
 	awsRegion = require('./util/test-aws-region'),
+	executorPolicy = require('../src/policies/lambda-executor-policy'),
+	snsPublishPolicy = require('../src/policies/sns-publish-policy'),
 	lambdaCode = require('../src/tasks/lambda-code');
 describe('create', () => {
 	'use strict';
 
 
-	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise;
+	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise, sns;
 	const defaultRuntime = 'nodejs10.x',
 		createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
@@ -52,6 +54,7 @@ describe('create', () => {
 		s3 = new aws.S3({region: awsRegion, signatureVersion: 'v4'});
 		apiGatewayPromise = retriableWrap(new aws.APIGateway({ region: awsRegion }));
 		logs = new aws.CloudWatchLogs({ region: awsRegion });
+		sns = new aws.SNS({region: awsRegion});
 	});
 	beforeEach(() => {
 		workingdir = tmppath();
@@ -220,16 +223,6 @@ describe('create', () => {
 	});
 
 	describe('role management', () => {
-		const executorPolicy =
-			JSON.stringify({
-				'Version': '2012-10-17',
-				'Statement': [{
-					'Effect': 'Allow',
-					'Principal': {'Service': 'lambda.amazonaws.com'},
-					'Action': 'sts:AssumeRole'
-				}]
-			});
-
 		it('creates the IAM role for the lambda', done => {
 			createFromDir('hello-world')
 			.then(() => iam.getRole({ RoleName: `${testRunName}-executor` }).promise())
@@ -249,7 +242,7 @@ describe('create', () => {
 				logger = new ArrayLogger();
 				return iam.createRole({
 					RoleName: roleName,
-					AssumeRolePolicyDocument: executorPolicy
+					AssumeRolePolicyDocument: executorPolicy()
 				}).promise()
 				.then(result => {
 					createdRole = result.Role;
@@ -423,7 +416,7 @@ describe('create', () => {
 					roleName = `${testRunName}-manual`;
 					return iam.createRole({
 						RoleName: roleName,
-						AssumeRolePolicyDocument: executorPolicy
+						AssumeRolePolicyDocument: executorPolicy()
 					}).promise()
 					.then(result => {
 						createdRoleArn = result.Role.Arn;
@@ -1368,6 +1361,106 @@ describe('create', () => {
 			})
 			.then(done, done.fail);
 		});
-
+	});
+	describe('dead letter queue support', () => {
+		let snsTopicArn, snsTopicName;
+		beforeAll(done => {
+			snsTopicName = `test-topic-${Date.now()}`;
+			sns.createTopic({
+				Name: snsTopicName
+			}).promise()
+			.then(result => snsTopicArn = result.TopicArn)
+			.then(done);
+		});
+		afterAll(done => {
+			destroyObjects({snsTopic: snsTopicArn})
+			.then(done, done.fail);
+		});
+		it('does not set up a DLQ configuration if not requested', done => {
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.DeadLetterConfig).toBeFalsy();
+			})
+			.then(done, done.fail);
+		});
+		it('adds a SNS access policy and DLQ configuration by topic ARN if requested', done => {
+			config['dlq-sns'] = snsTopicArn;
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.DeadLetterConfig).toEqual({TargetArn: snsTopicArn});
+				return configuration.Role;
+			})
+			.then(roleArn => {
+				const roleName = roleArn.split(':')[5].split('/')[1];
+				return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+			})
+			.then(policy => {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+					[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [snsTopicArn] }]
+				);
+			})
+			.then(done, done.fail);
+		});
+		it('adds a SNS access policy and DLQ configuration by topic name if requested', done => {
+			config['dlq-sns'] = snsTopicName;
+			createFromDir('hello-world')
+			.then(getLambdaConfiguration)
+			.then(configuration => {
+				expect(configuration.DeadLetterConfig).toEqual({TargetArn: snsTopicArn});
+				return configuration.Role;
+			})
+			.then(roleArn => {
+				const roleName = roleArn.split(':')[5].split('/')[1];
+				return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+			})
+			.then(policy => {
+				expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+					[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [snsTopicArn] }]
+				);
+			})
+			.then(done, done.fail);
+		});
+		describe('when a role is provided', () => {
+			let createdRoleArn, roleName;
+			beforeEach(done => {
+				roleName = `${testRunName}-manual`;
+				return iam.createRole({
+					RoleName: roleName,
+					AssumeRolePolicyDocument: executorPolicy()
+				}).promise()
+				.then(result => {
+					createdRoleArn = result.Role.Arn;
+				})
+				.then(() => iam.putRolePolicy({
+					RoleName: roleName,
+					PolicyName: 'manual-dlq-publisher',
+					PolicyDocument: snsPublishPolicy(snsTopicArn)
+				}).promise())
+				.then(done, done.fail);
+			});
+			afterEach(() => {
+				newObjects.lambdaRole = roleName;
+			});
+			it('does not patch the role', done => {
+				config['dlq-sns'] = snsTopicArn;
+				config.role = createdRoleArn;
+				createFromDir('hello-world')
+				.then(getLambdaConfiguration)
+				.then(configuration => {
+					expect(configuration.DeadLetterConfig).toEqual({TargetArn: snsTopicArn});
+					return configuration.Role;
+				})
+				.then(roleArn => {
+					const roleName = roleArn.split(':')[5].split('/')[1];
+					return iam.listRolePolicies({ RoleName: roleName }).promise();
+				})
+				.then(result => {
+					expect(result.PolicyNames.find(t => t === 'dlq-publisher')).toBeFalsy();
+				})
+				.then(done, done.fail);
+			});
+		});
 	});
 });
