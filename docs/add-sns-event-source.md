@@ -18,3 +18,7 @@ claudia add-sns-event-source {OPTIONS}
     * _Defaults to_: current directory
 *  `--config`:  (_optional_) Config file containing the resource names
     * _Defaults to_: claudia.json
+*  `--filter-policy`:  (_optional_) JSON filter policy for the subscription
+    * _For example_: {"payment-type": ["card"]}
+*  `--filter-policy-file`:  (_optional_) name of a file containing the JSON filter policy for the subscription
+    * _For example_: sns-filter-policy.json

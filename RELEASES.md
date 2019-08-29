@@ -1,6 +1,6 @@
 # Release history
 
-### 5.8.0 (?? August 2019)
+### 5.8.0 (29 August 2019)
 
 - support for adding SNS topic subscription filters
 - support for adding dead letter queues when creating functions

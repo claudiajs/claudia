@@ -56,3 +56,13 @@ claudia update {OPTIONS}
     * _For example_: arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4
 *  `--remove-layers`:  (_optional_) A comma-delimited list of Lambda layers to remove from this function. It will not remove any layers apart from the ones specified in the argument.
     * _For example_: arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4
+*  `--dlq-sns`:  (_optional_) Dead letter queue SNS topic name or ARN
+    * _For example_: arn:aws:sns:us-east-1:123456789012:my_corporate_topic
+*  `--skip-iam`:  (_optional_) Do not try to modify the IAM role for Lambda
+    * _For example_: true
+*  `--aws-delay`:  (_optional_) number of milliseconds betweeen retrying AWS operations if they fail
+    * _For example_: 3000
+    * _Defaults to_: 5000
+*  `--aws-retries`:  (_optional_) number of times to retry AWS operations if they fail
+    * _For example_: 15
+    * _Defaults to_: 15
