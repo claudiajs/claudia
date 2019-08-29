@@ -189,7 +189,7 @@ module.exports = function create(options, optionalLogger) {
 					return error &&
 						error.code === 'InvalidParameterValueException' &&
 						(error.message === 'The role defined for the function cannot be assumed by Lambda.'
-						|| error.message === 'The provided execution role does not have permissions to call CreateNetworkInterface on EC2'
+						|| error.message.startsWith('The provided execution role does not have permissions')
 						|| error.message.startsWith('Lambda was unable to configure access to your environment variables because the KMS key is invalid for CreateGrant.')
 						);
 				},

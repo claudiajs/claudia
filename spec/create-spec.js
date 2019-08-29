@@ -1381,6 +1381,14 @@ describe('create', () => {
 			.then(getLambdaConfiguration)
 			.then(configuration => {
 				expect(configuration.DeadLetterConfig).toBeFalsy();
+				return configuration.Role;
+			})
+			.then(roleArn => {
+				const roleName = roleArn.split(':')[5].split('/')[1];
+				return iam.listRolePolicies({ RoleName: roleName }).promise();
+			})
+			.then(result => {
+				expect(result.PolicyNames.find(t => t === 'dlq-publisher')).toBeFalsy();
 			})
 			.then(done, done.fail);
 		});

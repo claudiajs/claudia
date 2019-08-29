@@ -12,10 +12,12 @@ const underTest = require('../src/commands/update'),
 	aws = require('aws-sdk'),
 	os = require('os'),
 	awsRegion = require('./util/test-aws-region'),
+	snsPublishPolicy = require('../src/policies/sns-publish-policy'),
+	executorPolicy = require('../src/policies/lambda-executor-policy'),
 	lambdaCode = require('../src/tasks/lambda-code');
 describe('update', () => {
 	'use strict';
-	let workingdir, testRunName,  lambda, s3, newObjects;
+	let workingdir, testRunName,  lambda, s3, newObjects, sns, iam;
 	const invoke = function (url, options) {
 			if (!options) {
 				options = {};
@@ -29,6 +31,8 @@ describe('update', () => {
 	beforeAll(() => {
 		lambda = new aws.Lambda({region: awsRegion});
 		s3 = new aws.S3({region: awsRegion, signatureVersion: 'v4'});
+		iam = new aws.IAM({ region: awsRegion });
+		sns = new aws.SNS({region: awsRegion});
 	});
 	beforeEach(() => {
 		workingdir = tmppath();
@@ -756,12 +760,9 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('does not change environment variables if set-env not provided', done => {
-			return underTest({source: workingdir, version: 'new'}, logger).then(() => {
-				return lambda.getFunctionConfiguration({
-					FunctionName: testRunName,
-					Qualifier: 'new'
-				}).promise();
-			}).then(configuration => {
+			return underTest({source: workingdir, version: 'new'}, logger)
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => {
 				expect(configuration.Environment).toEqual({
 					Variables: {
 						'XPATH': '/var/www',
@@ -782,12 +783,9 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 		it('changes environment variables if set-env is provided', done => {
-			return underTest({source: workingdir, version: 'new', 'set-env': 'XPATH=/opt,ZPATH=/usr'}, logger).then(() => {
-				return lambda.getFunctionConfiguration({
-					FunctionName: testRunName,
-					Qualifier: 'new'
-				}).promise();
-			}).then(configuration => {
+			return underTest({source: workingdir, version: 'new', 'set-env': 'XPATH=/opt,ZPATH=/usr'}, logger)
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => {
 				expect(configuration.Environment).toEqual({
 					Variables: {
 						'XPATH': '/opt',
@@ -837,12 +835,9 @@ describe('update', () => {
 		it('changes env variables specified in a JSON file', done => {
 			const envpath = path.join(workingdir, 'env.json');
 			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
-			return underTest({source: workingdir, version: 'new', 'set-env-from-json': envpath}, logger).then(() => {
-				return lambda.getFunctionConfiguration({
-					FunctionName: testRunName,
-					Qualifier: 'new'
-				}).promise();
-			}).then(configuration => {
+			return underTest({source: workingdir, version: 'new', 'set-env-from-json': envpath}, logger)
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => {
 				expect(configuration.Environment).toEqual({
 					Variables: {
 						'XPATH': '/opt',
@@ -866,12 +861,9 @@ describe('update', () => {
 		it('updates env variables specified in a JSON file if update-env-from-json is provided', done => {
 			const envpath = path.join(workingdir, 'env.json');
 			fs.writeFileSync(envpath, JSON.stringify({'XPATH': '/opt', 'ZPATH': '/usr'}), 'utf8');
-			return underTest({source: workingdir, version: 'new', 'update-env-from-json': envpath}, logger).then(() => {
-				return lambda.getFunctionConfiguration({
-					FunctionName: testRunName,
-					Qualifier: 'new'
-				}).promise();
-			}).then(configuration => {
+			return underTest({source: workingdir, version: 'new', 'update-env-from-json': envpath}, logger)
+			.then(() => getLambdaConfiguration('new'))
+			.then(configuration => {
 				expect(configuration.Environment).toEqual({
 					Variables: {
 						'XPATH': '/opt',
@@ -921,12 +913,6 @@ describe('update', () => {
 					LayerName: layer.LayerArn,
 					VersionNumber: layer.Version
 				}).promise();
-			},
-			getFunctionConfiguration = function (qualifier) {
-				return lambda.getFunctionConfiguration({
-					FunctionName: testRunName,
-					Qualifier: qualifier
-				}).promise();
 			};
 		beforeAll((done) => {
 			const prefix = 'test' + Date.now();
@@ -952,13 +938,13 @@ describe('update', () => {
 			});
 			it('attaches no layers by default', (done) => {
 				return underTest({source: workingdir, version: 'new'})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => expect(configuration.Layers).toBeFalsy())
 					.then(done, done.fail);
 			});
 			it('can replace layer with --layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'layers': layers[0].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
 					})
@@ -966,7 +952,7 @@ describe('update', () => {
 			});
 			it('can replace multple layers with --layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'layers': layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn })
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
 					})
@@ -974,7 +960,7 @@ describe('update', () => {
 			});
 			it('can add a single layer with --add-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'add-layers': layers[0].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
 					})
@@ -983,7 +969,7 @@ describe('update', () => {
 
 			it('can add multiple layers with --add-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'add-layers': layers[0].LayerVersionArn + ',' + layers[1].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
 					})
@@ -1001,7 +987,7 @@ describe('update', () => {
 			});
 			it('retains old layers if no layer options specified', (done) => {
 				return underTest({source: workingdir, version: 'new'})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn]);
 					})
@@ -1009,7 +995,7 @@ describe('update', () => {
 			});
 			it('replaces all layers with --layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'layers': layers[2].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[2].LayerVersionArn]);
 					})
@@ -1017,7 +1003,7 @@ describe('update', () => {
 			});
 			it('can replace multple layers with --layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'layers': layers[2].LayerVersionArn + ',' + layers[3].LayerVersionArn })
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[2].LayerVersionArn, layers[3].LayerVersionArn]);
 					})
@@ -1025,7 +1011,7 @@ describe('update', () => {
 			});
 			it('can add a single layer with --add-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'add-layers': layers[2].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn, layers[2].LayerVersionArn]);
 					})
@@ -1033,7 +1019,7 @@ describe('update', () => {
 			});
 			it('can add multiple layers with --add-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'add-layers': layers[2].LayerVersionArn + ',' + layers[3].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[1].LayerVersionArn, layers[2].LayerVersionArn, layers[3].LayerVersionArn]);
 					})
@@ -1041,7 +1027,7 @@ describe('update', () => {
 			});
 			it('can remove a layer with --remove-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn]);
 					})
@@ -1049,7 +1035,7 @@ describe('update', () => {
 			});
 			it('can remove multiple layers with --remove-layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn + ',' + layers[0].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers).toBeFalsy();
 					})
@@ -1057,7 +1043,7 @@ describe('update', () => {
 			});
 			it('can mix adding and removing layers', (done) => {
 				return underTest({source: workingdir, version: 'new', 'remove-layers': layers[1].LayerVersionArn, 'add-layers': layers[2].LayerVersionArn})
-					.then(() => getFunctionConfiguration('new'))
+					.then(() => getLambdaConfiguration('new'))
 					.then(configuration => {
 						expect(configuration.Layers.map(l => l.Arn)).toEqual([layers[0].LayerVersionArn, layers[2].LayerVersionArn]);
 					})
@@ -1065,5 +1051,193 @@ describe('update', () => {
 			});
 		});
 
+	});
+	describe('dead letter queue support', () => {
+		let snsTopicArn, secondSnsTopicArn, snsTopicName, secondSnsTopicName;
+		beforeAll(done => {
+			snsTopicName = `test-topic-${Date.now()}`;
+			secondSnsTopicName = `test-topic2-${Date.now()}`;
+			sns.createTopic({
+				Name: snsTopicName
+			}).promise()
+			.then(result => snsTopicArn = result.TopicArn)
+			.then(() => sns.createTopic({
+				Name: secondSnsTopicName
+			}).promise())
+			.then(result => secondSnsTopicArn = result.TopicArn)
+			.then(done);
+		});
+		afterAll(done => {
+			destroyObjects({snsTopic: snsTopicArn})
+			.then(done, done.fail);
+		});
+		describe('when the original function had a dlq', () => {
+			beforeEach(done => {
+				fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+				create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler',
+					'dlq-sns': snsTopicArn})
+				.then(result => {
+					newObjects.lambdaRole = result.lambda && result.lambda.role;
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				}).then(done, done.fail);
+			});
+			it('does not remove the DLQ configuration if not repeated', done => {
+				return underTest({source: workingdir, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: snsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+					})
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+							[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [snsTopicArn] }]
+						);
+					})
+					.then(done, done.fail);
+			});
+			it('updates the dlq topic and policy if requested by ARN', done => {
+				return underTest({source: workingdir, 'dlq-sns': secondSnsTopicArn, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: secondSnsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+					})
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+							[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [secondSnsTopicArn] }]
+						);
+					})
+					.then(done, done.fail);
+			});
+			it('updates the dlq topic and policy if requested by name', done => {
+				return underTest({source: workingdir, 'dlq-sns': secondSnsTopicName, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: secondSnsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+					})
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+							[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [secondSnsTopicArn] }]
+						);
+					})
+					.then(done, done.fail);
+			});
+
+		});
+		describe('when the original function did not have a dlq', () => {
+			beforeEach(done => {
+				fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+				create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'})
+				.then(result => {
+					newObjects.lambdaRole = result.lambda && result.lambda.role;
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				}).then(done, done.fail);
+			});
+			it('does not add the DLQ configuration if not requested', done => {
+				return underTest({source: workingdir, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toBeFalsy();
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.listRolePolicies({ RoleName: roleName }).promise();
+					})
+					.then(result => {
+						expect(result.PolicyNames.find(t => t === 'dlq-publisher')).toBeFalsy();
+					})
+					.then(done, done.fail);
+			});
+			it('updates the dlq topic and policy if requested by ARN', done => {
+				return underTest({source: workingdir, 'dlq-sns': secondSnsTopicArn, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: secondSnsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+					})
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+							[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [secondSnsTopicArn] }]
+						);
+					})
+					.then(done, done.fail);
+			});
+			it('updates the dlq topic and policy if requested by name', done => {
+				return underTest({source: workingdir, 'dlq-sns': secondSnsTopicName, version: 'new'})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: secondSnsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.getRolePolicy({ PolicyName: 'dlq-publisher', RoleName: roleName }).promise();
+					})
+					.then(policy => {
+						expect(JSON.parse(decodeURIComponent(policy.PolicyDocument)).Statement).toEqual(
+							[{ Effect: 'Allow', Action: ['sns:Publish'], Resource: [secondSnsTopicArn] }]
+						);
+					})
+					.then(done, done.fail);
+			});
+
+		});
+		describe('when a role is provided during create', () => {
+			let roleName;
+			beforeEach(done => {
+				roleName = `${testRunName}-manual`;
+				fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+				return iam.createRole({
+					RoleName: roleName,
+					AssumeRolePolicyDocument: executorPolicy()
+				}).promise()
+				.then(() => {
+					newObjects.lambdaRole = roleName;
+				})
+				.then(() => iam.putRolePolicy({
+					RoleName: roleName,
+					PolicyName: 'manual-dlq-publisher',
+					PolicyDocument: snsPublishPolicy(snsTopicArn)
+				}).promise())
+				.then(() => create({name: testRunName, role: roleName, region: awsRegion, source: workingdir, handler: 'main.handler'}))
+				.then(result => {
+					newObjects.lambdaFunction = result.lambda && result.lambda.name;
+				}).then(done, done.fail);
+			});
+			it('does not patch the role while adding the dlq if skip-iam is set', done => {
+				return underTest({source: workingdir, 'dlq-sns': snsTopicArn, version: 'new', 'skip-iam': true})
+					.then(() => getLambdaConfiguration('new'))
+					.then(configuration => {
+						expect(configuration.DeadLetterConfig).toEqual({TargetArn: snsTopicArn});
+						return configuration.Role;
+					})
+					.then(roleArn => {
+						const roleName = roleArn.split(':')[5].split('/')[1];
+						return iam.listRolePolicies({ RoleName: roleName }).promise();
+					})
+					.then(result => {
+						expect(result.PolicyNames.find(t => t === 'dlq-publisher')).toBeFalsy();
+					})
+					.then(done, done.fail);
+			});
+		});
 	});
 });

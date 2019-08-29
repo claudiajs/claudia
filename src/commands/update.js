@@ -21,15 +21,20 @@ const zipdir = require('../tasks/zipdir'),
 	fsPromise = require('../util/fs-promise'),
 	fsUtil = require('../util/fs-util'),
 	loadConfig = require('../util/loadconfig'),
+	isSNSArn = require('../util/is-sns-arn'),
+	snsPublishPolicy = require('../policies/sns-publish-policy'),
+	retry = require('oh-no-i-insist'),
 	combineLists = require('../util/combine-lists');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
-	let lambda, s3, apiGateway, lambdaConfig, apiConfig, updateResult,
+	let lambda, s3, iam, apiGateway, lambdaConfig, apiConfig, updateResult,
 		functionConfig, packageDir, packageArchive, s3Key,
 		ownerAccount, awsPartition,
 		workingDir,
 		requiresHandlerUpdate = false;
 	const logger = optionalLogger || new NullLogger(),
+		awsDelay = options && options['aws-delay'] && parseInt(options['aws-delay'], 10) || (process.env.AWS_DELAY && parseInt(process.env.AWS_DELAY, 10)) || 5000,
+		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		alias = (options && options.version) || 'latest',
 		updateProxyApi = function () {
 			return allowApiInvocation(lambdaConfig.name, alias, apiConfig.id, ownerAccount, awsPartition, lambdaConfig.region)
@@ -89,6 +94,16 @@ module.exports = function update(options, optionalLogger) {
 				}
 			}
 		},
+		getSnsDLQTopic = function () {
+			const topicNameOrArn = options['dlq-sns'];
+			if (!topicNameOrArn) {
+				return false;
+			}
+			if (isSNSArn(topicNameOrArn)) {
+				return topicNameOrArn;
+			}
+			return `arn:${awsPartition}:sns:${lambdaConfig.region}:${ownerAccount}:${topicNameOrArn}`;
+		},
 		updateConfiguration = function (newHandler) {
 			const configurationPatch = {};
 			logger.logStage('updating configuration');
@@ -110,9 +125,26 @@ module.exports = function update(options, optionalLogger) {
 			if (options['add-layers'] || options['remove-layers']) {
 				configurationPatch.Layers = combineLists(functionConfig.Layers && functionConfig.Layers.map(l => l.Arn), options['add-layers'], options['remove-layers']);
 			}
+			if (options['dlq-sns']) {
+				configurationPatch.DeadLetterConfig = {
+					TargetArn: getSnsDLQTopic()
+				};
+			}
 			if (Object.keys(configurationPatch).length > 0) {
 				configurationPatch.FunctionName = lambdaConfig.name;
-				return lambda.updateFunctionConfiguration(configurationPatch).promise();
+				return retry(
+					() => {
+						return lambda.updateFunctionConfiguration(configurationPatch).promise();
+					},
+					awsDelay, awsRetries,
+					error => {
+						return error &&
+							error.code === 'InvalidParameterValueException' &&
+							error.message.startsWith('The provided execution role does not have permissions');
+					},
+					() => logger.logStage('waiting for IAM role propagation'),
+					Promise
+				);
 			}
 		},
 		cleanup = function () {
@@ -179,6 +211,7 @@ module.exports = function update(options, optionalLogger) {
 		apiConfig = config.api;
 		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		s3 = loggingWrap(new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'});
+		iam = loggingWrap(new aws.IAM({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'iam'});
 		apiGateway = retriableWrap(
 			loggingWrap(
 				new aws.APIGateway({region: lambdaConfig.region}),
@@ -213,6 +246,19 @@ module.exports = function update(options, optionalLogger) {
 	.then(dir => {
 		packageDir = dir;
 		return cleanUpPackage(dir, options, logger);
+	})
+	.then(() => {
+		if (!options['skip-iam']) {
+			if (getSnsDLQTopic()) {
+				logger.logStage('patching IAM policy');
+				const policyUpdate = {
+					RoleName: lambdaConfig.role,
+					PolicyName: 'dlq-publisher',
+					PolicyDocument: snsPublishPolicy(getSnsDLQTopic())
+				};
+				return iam.putRolePolicy(policyUpdate).promise();
+			}
+		};
 	})
 	.then(() => {
 		return updateConfiguration(requiresHandlerUpdate && functionConfig.Handler);
@@ -387,6 +433,32 @@ module.exports.doc = {
 			optional: true,
 			description: 'A comma-delimited list of Lambda layers to remove from this function. It will not remove any layers apart from the ones specified in the argument.',
 			example: 'arn:aws:lambda:us-east-1:12345678:layer:ffmpeg:4'
+		},
+		{
+			argument: 'dlq-sns',
+			optional: true,
+			description: 'Dead letter queue SNS topic name or ARN',
+			example: 'arn:aws:sns:us-east-1:123456789012:my_corporate_topic'
+		},
+		{
+			argument: 'skip-iam',
+			optional: true,
+			description: 'Do not try to modify the IAM role for Lambda',
+			example: 'true'
+		},
+		{
+			argument: 'aws-delay',
+			optional: true,
+			example: '3000',
+			description: 'number of milliseconds betweeen retrying AWS operations if they fail',
+			default: '5000'
+		},
+		{
+			argument: 'aws-retries',
+			optional: true,
+			example: '15',
+			description: 'number of times to retry AWS operations if they fail',
+			default: '15'
 		}
 	]
 };
