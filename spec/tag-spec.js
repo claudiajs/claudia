@@ -9,10 +9,11 @@ const underTest = require('../src/commands/tag'),
 	awsRegion = require('./util/test-aws-region');
 describe('tag', () => {
 	'use strict';
-	let workingdir, testRunName, newObjects, lambda;
+	let workingdir, testRunName, newObjects, lambda, api;
 	beforeEach(() => {
 		workingdir = tmppath();
 		lambda = new aws.Lambda({region: awsRegion});
+		api = new aws.APIGateway({region: awsRegion});
 		testRunName = 'test' + Date.now();
 		newObjects = {workingdir: workingdir};
 		fs.mkdirSync(workingdir);
@@ -28,7 +29,7 @@ describe('tag', () => {
 			done();
 		});
 	});
-	it('appends tags from csv', done => {
+	it('appends tags from csv to lambda with no associated web api', done => {
 		create({ name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler' }).then(result => {
 			newObjects.lambdaRole = result.lambda && result.lambda.role;
 			newObjects.lambdaFunction = result.lambda && result.lambda.name;
@@ -43,6 +44,31 @@ describe('tag', () => {
 			return lambda.listTags({ Resource: lambdaResult.FunctionArn }).promise();
 		})
 		.then(data => expect(data.Tags).toEqual({ Team: 'onboarding' }))
+		.then(done, done.fail);
+	});
+	it('appends tags from csv to lambda and associated web api', done => {
+		fsUtil.copy('spec/test-projects/api-gw-hello-world', workingdir, true);
+		create({ name: testRunName, region: awsRegion, source: workingdir, 'api-module': 'main' }).then(result => {
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+			newObjects.restApi = result.api && result.api.id;
+		})
+		.then(() => underTest({tags: 'Team=onboarding', source: workingdir}))
+		.then(() => {
+			return lambda.getFunctionConfiguration({
+				FunctionName: testRunName
+			}).promise();
+		})
+		.then(lambdaResult => {
+			return lambda.listTags({ Resource: lambdaResult.FunctionArn }).promise();
+		})
+		.then(data => expect(data.Tags).toEqual({ Team: 'onboarding' }))
+		.then(() => {
+			return api.getTags({
+				resourceArn: `arn:aws:apigateway:${awsRegion}::/restapis/${newObjects.restApi}`
+			}).promise();
+		})
+		.then(data => expect(data.tags).toEqual({ Team: 'onboarding' }))
 		.then(done, done.fail);
 	});
 });

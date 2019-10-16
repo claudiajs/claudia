@@ -5,15 +5,19 @@ const loadConfig = require('../util/loadconfig'),
 module.exports = function tag(options) {
 	'use strict';
 	let lambdaConfig,
-		lambda;
+		lambda,
+		apiConfig,
+		api;
 	const initServices = function () {
 			lambda = new aws.Lambda({region: lambdaConfig.region});
+			api = new aws.APIGateway({region: lambdaConfig.region});
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})
 				.then(config => {
 					lambdaConfig = config.lambda;
+					apiConfig = config.api;
 				})
 				.then(initServices)
 				.then(getLambda)
@@ -22,29 +26,41 @@ module.exports = function tag(options) {
 					lambdaConfig.version = result.Version;
 				});
 		},
-		tag = function () {
-			const tags = parseKeyValueCSV(options.tags);
+		tagLambda = function (tags) {
 			return lambda.tagResource({
 				Resource: lambdaConfig.arn,
 				Tags: tags
 			}).promise();
+		},
+		tagApi = function (tags) {
+			if (apiConfig && apiConfig.id) {
+				return api.tagResource({
+					resourceArn: `arn:aws:apigateway:${lambdaConfig.region}::/restapis/${apiConfig.id}`,
+					tags: tags
+				}).promise();
+			}
+		},
+		tag = function (tags) {
+			return tagLambda(tags)
+				.then(() => tagApi(tags));
+
 		};
 	if (!options.tags) {
 		return Promise.reject('no tags specified. please provide them with --tags');
 	}
 
 	return readConfig()
-		.then(tag);
+		.then(() => tag(parseKeyValueCSV(options.tags)));
 };
 
 module.exports.doc = {
-	description: 'Add tags (key-value pairs) to a lambda function',
+	description: 'Add tags (key-value pairs) to the lambda function and any associated web API',
 	priority: 22,
 	args: [
 		{
 			argument: 'tags',
 			example: 'Team=onboarding,Project=amarillo',
-			description: 'The list of tags (key-value pairs) to assign to the lambda function.'
+			description: 'The list of tags (key-value pairs) to assign to the lambda function and any associated web API'
 		},
 		{
 			argument: 'source',
