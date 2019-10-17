@@ -1,5 +1,6 @@
 const loadConfig = require('../util/loadconfig'),
 	parseKeyValueCSV = require('../util/parse-key-value-csv'),
+	getOwnerInfo = require('../tasks/get-owner-info'),
 	aws = require('aws-sdk');
 
 module.exports = function tag(options) {
@@ -7,6 +8,8 @@ module.exports = function tag(options) {
 	let lambdaConfig,
 		lambda,
 		apiConfig,
+		awsPartition,
+		region,
 		api;
 	const initServices = function () {
 			lambda = new aws.Lambda({region: lambdaConfig.region});
@@ -18,12 +21,17 @@ module.exports = function tag(options) {
 				.then(config => {
 					lambdaConfig = config.lambda;
 					apiConfig = config.api;
+					region = config.region;
 				})
 				.then(initServices)
 				.then(getLambda)
 				.then(result => {
 					lambdaConfig.arn = result.FunctionArn;
 					lambdaConfig.version = result.Version;
+				})
+				.then(() => getOwnerInfo(region))
+				.then(ownerInfo => {
+					awsPartition = ownerInfo.partition;
 				});
 		},
 		tagLambda = function (tags) {
@@ -35,7 +43,7 @@ module.exports = function tag(options) {
 		tagApi = function (tags) {
 			if (apiConfig && apiConfig.id) {
 				return api.tagResource({
-					resourceArn: `arn:aws:apigateway:${lambdaConfig.region}::/restapis/${apiConfig.id}`,
+					resourceArn: `arn:${awsPartition}:apigateway:${lambdaConfig.region}::/restapis/${apiConfig.id}`,
 					tags: tags
 				}).promise();
 			}
@@ -43,7 +51,6 @@ module.exports = function tag(options) {
 		tag = function (tags) {
 			return tagLambda(tags)
 				.then(() => tagApi(tags));
-
 		};
 	if (!options.tags) {
 		return Promise.reject('no tags specified. please provide them with --tags');

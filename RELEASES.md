@@ -1,5 +1,9 @@
 # Release history
 
+### 5.9.0 (17 October 2019)
+
+- support for tagging API Gateway resources (thanks to [Richard Jones](https://github.com/wigsaparelli).
+
 ### 5.8.0 (29 August 2019)
 
 - support for adding SNS topic subscription filters
