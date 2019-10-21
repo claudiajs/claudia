@@ -1,5 +1,9 @@
 # Release history
 
+### 5.9.1 (21 October 2019)
+
+- fixing npm dependency vulnerabilities
+
 ### 5.9.0 (17 October 2019)
 
 - support for tagging API Gateway resources (thanks to [Richard Jones](https://github.com/wigsaparelli).
