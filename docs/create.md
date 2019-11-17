@@ -10,7 +10,7 @@ claudia create {OPTIONS}
 
 ## Options
 
-*  `--region`:  AWS region where to create the lambda. For supported values, see     https://docs.aws.amazon.com/general/latest/gr/rande.html#lambda_region
+*  `--region`:  AWS region where to create the lambda. For supported values, see     https://docs.aws.amazon.com/general/latest/gr/rande.html
     * _For example_: us-east-1
 *  `--handler`:  (_optional_) Main function for Lambda to execute, as module.function
     * _For example_: if it is in the main.js file and exported as router, this would be main.router
