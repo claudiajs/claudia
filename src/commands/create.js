@@ -438,7 +438,7 @@ module.exports.doc = {
 	args: [
 		{
 			argument: 'region',
-			description: 'AWS region where to create the lambda',
+			description: 'AWS region where to create the lambda. For supported values, see\n https://docs.aws.amazon.com/general/latest/gr/rande.html#lambda_region',
 			example: 'us-east-1'
 		},
 		{
