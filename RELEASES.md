@@ -1,5 +1,9 @@
 # Release history
 
+### 5.9.2 (6 November 2019)
+
+- updated docs for create, listing supported regions (thanks to [Claudio Acioli](https://github.com/claudioacioli)).
+
 ### 5.9.1 (21 October 2019)
 
 - fixing npm dependency vulnerabilities
