@@ -1,5 +1,9 @@
 # Release history
 
+### 5.10.0 (19 November 2019)
+
+- support for Lambda runtime nodejs12.x
+
 ### 5.9.2 (6 November 2019)
 
 - updated docs for create, listing supported regions (thanks to [Claudio Acioli](https://github.com/claudioacioli)).
