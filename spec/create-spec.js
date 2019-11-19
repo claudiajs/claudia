@@ -21,7 +21,8 @@ describe('create', () => {
 
 
 	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise, sns;
-	const defaultRuntime = 'nodejs10.x',
+	const defaultRuntime = 'nodejs12.x',
+		supportedRuntimes = ['nodejs12.x', 'nodejs10.x', 'nodejs8.10'],
 		createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
 				fs.mkdirSync(workingdir);
@@ -511,19 +512,22 @@ describe('create', () => {
 		});
 	});
 	describe('runtime support', () => {
-		it('creates node 10 deployments by default', done => {
+		it(`creates ${defaultRuntime} deployments by default`, done => {
 			createFromDir('hello-world')
 			.then(getLambdaConfiguration)
 			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(defaultRuntime))
 			.then(done, done.fail);
 		});
-		it('can create nodejs8.10 when requested', done => {
-			config.runtime = 'nodejs8.10';
-			createFromDir('hello-world')
-			.then(getLambdaConfiguration)
-			.then(lambdaResult => expect(lambdaResult.Runtime).toEqual('nodejs8.10'))
-			.then(done, done.fail);
+		supportedRuntimes.forEach(supportedRuntime => {
+			it(`can create ${supportedRuntime} when requested`, done => {
+				config.runtime = supportedRuntime;
+				createFromDir('hello-world')
+				.then(getLambdaConfiguration)
+				.then(lambdaResult => expect(lambdaResult.Runtime).toEqual(supportedRuntime))
+				.then(done, done.fail);
+			});
 		});
+
 	});
 	describe('memory option support', () => {
 		it(`fails if memory value is < ${limits.LAMBDA.MEMORY.MIN}`, done => {

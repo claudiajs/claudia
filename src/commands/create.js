@@ -172,7 +172,7 @@ module.exports = function create(options, optionalLogger) {
 						KMSKeyArn: options['env-kms-key-arn'],
 						Handler: options.handler || (options['api-module'] + '.proxyRouter'),
 						Role: roleArn,
-						Runtime: options.runtime || 'nodejs10.x',
+						Runtime: options.runtime || 'nodejs12.x',
 						Publish: true,
 						Layers: options.layers && options.layers.split(','),
 						VpcConfig: options['security-group-ids'] && options['subnet-ids'] && {
@@ -519,7 +519,7 @@ module.exports.doc = {
 			argument: 'runtime',
 			optional: true,
 			description: 'Node.js runtime to use. For supported values, see\n http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html',
-			default: 'nodejs10.x'
+			default: 'nodejs12.x'
 		},
 		{
 			argument: 'description',
