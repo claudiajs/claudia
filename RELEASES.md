@@ -1,5 +1,9 @@
 # Release history
 
+### 5.11.0 (20 November 2019)
+
+- support for listing deployed versions, using `claudia list`
+
 ### 5.10.0 (19 November 2019)
 
 - support for Lambda runtime nodejs12.x

@@ -17,11 +17,11 @@ module.exports = function ConsoleLogger(prefix, loggable) {
 		};
 	this.logStage = function (stage) {
 		currentStage = stage + '\t';
-		writer.log(currentPrepend + stage);
+		writer.error(currentPrepend + stage);
 		currentPrepend = prepend;
 	};
 	this.logApiCall = function (serviceCall, arg) {
-		writer.log(currentPrepend + currentStage + serviceCall + formatArg(arg));
+		writer.error(currentPrepend + currentStage + serviceCall + formatArg(arg));
 		currentPrepend = prepend;
 	};
 };

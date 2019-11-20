@@ -70,7 +70,11 @@ const minimist = require('minimist'),
 
 		commands[command](args, logger).then(result => {
 			if (result && !args.quiet) {
-				console.log(JSON.stringify(result, null, 2));
+				if (typeof result === 'string') {
+					console.log(result);
+				} else {
+					console.log(JSON.stringify(result, null, 2));
+				}
 			}
 			process.exit();
 		}, e => {
