@@ -285,6 +285,39 @@ describe('update', () => {
 			}).then(done, done.fail);
 		});
 
+		it('uses an s3 key if provided', done => {
+			const logger = new ArrayLogger(),
+				bucketName = `${testRunName}-bucket`,
+				keyName = 'test-key',
+				s3Path = `${bucketName}/${keyName}`;
+			let archivePath;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise().then(() => {
+				newObjects.s3bucket = bucketName;
+				newObjects.s3Key = keyName;
+			}).then(() => {
+				return underTest({keep: true, 'use-s3-bucket': s3Path, source: workingdir}, logger);
+			}).then(result => {
+				const expectedKey = `${keyName}.zip`;
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			}).then(fileResult => {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(() => {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
+			}).then(() => {
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
+			}).then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+
 		it('adds the version alias if supplied', done => {
 			underTest({source: workingdir, version: 'great'}).then(() => {
 				return lambda.getAlias({FunctionName: testRunName, Name: 'great'}).promise();

@@ -8,20 +8,28 @@ const	path = require('path'),
 	},
 	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption) {
 		'use strict';
-		const fileKey = path.basename(filePath),
+		const s3Options = bucket.match(/([^\/]+)\/(.+$)/),
 			params = {
-				Bucket: bucket,
-				Key: fileKey,
 				Body: fs.createReadStream(filePath),
 				ACL: 'private'
 			};
+		let s3Bucket, s3FileKey;
+		if (s3Options) {
+			s3Bucket = s3Options[1];
+			s3FileKey = /.+\.zip$/g.test(s3Options[2]) ? `${s3Options[2]}` : `${s3Options[2]}.zip`;
+		} else {
+			s3Bucket = bucket;
+			s3FileKey = path.basename(filePath);
+		}
+		params.Bucket = s3Bucket;
+		params.Key = s3FileKey;
 		if (serverSideEncryption) {
 			params.ServerSideEncryption = serverSideEncryption;
 		}
 		return s3.upload(params).promise()
 		.then(() => ({
-			S3Bucket: bucket,
-			S3Key: fileKey
+			S3Bucket: s3Bucket,
+			S3Key: s3FileKey
 		}));
 	};
 module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption) {

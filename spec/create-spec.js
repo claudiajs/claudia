@@ -890,6 +890,40 @@ describe('create', () => {
 			})
 			.then(done, done.fail);
 		});
+		it('uses an s3 key if provided', done => {
+			const logger = new ArrayLogger(),
+				bucketName = `${testRunName}-bucket`,
+				keyName = 'test-key',
+				s3Path = `${bucketName}/${keyName}`;
+			let archivePath;
+			config.keep = true;
+			config['use-s3-bucket'] = s3Path;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise()
+			.then(() => {
+				newObjects.s3bucket = bucketName;
+				newObjects.s3Key = keyName;
+			})
+			.then(() => createFromDir('hello-world', logger))
+			.then(result => {
+				const expectedKey = `${keyName}.zip`;
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			})
+			.then(fileResult => expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size))
+			.then(() => expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']))
+			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
+			.then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('"hello world"');
+			})
+			.then(done, done.fail);
+		});
 	});
 	describe('deploying a proxy api', () => {
 		beforeEach(() => {
