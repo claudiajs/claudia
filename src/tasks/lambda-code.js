@@ -6,37 +6,29 @@ const	path = require('path'),
 		return fsPromise.readFileAsync(packageArchive)
 		.then(fileContents => ({ ZipFile: fileContents }));
 	},
-	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption) {
+	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption, s3Key) {
 		'use strict';
-		const s3Options = bucket.match(/([^\/]+)\/(.+$)/),
+		const fileKey = s3Key ? s3Key : path.basename(filePath),
 			params = {
+				Bucket: bucket,
+				Key: fileKey,
 				Body: fs.createReadStream(filePath),
 				ACL: 'private'
 			};
-		let s3Bucket, s3FileKey;
-		if (s3Options) {
-			s3Bucket = s3Options[1];
-			s3FileKey = /.+\.zip$/g.test(s3Options[2]) ? `${s3Options[2]}` : `${s3Options[2]}.zip`;
-		} else {
-			s3Bucket = bucket;
-			s3FileKey = path.basename(filePath);
-		}
-		params.Bucket = s3Bucket;
-		params.Key = s3FileKey;
 		if (serverSideEncryption) {
 			params.ServerSideEncryption = serverSideEncryption;
 		}
 		return s3.upload(params).promise()
 		.then(() => ({
-			S3Bucket: s3Bucket,
-			S3Key: s3FileKey
+			S3Bucket: bucket,
+			S3Key: fileKey
 		}));
 	};
-module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption) {
+module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption, s3Key) {
 	'use strict';
 	if (!s3Bucket) {
 		return readFromDisk(zipArchive);
 	} else {
-		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption);
+		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption, s3Key);
 	}
 };

@@ -93,6 +93,13 @@ describe('update', () => {
 			done();
 		});
 	});
+	it('fails if s3-key is specified but use-s3-bucket is not', done => {
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+		underTest({source: workingdir, 's3-key': 'foo'}).then(done.fail, reason => {
+			expect(reason).toEqual('--s3-key only works with --use-s3-bucket');
+			done();
+		});
+	});
 
 	describe('when the config exists', () => {
 		beforeEach(done => {
@@ -288,18 +295,17 @@ describe('update', () => {
 		it('uses an s3 key if provided', done => {
 			const logger = new ArrayLogger(),
 				bucketName = `${testRunName}-bucket`,
-				keyName = 'test-key',
-				s3Path = `${bucketName}/${keyName}`;
+				keyName = `${testRunName}-key`;
 			let archivePath;
 			s3.createBucket({
 				Bucket: bucketName
 			}).promise().then(() => {
-				newObjects.s3bucket = bucketName;
+				newObjects.s3Bucket = bucketName;
 				newObjects.s3Key = keyName;
 			}).then(() => {
-				return underTest({keep: true, 'use-s3-bucket': s3Path, source: workingdir}, logger);
+				return underTest({keep: true, 'use-s3-bucket': bucketName, 's3-key': keyName, source: workingdir}, logger);
 			}).then(result => {
-				const expectedKey = `${keyName}.zip`;
+				const expectedKey = keyName;
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
 				return s3.headObject({

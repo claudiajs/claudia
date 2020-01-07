@@ -221,6 +221,13 @@ describe('create', () => {
 			.then(done.fail, message => expect(message).toMatch(/incompatible arguments allow-recursion and role/))
 			.then(done);
 		});
+		it('fails if s3-key is specified but use-s3-bucket is not', done => {
+			config['s3-key'] = 'foo';
+			config['use-s3-bucket'] = undefined;
+			createFromDir('hello-world')
+			.then(done.fail, message => expect(message).toEqual('--s3-key only works with --use-s3-bucket'))
+			.then(done);
+		});
 	});
 
 	describe('role management', () => {
@@ -893,21 +900,21 @@ describe('create', () => {
 		it('uses an s3 key if provided', done => {
 			const logger = new ArrayLogger(),
 				bucketName = `${testRunName}-bucket`,
-				keyName = 'test-key',
-				s3Path = `${bucketName}/${keyName}`;
+				keyName = `${testRunName}-key`;
 			let archivePath;
 			config.keep = true;
-			config['use-s3-bucket'] = s3Path;
+			config['use-s3-bucket'] = bucketName;
+			config['s3-key'] = keyName;
 			s3.createBucket({
 				Bucket: bucketName
 			}).promise()
 			.then(() => {
-				newObjects.s3bucket = bucketName;
+				newObjects.s3Bucket = bucketName;
 				newObjects.s3Key = keyName;
 			})
 			.then(() => createFromDir('hello-world', logger))
 			.then(result => {
-				const expectedKey = `${keyName}.zip`;
+				const expectedKey = keyName;
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
 				return s3.headObject({

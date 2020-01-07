@@ -191,6 +191,9 @@ module.exports = function update(options, optionalLogger) {
 			if (options['remove-layers'] && options.layers) {
 				return Promise.reject('incompatible arguments --layers and --remove-layers');
 			}
+			if (options['s3-key'] && !options['use-s3-bucket']) {
+				return Promise.reject('--s3-key only works with --use-s3-bucket');
+			}
 			return Promise.resolve();
 		};
 	options = options || {};
@@ -272,7 +275,7 @@ module.exports = function update(options, optionalLogger) {
 	})
 	.then(zipFile => {
 		packageArchive = zipFile;
-		return lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse']);
+		return lambdaCode(s3, packageArchive, options['use-s3-bucket'], options['s3-sse'], options['s3-key']);
 	})
 	.then(functionCode => {
 		logger.logStage('updating Lambda');
@@ -378,8 +381,13 @@ module.exports.doc = {
 			example: 'claudia-uploads/path/to/filename',
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 			'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
-			'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda.\n' +
-			'A key name for the archive can be specified by including one or more `/` characters in the parameters; the string after the first `/` will be treated as the path for the s3 key, with the string after the last `/` treated as the s3 file name.'
+			'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda.\n'
+		},
+		{
+			argument: 's3-key',
+			optional: true,
+			example: 'path/to/file.zip',
+			description: 'The key to which the function code will be uploaded in the s3 bucket referenced in `--use-s3-bucket`'
 		},
 		{
 			argument: 's3-sse',
