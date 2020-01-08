@@ -1,4 +1,4 @@
-version: 0.1
+version: 0.2
 environment_variables:
   plaintext:
     AWS_REGION: "us-west-2"
