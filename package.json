@@ -51,7 +51,7 @@
   ],
   "dependencies": {
     "archiver": "^3.0.0",
-    "aws-sdk": "^2.454.0",
+    "aws-sdk": "^2.599.0",
     "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
     "gunzip-maybe": "^1.4.0",
