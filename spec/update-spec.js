@@ -607,7 +607,7 @@ describe('update', () => {
 				'lambda.getFunctionConfiguration', 'lambda.setupRequestListeners', 'lambda.updateFunctionCode', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual([]);
-			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity', 'sts.setupRequestListeners', 'sts.optInRegionalEndpoint']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.getRestApi',
 				'apigateway.setupRequestListeners',

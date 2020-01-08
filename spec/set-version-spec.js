@@ -218,7 +218,7 @@ describe('setVersion', () => {
 				'loading config', 'updating configuration', 'updating versions'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual(['lambda.getFunctionConfiguration', 'lambda.setupRequestListeners', 'lambda.publishVersion', 'lambda.updateAlias', 'lambda.createAlias']);
-			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity', 'sts.setupRequestListeners', 'sts.optInRegionalEndpoint']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createDeployment',
 				'apigateway.setupRequestListeners',

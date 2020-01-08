@@ -22,7 +22,7 @@ describe('create', () => {
 
 	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise, sns;
 	const defaultRuntime = 'nodejs12.x',
-		supportedRuntimes = ['nodejs12.x', 'nodejs10.x', 'nodejs8.10'],
+		supportedRuntimes = ['nodejs12.x', 'nodejs10.x'],
 		createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
 				fs.mkdirSync(workingdir);
@@ -1220,7 +1220,7 @@ describe('create', () => {
 				'lambda.createFunction',  'lambda.setupRequestListeners', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.putRolePolicy']);
-			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity']);
+			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity', 'sts.setupRequestListeners', 'sts.optInRegionalEndpoint']);
 			expect(logger.getApiCallLogForService('apigateway', true)).toEqual([
 				'apigateway.createRestApi',
 				'apigateway.setupRequestListeners',
