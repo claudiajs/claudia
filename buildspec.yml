@@ -1,5 +1,4 @@
 version: 0.1
-
 environment_variables:
   plaintext:
     AWS_REGION: "us-west-2"
@@ -10,6 +9,8 @@ environment_variables:
 
 phases:
   install:
+    runtime-versions:
+        nodejs: 10
     commands:
       - echo "NODE VERSION"
       - node --version
