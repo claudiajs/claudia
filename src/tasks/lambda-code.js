@@ -6,9 +6,9 @@ const	path = require('path'),
 		return fsPromise.readFileAsync(packageArchive)
 		.then(fileContents => ({ ZipFile: fileContents }));
 	},
-	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption) {
+	uploadToS3 = function (s3, filePath, bucket, serverSideEncryption, s3Key) {
 		'use strict';
-		const fileKey = path.basename(filePath),
+		const fileKey = s3Key ? s3Key : path.basename(filePath),
 			params = {
 				Bucket: bucket,
 				Key: fileKey,
@@ -24,11 +24,11 @@ const	path = require('path'),
 			S3Key: fileKey
 		}));
 	};
-module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption) {
+module.exports = function lambdaCode(s3, zipArchive, s3Bucket, s3ServerSideEncryption, s3Key) {
 	'use strict';
 	if (!s3Bucket) {
 		return readFromDisk(zipArchive);
 	} else {
-		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption);
+		return uploadToS3(s3, zipArchive, s3Bucket, s3ServerSideEncryption, s3Key);
 	}
 };

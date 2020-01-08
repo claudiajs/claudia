@@ -93,6 +93,13 @@ describe('update', () => {
 			done();
 		});
 	});
+	it('fails if s3-key is specified but use-s3-bucket is not', done => {
+		fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+		underTest({source: workingdir, 's3-key': 'foo'}).then(done.fail, reason => {
+			expect(reason).toEqual('--s3-key only works with --use-s3-bucket');
+			done();
+		});
+	});
 
 	describe('when the config exists', () => {
 		beforeEach(done => {
@@ -267,6 +274,38 @@ describe('update', () => {
 				return underTest({keep: true, 'use-s3-bucket': bucketName, 's3-sse': serverSideEncryption, source: workingdir}, logger);
 			}).then(result => {
 				const expectedKey = path.basename(result.archive);
+				archivePath = result.archive;
+				expect(result.s3key).toEqual(expectedKey);
+				return s3.headObject({
+					Bucket: bucketName,
+					Key: expectedKey
+				}).promise();
+			}).then(fileResult => {
+				expect(parseInt(fileResult.ContentLength)).toEqual(fs.statSync(archivePath).size);
+			}).then(() => {
+				expect(logger.getApiCallLogForService('s3', true)).toEqual(['s3.upload', 's3.getSignatureVersion']);
+			}).then(() => {
+				return lambda.invoke({FunctionName: testRunName, Payload: JSON.stringify({message: 'aloha'})}).promise();
+			}).then(lambdaResult => {
+				expect(lambdaResult.StatusCode).toEqual(200);
+				expect(lambdaResult.Payload).toEqual('{"message":"aloha"}');
+			}).then(done, done.fail);
+		});
+
+		it('uses an s3 key if provided', done => {
+			const logger = new ArrayLogger(),
+				bucketName = `${testRunName}-bucket`,
+				keyName = `${testRunName}-key`;
+			let archivePath;
+			s3.createBucket({
+				Bucket: bucketName
+			}).promise().then(() => {
+				newObjects.s3Bucket = bucketName;
+				newObjects.s3Key = keyName;
+			}).then(() => {
+				return underTest({keep: true, 'use-s3-bucket': bucketName, 's3-key': keyName, source: workingdir}, logger);
+			}).then(result => {
+				const expectedKey = keyName;
 				archivePath = result.archive;
 				expect(result.s3key).toEqual(expectedKey);
 				return s3.headObject({
