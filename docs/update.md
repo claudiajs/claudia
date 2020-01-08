@@ -37,8 +37,11 @@ claudia update {OPTIONS}
     If not set, the temporary files will be removed after the Lambda function is successfully created
 *  `--use-s3-bucket`:  (_optional_) The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.
     You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact
-    after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda
+    after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda.
+    
     * _For example_: claudia-uploads
+*  `--s3-key`:  (_optional_) The key to which the function code will be uploaded in the s3 bucket referenced in `--use-s3-bucket`
+    * _For example_: path/to/file.zip
 *  `--s3-sse`:  (_optional_) The type of Server Side Encryption applied to the S3 bucket referenced in `--use-s3-bucket`
     * _For example_: AES256
 *  `--update-env`:  (_optional_) comma-separated list of VAR=VALUE environment variables to set, merging with old variables
