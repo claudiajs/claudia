@@ -378,7 +378,7 @@ module.exports.doc = {
 		{
 			argument: 'use-s3-bucket',
 			optional: true,
-			example: 'claudia-uploads/path/to/filename',
+			example: 'claudia-uploads',
 			description: 'The name of a S3 bucket that Claudia will use to upload the function code before installing in Lambda.\n' +
 			'You can use this to upload large functions over slower connections more reliably, and to leave a binary artifact\n' +
 			'after uploads for auditing purposes. If not set, the archive will be uploaded directly to Lambda.\n'
