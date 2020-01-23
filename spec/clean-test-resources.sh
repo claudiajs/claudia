@@ -8,6 +8,12 @@ fi
 
 echo using $AWS_PROFILE in region $AWS_REGION
 
+userpools=`aws cognito-idp list-user-pools --max-results 50 --output text --query 'UserPools[?starts_with(Name,\`test\`)].Id' --profile $AWS_PROFILE --region $AWS_REGION`
+for up in $userpools; do
+  echo deleting user pool $up
+  aws cognito-idp delete-user-pool --user-pool-id $up --profile $AWS_PROFILE --region $AWS_REGION
+done
+
 functions=`aws lambda list-functions --query 'Functions[?starts_with(FunctionName,\`test\`)].FunctionName' --output text --profile $AWS_PROFILE --region $AWS_REGION`
 for fun in $functions; do
   echo deleting function $fun
