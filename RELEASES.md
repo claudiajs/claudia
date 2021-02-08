@@ -1,5 +1,9 @@
 # Release history
 
+### 5.13.0 (8 February 2021)
+
+- support for nodejs14.x
+
 ### 5.12.0 (8 January 2020)
 
 - support for `--s3-key` while creating and updating functions, combined with `--use-s3-bucket`, to specify the destination key. (Thanks to [Chris Barnaby](https://github.com/cjbarnaby))

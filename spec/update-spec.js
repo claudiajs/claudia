@@ -698,8 +698,8 @@ describe('update', () => {
 		});
 	});
 	describe('runtime', () => {
-		const initialRuntime = 'nodejs10.x',
-			newRuntime = 'nodejs12.x';
+		const initialRuntime = 'nodejs12.x',
+			newRuntime = 'nodejs14.x';
 		beforeEach(done => {
 			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
 			create({name: testRunName, runtime: initialRuntime, region: awsRegion, source: workingdir, handler: 'main.handler'}).then(result => {

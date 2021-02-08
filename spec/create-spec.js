@@ -21,8 +21,8 @@ describe('create', () => {
 
 
 	let workingdir, testRunName, iam, lambda, s3, newObjects, config, logs, apiGatewayPromise, sns;
-	const defaultRuntime = 'nodejs12.x',
-		supportedRuntimes = ['nodejs12.x', 'nodejs10.x'],
+	const defaultRuntime = 'nodejs14.x',
+		supportedRuntimes = ['nodejs14.x', 'nodejs12.x', 'nodejs10.x'],
 		createFromDir = function (dir, logger) {
 			if (!fs.existsSync(workingdir)) {
 				fs.mkdirSync(workingdir);
