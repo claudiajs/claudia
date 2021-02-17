@@ -55,7 +55,7 @@
     "fs-extra": "^6.0.1",
     "glob": "^7.1.2",
     "gunzip-maybe": "^1.4.0",
-    "https-proxy-agent": "^3.0.0",
+    "https-proxy-agent": "^5.0.0",
     "minimal-request-promise": "^1.1.0",
     "minimist": "^1.2.0",
     "oh-no-i-insist": "^1.1.1",

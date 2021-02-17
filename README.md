@@ -4,9 +4,10 @@
 [![npm](https://img.shields.io/npm/dt/claudia.svg?maxAge=2592000?style=plastic)](https://www.npmjs.com/package/claudia)
 [![npm](https://img.shields.io/npm/l/claudia.svg?maxAge=2592000?style=plastic)](https://github.com/claudiajs/claudia/blob/master/LICENSE)
 
-Claudia makes it easy to deploy Node.js projects to AWS Lambda and API Gateway. It automates all the error-prone deployment and configuration tasks, and sets everything up the way JavaScript developers expect out of the box. This means that you can get started with Lambda and API Gateway easily, and focus on solving important business problems instead of dealing with AWS deployment workflows. [Check out this video to see how to create and deploy a microservice in under 5 minutes](https://vimeo.com/156232471).
+Claudia makes it easy to deploy Node.js projects to AWS Lambda and API Gateway. It automates all the error-prone deployment and configuration tasks, and sets everything up the way JavaScript developers expect out of the box. This means that you can get started with Lambda and API Gateway easily, and focus on solving important business problems instead of dealing with AWS deployment workflows. [Check out this video to see how to create and deploy a microservice in under 5 minutes](https://youtu.be/lsXHWy4b-I0).
 
-[![Claudia.js Introduction Video](https://claudiajs.com/assets/claudia-intro-video.png)](https://vimeo.com/156232471)
+[![Claudia.js Introduction Video](https://claudiajs.com/assets/claudia-intro-video.png)](https://youtu.be/lsXHWy4b-I0)
+
 
 With the help of Claudia builder projects, you can also [use API Gateway as if it were a lightweight javascript web server](https://github.com/claudiajs/claudia-api-builder), or create and deploy [chat bots for various platforms](https://github.com/claudiajs/claudia-bot-builder) easily. 
 
