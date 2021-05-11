@@ -57,7 +57,6 @@
     "gunzip-maybe": "^1.4.0",
     "https-proxy-agent": "^5.0.0",
     "minimal-request-promise": "^1.1.0",
-    "minimist": "^1.2.0",
     "oh-no-i-insist": "^1.1.1",
     "sequential-promise-map": "^1.0.0",
     "tar-fs": "^1.14.0",
@@ -71,7 +70,8 @@
     "eslint-config-crockford": "^0.2.0",
     "eslint-config-defaults": "^9.0.0",
     "jasmine": "^2.5.2",
-    "jasmine-spec-reporter": "^2.7.0"
+    "jasmine-spec-reporter": "^2.7.0",
+    "minimist": "^1.2.5"
   },
   "engines": {
     "node": ">=8.10.0"
