@@ -130,6 +130,14 @@ module.exports = function update(options, optionalLogger) {
 					TargetArn: getSnsDLQTopic()
 				};
 			}
+
+			if(options['security-group-ids'] && options['subnet-ids']) {
+				configurationPatch.VpcConfig = {
+					SecurityGroupIds: (options['security-group-ids'] && options['security-group-ids'].split(',')),
+					SubnetIds: (options['subnet-ids'] && options['subnet-ids'].split(','))
+				}
+			}
+			
 			if (Object.keys(configurationPatch).length > 0) {
 				configurationPatch.FunctionName = lambdaConfig.name;
 				return retry(
@@ -194,6 +202,14 @@ module.exports = function update(options, optionalLogger) {
 			if (options['s3-key'] && !options['use-s3-bucket']) {
 				return Promise.reject('--s3-key only works with --use-s3-bucket');
 			}
+
+			if (!options['security-group-ids'] && options['subnet-ids']) {
+				return 'VPC access requires at least one security group id *and* one subnet id';
+			}
+			if (options['security-group-ids'] && !options['subnet-ids']) {
+				return 'VPC access requires at least one security group id *and* one subnet id';
+			}			
+			
 			return Promise.resolve();
 		};
 	options = options || {};
