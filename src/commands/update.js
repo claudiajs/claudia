@@ -347,7 +347,7 @@ module.exports.doc = {
 			argument: 'arch',
 			optional: true,
 			description: 'Specifies the desired architecture, either x86_64 or arm64. \n' +
-				'If this option is not provided, the architecture will not br modfied.',
+				'If this option is not provided, the architecture will not be modfied.',
 			since: '5.13.2'
 		},
 		{
