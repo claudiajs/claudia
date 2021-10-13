@@ -194,6 +194,9 @@ module.exports = function update(options, optionalLogger) {
 			if (options['s3-key'] && !options['use-s3-bucket']) {
 				return Promise.reject('--s3-key only works with --use-s3-bucket');
 			}
+			if (options.arch && options.arch !== 'x86_64' && options.arch !== 'arm64') {
+				return '--arch should specify either \'x86_64\' or \'arm64\'';
+			}
 			return Promise.resolve();
 		};
 	options = options || {};
@@ -282,6 +285,9 @@ module.exports = function update(options, optionalLogger) {
 		s3Key = functionCode.S3Key;
 		functionCode.FunctionName = lambdaConfig.name;
 		functionCode.Publish = true;
+		if (options.arch) {
+			functionCode.Architectures = [options.arch];
+		}
 		return lambda.updateFunctionCode(functionCode).promise();
 	})
 	.then(result => {
@@ -336,6 +342,13 @@ module.exports.doc = {
 			argument: 'memory',
 			optional: true,
 			description: 'The amount of memory, in MB, your Lambda function is given.\nThe value must be a multiple of 64 MB.'
+		},
+		{
+			argument: 'arch',
+			optional: true,
+			description: 'Specifies the desired architecture, either x86_64 or arm64. \n' +
+				'If this option is not provided, the architecture will not be modfied.',
+			since: '5.13.2'
 		},
 		{
 			argument: 'no-optional-dependencies',

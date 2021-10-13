@@ -145,6 +145,9 @@ module.exports = function create(options, optionalLogger) {
 			if (options['s3-key'] && !options['use-s3-bucket']) {
 				return '--s3-key only works with --use-s3-bucket';
 			}
+			if (options.arch && options.arch !== 'x86_64' && options.arch !== 'arm64') {
+				return '--arch should specify either \'x86_64\' or \'arm64\'';
+			}
 		},
 		getPackageInfo = function () {
 			logger.logStage('loading package config');
@@ -166,6 +169,7 @@ module.exports = function create(options, optionalLogger) {
 				() => {
 					logger.logStage('creating Lambda');
 					return lambda.createFunction({
+						Architectures: [options.arch || 'x86_64'],
 						Code: functionCode,
 						FunctionName: functionName,
 						Description: functionDesc,
@@ -457,6 +461,14 @@ module.exports.doc = {
 				'If you provide this parameter, do not set the handler option.\n' +
 				'This should be a module created using the Claudia API Builder.',
 			example: 'if the api is defined in web.js, this would be web'
+		},
+		{
+			argument: 'arch',
+			optional: true,
+			description: 'Specifies the desired architecture, either x86_64 or arm64. \n' +
+				'If a value is not provided, x86_64 will be used as the default.',
+			default: 'x86_64',
+			since: '5.13.2'
 		},
 		{
 			argument: 'deploy-proxy-api',
