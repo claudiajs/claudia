@@ -195,7 +195,7 @@ module.exports = function update(options, optionalLogger) {
 				return Promise.reject('--s3-key only works with --use-s3-bucket');
 			}
 			if (options.arch && options.arch !== 'x86_64' && options.arch !== 'arm64') {
-				return '--arch should specify either \'x86_64\' or \'arm64\'';
+				return Promise.reject(`--arch should specify either 'x86_64' or 'arm64'`);
 			}
 			return Promise.resolve();
 		};

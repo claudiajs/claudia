@@ -1513,7 +1513,37 @@ describe('create', () => {
 					expect(result.PolicyNames.find(t => t === 'dlq-publisher')).toBeFalsy();
 				})
 				.then(done, done.fail);
+
 			});
+		});
+	});
+	describe('architecture', () => {
+		it('creates x86 functions by default', async () => {
+			await createFromDir('hello-world');
+			const result = await getLambdaConfiguration();
+			console.log(result);
+			expect(result.Architectures).toEqual(['x86_64']);
+		});
+		it('creates x86 functions if specified', async () => {
+			config.arch = 'x86_64';
+			await createFromDir('hello-world');
+			const result = await getLambdaConfiguration();
+			expect(result.Architectures).toEqual(['x86_64']);
+		});
+		it('creates arm functions if specified', async () => {
+			config.arch = 'arm64';
+			await createFromDir('hello-world');
+			const result = await getLambdaConfiguration();
+			expect(result.Architectures).toEqual(['arm64']);
+		});
+		it('refuses to create with invalid architecture', async () => {
+			config.arch = 'arm65';
+			try {
+				await createFromDir('hello-world');
+				fail('did not throw');
+			} catch (e) {
+				expect(e).toEqual(`--arch should specify either 'x86_64' or 'arm64'`);
+			}
 		});
 	});
 });

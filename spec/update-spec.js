@@ -1279,4 +1279,32 @@ describe('update', () => {
 			});
 		});
 	});
+	describe('architectures', () => {
+		beforeEach(async () => {
+			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
+			const result = await create({name: testRunName, region: awsRegion, source: workingdir, handler: 'main.handler'});
+			newObjects.lambdaRole = result.lambda && result.lambda.role;
+			newObjects.lambdaFunction = result.lambda && result.lambda.name;
+		});
+		it('does not change the architecture if not provided', async () => {
+			await underTest({source: workingdir, version: 'new'});
+			const configuration = await getLambdaConfiguration('new');
+			expect(configuration.Architectures).toEqual(['x86_64']);
+		});
+		it(`fails if arch are specified but invalid`, async () => {
+			try {
+				await underTest({source: workingdir, version: 'new', arch: 'arm65'});
+				fail('did not throw');
+			} catch (e) {
+				expect(e).toEqual(`--arch should specify either 'x86_64' or 'arm64'`);
+			}
+			const configuration = await getLambdaConfiguration();
+			expect(configuration.Architectures).toEqual(['x86_64']);
+		});
+		it('can specify architecture size using the --arch argument', async () => {
+			await underTest({source: workingdir, version: 'new', arch: 'arm64'});
+			const result = await getLambdaConfiguration('new');
+			expect(result.Architectures).toEqual(['arm64']);
+		});
+	});
 });
