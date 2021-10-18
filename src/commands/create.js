@@ -29,6 +29,7 @@ const path = require('path'),
 	snsPublishPolicy = require('../policies/sns-publish-policy'),
 	isSNSArn = require('../util/is-sns-arn'),
 	lambdaInvocationPolicy = require('../policies/lambda-invocation-policy'),
+	waitUntilNotPending = require('../tasks/wait-until-not-pending'),
 	NullLogger = require('../util/null-logger');
 module.exports = function create(options, optionalLogger) {
 	'use strict';
@@ -213,6 +214,11 @@ module.exports = function create(options, optionalLogger) {
 				}
 			})
 			.then(() =>lambdaData);
+		},
+		waitForState = function (lambdaData) {
+			logger.logStage('waiting for lambda resource allocation');
+			return waitUntilNotPending(lambda, lambdaData.FunctionName, awsDelay, awsRetries)
+			.then(() => lambdaData);
 		},
 		createWebApi = function (lambdaMetadata, packageDir) {
 			let apiModule, apiConfig, apiModulePath;
@@ -424,6 +430,7 @@ module.exports = function create(options, optionalLogger) {
 		s3Key = functionCode.S3Key;
 		return createLambda(functionName, functionDesc, functionCode, roleMetadata.Role.Arn);
 	})
+	.then(waitForState)
 	.then(markAliases)
 	.then(lambdaMetadata => {
 		if (options['api-module']) {

@@ -24,6 +24,7 @@ const zipdir = require('../tasks/zipdir'),
 	isSNSArn = require('../util/is-sns-arn'),
 	snsPublishPolicy = require('../policies/sns-publish-policy'),
 	retry = require('oh-no-i-insist'),
+	waitUntilNotPending = require('../tasks/wait-until-not-pending'),
 	combineLists = require('../util/combine-lists');
 module.exports = function update(options, optionalLogger) {
 	'use strict';
@@ -289,6 +290,11 @@ module.exports = function update(options, optionalLogger) {
 			functionCode.Architectures = [options.arch];
 		}
 		return lambda.updateFunctionCode(functionCode).promise();
+	})
+	.then(result => {
+		logger.logStage('waiting for lambda resource allocation');
+		return waitUntilNotPending(lambda, lambdaConfig.name, awsDelay, awsRetries)
+		.then(() => result);
 	})
 	.then(result => {
 		updateResult = result;
