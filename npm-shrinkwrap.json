@@ -1,11 +1,11 @@
 {
   "name": "claudia",
-  "version": "5.13.2",
+  "version": "5.14.0",
   "lockfileVersion": 2,
   "requires": true,
   "packages": {
     "": {
-      "version": "5.13.2",
+      "version": "5.14.0",
       "license": "MIT",
       "dependencies": {
         "archiver": "^3.0.0",
