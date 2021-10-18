@@ -183,7 +183,7 @@ describe('update', () => {
 				return lambda.invoke({FunctionName: testRunName}).promise();
 			}).then(lambdaResult => {
 				expect(lambdaResult.StatusCode).toEqual(200);
-				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
+				expect(JSON.parse(lambdaResult.Payload).modules.filter(t => !t.startsWith('.'))).toEqual(['huh']);
 			}).then(done, done.fail);
 		});
 		it('rewires relative dependencies to reference original location after copy', done => {
@@ -600,6 +600,7 @@ describe('update', () => {
 				'updating configuration',
 				'zipping package',
 				'updating Lambda',
+				'waiting for lambda resource allocation',
 				'setting version alias',
 				'updating REST API'
 			]);
