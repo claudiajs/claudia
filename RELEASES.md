@@ -1,5 +1,11 @@
 # Release history
 
+### 5.14.0 (18 October 2021)
+
+- [Support for architecture option in create and update commands](https://github.com/claudiajs/claudia/pull/228), thanks to  [Tony BenBrahim](https://github.com/tbenbrahim)
+- [Dedupe with "--production" and "--no-optional" flags](https://github.com/claudiajs/claudia/pull/225), thanks to [Daniel Gorbatov](https://github.com/danielg-cf)
+- [Updates uuid to version 3](https://github.com/claudiajs/claudia/pull/215), thanks to [@barslev](https://github.com/barslev)
+
 ### 5.13.0 (8 February 2021)
 
 - support for nodejs14.x
