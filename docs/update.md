@@ -21,6 +21,9 @@ claudia update {OPTIONS}
     http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html
 *  `--memory`:  (_optional_) The amount of memory, in MB, your Lambda function is given.
     The value must be a multiple of 64 MB.
+*  `--arch`:  (_optional_) Specifies the desired architecture, either x86_64 or arm64. 
+    If this option is not provided, the architecture will not be modfied.
+    * _Introduced in version_: 5.13.2
 *  `--no-optional-dependencies`:  (_optional_) Do not upload optional dependencies to Lambda.
 *  `--use-local-dependencies`:  (_optional_) Do not install dependencies, use local node_modules directory instead
 *  `--npm-options`:  (_optional_) Any additional options to pass on to NPM when installing packages. Check https://docs.npmjs.com/cli/install for more information

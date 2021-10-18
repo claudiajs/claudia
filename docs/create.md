@@ -19,6 +19,10 @@ claudia create {OPTIONS}
     If you provide this parameter, do not set the handler option.
     This should be a module created using the Claudia API Builder.
     * _For example_: if the api is defined in web.js, this would be web
+*  `--arch`:  (_optional_) Specifies the desired architecture, either x86_64 or arm64. 
+    If a value is not provided, x86_64 will be used as the default.
+    * _Defaults to_: x86_64
+    * _Introduced in version_: 5.13.2
 *  `--deploy-proxy-api`:  (_optional_) If specified, a proxy API will be created for the Lambda 
     function on API Gateway, and forward all requests to function.
     This is an alternative way to create web APIs to --api-module.
