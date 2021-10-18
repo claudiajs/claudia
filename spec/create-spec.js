@@ -775,7 +775,7 @@ describe('create', () => {
 			.then(() => lambda.invoke({ FunctionName: testRunName }).promise())
 			.then(lambdaResult => {
 				expect(lambdaResult.StatusCode).toEqual(200);
-				expect(lambdaResult.Payload).toEqual('{"endpoint":"https://s3.amazonaws.com/","modules":[".bin","huh"]}');
+				expect(JSON.parse(lambdaResult.Payload).modules.filter(t => !t.startsWith('.'))).toEqual(['huh']);
 			})
 			.then(done, done.fail);
 		});
@@ -1212,12 +1212,13 @@ describe('create', () => {
 				'zipping package',
 				'initialising IAM role',
 				'creating Lambda',
+				'waiting for lambda resource allocation',
 				'creating version alias',
 				'creating REST API',
 				'saving configuration'
 			]);
 			expect(logger.getApiCallLogForService('lambda', true)).toEqual([
-				'lambda.createFunction',  'lambda.setupRequestListeners', 'lambda.updateAlias', 'lambda.createAlias'
+				'lambda.createFunction',  'lambda.setupRequestListeners', 'lambda.getFunctionConfiguration', 'lambda.updateAlias', 'lambda.createAlias'
 			]);
 			expect(logger.getApiCallLogForService('iam', true)).toEqual(['iam.createRole', 'iam.putRolePolicy']);
 			expect(logger.getApiCallLogForService('sts', true)).toEqual(['sts.getCallerIdentity', 'sts.setupRequestListeners', 'sts.optInRegionalEndpoint']);
@@ -1521,7 +1522,6 @@ describe('create', () => {
 		it('creates x86 functions by default', async () => {
 			await createFromDir('hello-world');
 			const result = await getLambdaConfiguration();
-			console.log(result);
 			expect(result.Architectures).toEqual(['x86_64']);
 		});
 		it('creates x86 functions if specified', async () => {
