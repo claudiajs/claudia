@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const underTest = require('../src/util/path-splitter');
 describe('pathSplitter', () => {
 	'use strict';

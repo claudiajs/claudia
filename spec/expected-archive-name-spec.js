@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const expectedArchiveName = require('../src/util/expected-archive-name');
 describe('expectedArchiveName', () => {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global module */
 module.exports = function countElements(object, keys) {
 	'use strict';
 	if (!object || !keys) {

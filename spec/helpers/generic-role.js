@@ -1,4 +1,3 @@
-/*global beforeAll, afterAll, require, console */
 const genericRole = require('../util/generic-role');
 beforeAll(done => {
 	'use strict';

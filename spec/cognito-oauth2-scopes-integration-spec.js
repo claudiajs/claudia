@@ -1,4 +1,3 @@
-/*global beforeAll, afterAll, describe, require, console*/
 const create = require('../src/commands/create'),
 	destroy = require('../src/commands/destroy'),
 	path = require('path'),

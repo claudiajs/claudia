@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const iamNameSanitize = require('../src/util/iam-name-sanitize');
 describe('iamNameSanitize', () => {
 	'use strict';

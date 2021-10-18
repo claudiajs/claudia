@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const appendServiceToRole = require('../src/tasks/append-service-to-role');
 describe('appendServiceToRole', () => {
 	'use strict';

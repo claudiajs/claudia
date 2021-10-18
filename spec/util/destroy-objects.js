@@ -1,4 +1,3 @@
-/*global require, Promise, console, process*/
 const aws = require('aws-sdk'),
 	destroyRole = require('../../src/util/destroy-role'),
 	fsUtil = require('../../src/util/fs-util'),

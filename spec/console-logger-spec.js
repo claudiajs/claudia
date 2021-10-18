@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, jasmine */
 const ConsoleLogger = require('../src/util/console-logger');
 describe('ConsoleLogger', () => {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global describe, require, it, expect, beforeEach, afterEach, console */
 const underTest = require('../src/commands/set-version'),
 	genericTestRole = require('./util/generic-role'),
 	destroyObjects = require('./util/destroy-objects'),

@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const createPatchArrayForTypes = require('../src/util/create-patch-array-for-types');
 describe('createPatchArrayForTypes', () => {
 	'use strict';

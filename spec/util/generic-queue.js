@@ -1,4 +1,3 @@
-/*global require */
 
 let queueUrl;
 const aws = require('aws-sdk'),

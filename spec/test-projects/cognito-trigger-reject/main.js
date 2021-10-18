@@ -1,4 +1,3 @@
-/*global exports, console*/
 exports.handler = function (event, context, callback) {
 	'use strict';
 	console.log(event);

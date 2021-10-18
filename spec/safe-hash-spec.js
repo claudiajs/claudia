@@ -1,4 +1,3 @@
-/* global describe, it, expect, require */
 const safeHash = require('../src/util/safe-hash');
 describe('safeHash', () => {
 	'use strict';

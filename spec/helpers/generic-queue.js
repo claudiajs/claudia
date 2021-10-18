@@ -1,4 +1,3 @@
-/*global afterAll, require, console */
 const genericQueue = require('../util/generic-queue');
 afterAll(done => {
 	'use strict';

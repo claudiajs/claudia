@@ -1,4 +1,3 @@
-/*global exports, require*/
 const aws = require('aws-sdk'),
 	fs = require('fs');
 exports.handler = function (event, context) {

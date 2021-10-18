@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/set-cloudfront-trigger'),
 	create = require('../src/commands/create'),
 	findCloudfrontBehavior = require('../src/tasks/find-cloudfront-behavior'),

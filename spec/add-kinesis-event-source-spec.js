@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach, beforeAll, afterAll */
 const underTest = require('../src/commands/add-kinesis-event-source'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),

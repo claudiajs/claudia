@@ -1,4 +1,3 @@
-/*global describe, it, expect, require, __dirname */
 const path = require('path'),
 	underTest = require('../src/tasks/validate-package');
 describe('validatePackage', () => {

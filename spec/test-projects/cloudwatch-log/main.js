@@ -1,4 +1,3 @@
-/*global exports, require */
 const aws = require('aws-sdk');
 exports.handler = function (event, context) {
 	'use strict';

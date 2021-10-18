@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region'),
 	patchBinaryTypes = require('../src/tasks/patch-binary-types'),

@@ -1,4 +1,3 @@
-/*global describe, it, beforeEach, afterEach, expect*/
 const underTest = require('../src/tasks/clean-up-package'),
 	fs = require('fs'),
 	fsUtil = require('../src/util/fs-util'),

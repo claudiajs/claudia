@@ -1,4 +1,3 @@
-/*global beforeEach, afterEach*/
 const cwd = process.cwd();
 beforeEach(() => {
 	'use strict';

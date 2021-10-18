@@ -1,4 +1,3 @@
-/*global module */
 const createPatchArrayForTypes = require('../util/create-patch-array-for-types');
 module.exports = function patchBinaryTypes(restApiId, apiGateway, requestedBinaryTypes) {
 	'use strict';

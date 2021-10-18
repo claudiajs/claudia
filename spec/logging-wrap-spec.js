@@ -1,4 +1,3 @@
-/*global describe, it, beforeEach, expect, jasmine */
 const underTest = require('../src/util/logging-wrap'),
 	aws = require('aws-sdk');
 describe('loggingWrap', () => {

@@ -1,4 +1,3 @@
-/*global describe, require, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/test-lambda'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),

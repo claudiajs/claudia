@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/commands/add-iot-topic-rule'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),

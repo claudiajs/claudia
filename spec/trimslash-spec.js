@@ -1,4 +1,3 @@
-/*global require, describe, it, expect*/
 const underTest = require('../src/util/trimslash');
 describe('trimSlash', () => {
 	'use strict';

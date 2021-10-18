@@ -1,4 +1,3 @@
-/*global describe, it, expect, require, beforeEach, afterEach*/
 
 const fsUtil = require('../src/util/fs-util'),
 	fs = require('fs'),

@@ -1,4 +1,3 @@
-/*global describe, it, expect, process, require, beforeEach, spyOn, jasmine */
 const readline = require('readline'),
 	ask = require('../../src/util/ask');
 describe('ask', () => {

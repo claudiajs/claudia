@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const readEnvVarsFromOptions = require('../src/util/read-env-vars-from-options'),
 	fs = require('fs'),
 	tmppath = require('../src/util/tmppath');

@@ -1,4 +1,3 @@
-/*global require, module */
 const readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
 	mergeProperties = require('../util/merge-properties');
 module.exports = function initEnvVarsFromOptions(options) {

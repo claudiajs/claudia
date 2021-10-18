@@ -38,7 +38,7 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 				httpMethod: httpMethod,
 				type: 'MOCK',
 				requestTemplates: {
-					'application/json': '{\"statusCode\": 200}'
+					'application/json': '{"statusCode": 200}'
 				}
 			});
 		},
@@ -233,13 +233,13 @@ module.exports = function rebuildWebApi(functionName, functionVersion, restApiId
 			};
 			if (responseConfig.statusCode) {
 				params.statusCode = String(responseConfig.statusCode);
-			};
+			}
 			if (responseConfig.responseParameters) {
 				params.responseParameters = responseConfig.responseParameters;
-			};
+			}
 			if (responseConfig.responseTemplates) {
 				params.responseTemplates = responseConfig.responseTemplates;
-			};
+			}
 			if (responseConfig.headers) {
 				params.responseParameters = params.responseParameters || {};
 				Object.keys(responseConfig.headers).forEach(header => {

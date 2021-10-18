@@ -1,4 +1,3 @@
-/*global jasmine, require, process*/
 const Jasmine = require('jasmine'),
 	SpecReporter = require('jasmine-spec-reporter'),
 	jrunner = new Jasmine(),

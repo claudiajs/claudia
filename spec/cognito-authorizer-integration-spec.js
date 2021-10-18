@@ -1,4 +1,3 @@
-/*global beforeAll, afterAll, describe, expect, require, console, it*/
 const create = require('../src/commands/create'),
 	update = require('../src/commands/update'),
 	destroy = require('../src/commands/destroy'),

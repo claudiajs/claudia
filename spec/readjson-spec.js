@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),
 	fsUtil = require('../src/util/fs-util'),

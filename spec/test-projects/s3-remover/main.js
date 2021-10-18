@@ -1,4 +1,3 @@
-/*global exports, require, console*/
 const aws = require('aws-sdk'),
 	s3 = new aws.S3();
 exports.handler = function (event, context) {

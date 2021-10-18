@@ -1,4 +1,3 @@
-/*global require, module, process */
 const readline = require('readline');
 
 module.exports = function ask(question) {

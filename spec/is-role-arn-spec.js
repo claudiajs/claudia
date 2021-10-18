@@ -1,4 +1,3 @@
-/*global describe, it, expect*/
 const isRoleArn = require('../src/util/is-role-arn');
 describe('isRoleArn', () => {
 	'use strict';

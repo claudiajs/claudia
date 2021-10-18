@@ -1,2 +1,1 @@
-/*global module*/
 module.exports = {};

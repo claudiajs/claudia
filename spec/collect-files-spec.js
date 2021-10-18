@@ -1,4 +1,3 @@
-/*global describe, it, beforeEach, afterEach, expect, process */
 const underTest = require('../src/tasks/collect-files'),
 	os = require('os'),
 	fs = require('fs'),

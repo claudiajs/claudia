@@ -1,4 +1,3 @@
-/*global describe, it, beforeEach, afterEach, expect, it */
 const underTest = require('../src/tasks/register-authorizers'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),

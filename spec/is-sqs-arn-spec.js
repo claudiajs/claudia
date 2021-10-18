@@ -1,4 +1,3 @@
-/*global describe, it, expect*/
 const isSQSArn = require('../src/util/is-sqs-arn');
 describe('isSQSArn', () => {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global describe, it, expect, jasmine, beforeEach */
 const initEnvVarsFromOptions = require('../src/util/init-env-vars-from-options');
 
 describe('initEnvVarsFromOptions', () => {

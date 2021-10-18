@@ -1,6 +1,3 @@
-/*global require */
-/*eslint "strict": ["error", "global"] */
-'use strict';
 const aws = require('aws-sdk'),
 	awsRegion = require('./test-aws-region'),
 	getOwnerInfo = require('../../src/tasks/get-owner-info'),
@@ -9,6 +6,7 @@ const aws = require('aws-sdk'),
 let userPoolId, clientId, userPoolArn, idToken;
 
 module.exports.create = function create() {
+	'use strict';
 	const cognitoIdentityServiceProvider = new aws.CognitoIdentityServiceProvider({ region: awsRegion });
 	return cognitoIdentityServiceProvider.createUserPool({ PoolName: userPoolName }).promise()
 	.then(result => {
@@ -63,6 +61,7 @@ module.exports.create = function create() {
 };
 
 module.exports.destroy = function () {
+	'use strict';
 	if (userPoolId) {
 		const cognitoIdentityServiceProvider = new aws.CognitoIdentityServiceProvider({ region: awsRegion });
 		return cognitoIdentityServiceProvider.deleteUserPool({ UserPoolId: userPoolId }).promise();
@@ -70,6 +69,7 @@ module.exports.destroy = function () {
 };
 
 module.exports.getArn = function () {
+	'use strict';
 	if (!userPoolArn) {
 		throw 'Cognito User Pool Not Created!';
 	}
@@ -77,6 +77,7 @@ module.exports.getArn = function () {
 };
 
 module.exports.getUserToken = function () {
+	'use strict';
 	if (!idToken) {
 		throw 'Cognito User Pool Not Created!';
 	}

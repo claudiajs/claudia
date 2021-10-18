@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const patchEscape = require('../src/util/patch-escape');
 describe('patchEscape', () => {
 	'use strict';

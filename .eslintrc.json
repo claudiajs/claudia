@@ -1,8 +1,8 @@
 {
-  "extends": "crockford",
+  "extends": "eslint:recommended",
   "env": {
     "node": true,
-    "es6": true
+	"es6": true
   },
   "parserOptions": {
     "ecmaVersion": 2017
@@ -11,13 +11,19 @@
     "semi": ["error", "always"],
     "strict": ["error", "function"],
     "no-unused-vars": "error",
-    "indent": ["error", "tab", {"MemberExpression": "off"}],
+    "indent": ["error", "tab", {"MemberExpression": "off"} ],
     "no-const-assign": "error",
     "one-var": "error",
     "prefer-const": "error",
     "no-var": "error",
     "prefer-arrow-callback": "error",
     "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
-    "quotes": ["error", "single", {"avoidEscape": true, "allowTemplateLiterals": true}]
+    "quotes": ["error", "single", {"avoidEscape": true, "allowTemplateLiterals": true}],
+    "no-underscore-dangle": "off",
+	"no-use-before-define": ["error"],
+	"require-await": ["error"],
+	"eqeqeq": ["error"],
+	"comma-spacing": ["error", { "before": false, "after": true }],
+	"key-spacing": ["error", { "afterColon": true, "beforeColon": false }]
   }
 }

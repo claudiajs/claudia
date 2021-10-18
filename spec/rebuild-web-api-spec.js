@@ -1,4 +1,3 @@
-/*global beforeEach, afterEach, describe, expect, require, console, it, describe, afterAll */
 const underTest = require('../src/tasks/rebuild-web-api'),
 	destroyObjects = require('./util/destroy-objects'),
 	genericTestRole = require('./util/generic-role'),

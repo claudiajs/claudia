@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeAll, beforeEach, afterAll, afterEach*/
 const underTest = require('../src/commands/create'),
 	limits = require('../src/util/limits.json'),
 	tmppath = require('../src/util/tmppath'),

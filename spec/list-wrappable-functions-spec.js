@@ -1,4 +1,3 @@
-/*global describe, expect, it */
 const aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region'),
 	listWrappableFunctions = require('../src/util/list-wrappable-functions'),

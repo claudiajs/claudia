@@ -1,4 +1,3 @@
-/*global require, describe, it, expect, beforeEach, Promise, jasmine */
 const updateEnvVars = require('../src/tasks/update-env-vars'),
 	fs = require('fs'),
 	tmppath = require('../src/util/tmppath');

@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach, beforeAll, afterAll */
 const underTest = require('../src/commands/add-s3-event-source'),
 	destroyObjects = require('./util/destroy-objects'),
 	create = require('../src/commands/create'),

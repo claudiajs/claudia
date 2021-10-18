@@ -1,4 +1,3 @@
-/*global module, require */
 const retry = require('oh-no-i-insist'),
 	aws = require('aws-sdk');
 

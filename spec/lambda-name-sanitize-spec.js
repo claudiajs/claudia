@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const lambdaNameSanitize = require('../src/util/lambda-name-sanitize');
 describe('lambdaNameSanitize', () => {
 	'use strict';

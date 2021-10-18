@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/tasks/mark-alias'),
 	create = require('../src/commands/create'),
 	destroyObjects = require('./util/destroy-objects'),

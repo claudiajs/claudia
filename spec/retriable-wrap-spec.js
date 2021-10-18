@@ -1,4 +1,3 @@
-/* global describe, it, expect, beforeEach, jasmine */
 const underTest = require('../src/util/retriable-wrap'),
 	aws = require('aws-sdk');
 describe('retriableWrap', () => {

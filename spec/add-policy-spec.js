@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach  */
 const underTest = require('../src/tasks/add-policy'),
 	destroyObjects = require('./util/destroy-objects'),
 	tmppath = require('../src/util/tmppath'),

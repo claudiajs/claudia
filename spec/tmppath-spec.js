@@ -1,4 +1,3 @@
-/*global describe, it, expect, require */
 const underTest = require ('../src/util/tmppath'),
 	trimSlash = require ('../src/util/trimslash'),
 	path = require('path'),

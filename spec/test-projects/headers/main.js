@@ -1,4 +1,3 @@
-/*global exports*/
 exports.handler = function (request, context) {
 	'use strict';
 	if (request.queryString.fail) {

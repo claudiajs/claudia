@@ -1,4 +1,3 @@
-/*global describe, it, expect*/
 const isSNSArn = require('../src/util/is-sns-arn');
 describe('isSNSArn', () => {
 	'use strict';

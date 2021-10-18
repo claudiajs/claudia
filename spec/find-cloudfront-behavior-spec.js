@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach */
 const findCloudfrontBehavior = require('../src/tasks/find-cloudfront-behavior');
 describe('findCloudfrontBehavior', () => {
 	'use strict';

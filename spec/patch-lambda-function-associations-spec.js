@@ -1,4 +1,3 @@
-/*global describe, it, expect*/
 const patchLambdaFunctionAssociations = require('../src/tasks/patch-lambda-function-associations');
 describe('patchLambdaFunctionAssociations', () => {
 	'use strict';

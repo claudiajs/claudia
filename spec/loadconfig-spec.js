@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach */
 const underTest = require('../src/util/loadconfig'),
 	tmppath = require('../src/util/tmppath'),
 	fs = require('fs'),

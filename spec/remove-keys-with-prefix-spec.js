@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const removeKeysWithPrefix = require('../src/util/remove-keys-with-prefix');
 describe('removeKeysWithPrefix', () => {
 	'use strict';

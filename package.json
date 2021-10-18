@@ -66,9 +66,7 @@
   "devDependencies": {
     "decompress": "^4.2.0",
     "dotenv": "^2.0.0",
-    "eslint": "^6.5.1",
-    "eslint-config-crockford": "^0.2.0",
-    "eslint-config-defaults": "^9.0.0",
+    "eslint": "^8.0.1",
     "jasmine": "^2.5.2",
     "jasmine-spec-reporter": "^2.7.0",
     "minimist": "^1.2.5"

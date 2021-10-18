@@ -1,4 +1,3 @@
-/*global exports, global*/
 
 if (global.MARKED) {
 	throw new Error('trying to re-enter module');

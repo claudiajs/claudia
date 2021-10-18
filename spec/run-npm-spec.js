@@ -1,4 +1,3 @@
-/*global describe, it, beforeEach, afterEach, require, it, expect */
 const underTest = require('../src/util/run-npm'),
 	fs = require('fs'),
 	fsUtil = require('../src/util/fs-util'),

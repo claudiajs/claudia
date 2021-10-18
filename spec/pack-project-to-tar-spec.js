@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach, require*/
 
 const packProjectToTar = require('../src/util/pack-project-to-tar'),
 	os = require('os'),

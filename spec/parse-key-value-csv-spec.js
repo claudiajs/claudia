@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const parseKeyValueCSV = require('../src/util/parse-key-value-csv');
 describe('parseKeyValueCSV', () => {
 	'use strict';

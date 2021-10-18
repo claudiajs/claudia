@@ -1,4 +1,3 @@
-/*global exports */
 if (!process.env.TEST_VAR) {
 	throw 'TEST_VAR is not defined';
 }

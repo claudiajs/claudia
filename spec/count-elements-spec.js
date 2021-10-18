@@ -1,4 +1,3 @@
-/*global describe, require, it, expect */
 const countElements = require('../src/util/count-elements');
 describe('countElements', () => {
 	'use strict';

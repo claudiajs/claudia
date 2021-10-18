@@ -36,7 +36,7 @@ module.exports = function addKinesisEventSource(options, logger) {
 					RoleName: lambdaConfig.role,
 					PolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole'
 				}).promise();
-			};
+			}
 		},
 		getKinesisArn = function () {
 			if (isKinesisArn(options.stream)) {

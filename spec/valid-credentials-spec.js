@@ -1,4 +1,3 @@
-/*global describe, it, expect, require */
 const validCredentials = require('../src/util/valid-credentials');
 describe('validCredentials', () => {
 	'use strict';

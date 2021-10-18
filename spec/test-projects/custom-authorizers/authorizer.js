@@ -1,4 +1,3 @@
-/*global exports */
 const generatePolicy = function (authToken, methodArn) {
 	'use strict';
 	const tmp = methodArn.split(':'),

@@ -1,4 +1,3 @@
-/*global require */
 const aws = require('aws-sdk'),
 	destroyRole = require('../../src/util/destroy-role'),
 	awsRegion = require('./test-aws-region'),

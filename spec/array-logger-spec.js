@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach */
 const ArrayLogger = require('../src/util/array-logger');
 describe('ArrayLogger', () => {
 	'use strict';

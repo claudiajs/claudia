@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach*/
 const underTest = require('../src/commands/pack'),
 	os = require('os'),
 	path = require('path'),

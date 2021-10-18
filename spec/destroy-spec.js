@@ -1,4 +1,3 @@
-/*global describe, require, it, expect, beforeEach, console */
 const underTest = require('../src/commands/destroy'),
 	create = require('../src/commands/create'),
 	retriableWrap = require('../src/util/retriable-wrap'),

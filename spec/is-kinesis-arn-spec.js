@@ -1,4 +1,3 @@
-/*global describe, it, expect*/
 const isKinesisArn = require('../src/util/is-kinesis-arn');
 describe('isKinesisArn', () => {
 	'use strict';

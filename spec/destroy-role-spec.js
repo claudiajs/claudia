@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach */
 const underTest = require('../src/util/destroy-role'),
 	aws = require('aws-sdk'),
 	awsRegion = require('./util/test-aws-region'),

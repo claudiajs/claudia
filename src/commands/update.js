@@ -265,7 +265,7 @@ module.exports = function update(options, optionalLogger) {
 				};
 				return iam.putRolePolicy(policyUpdate).promise();
 			}
-		};
+		}
 	})
 	.then(() => {
 		return updateConfiguration(requiresHandlerUpdate && functionConfig.Handler);

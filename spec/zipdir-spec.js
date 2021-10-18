@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach, afterEach, require */
 const fs = require('fs'),
 	os = require('os'),
 	path = require('path'),

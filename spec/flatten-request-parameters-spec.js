@@ -1,4 +1,3 @@
-/*global describe, it, expect */
 const underTest = require('../src/tasks/flatten-request-parameters');
 describe('flattenRequestParameters', () => {
 	'use strict';

@@ -1,4 +1,3 @@
-/*global describe, it, expect, beforeEach */
 const NullLogger = require('../src/util/null-logger');
 describe('NullLogger', () => {
 	'use strict';

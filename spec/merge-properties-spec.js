@@ -1,4 +1,3 @@
-/*global describe, it, expect, require */
 const mergeProperties = require('../src/util/merge-properties');
 describe('mergeProperties', () => {
 	'use strict';

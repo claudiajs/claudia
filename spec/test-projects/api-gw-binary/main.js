@@ -1,4 +1,3 @@
-/*global exports*/
 exports.apiConfig = function () {
 	'use strict';
 	return {
