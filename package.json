@@ -57,12 +57,12 @@
     "gunzip-maybe": "^1.4.0",
     "https-proxy-agent": "^5.0.0",
     "minimal-request-promise": "^1.1.0",
+    "minimist": "^1.2.5",
     "oh-no-i-insist": "^1.1.1",
     "sequential-promise-map": "^1.0.0",
-    "uuid": "^8.3.2",
-    "which": "^1.3.1",
     "tar-fs": "^2.1.1",
-    "minimist": "^1.2.5"
+    "uuid": "^8.3.2",
+    "which": "^2.0.2"
   },
   "devDependencies": {
     "decompress": "^4.2.0",
