@@ -5,3 +5,4 @@ SpecRunner.html
 .grunt
 *.log
 .DS_Store
+.idea
