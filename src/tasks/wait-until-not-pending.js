@@ -11,6 +11,9 @@ module.exports = function waitUntilNotPending(lambda, functionName, timeout, ret
 					if (result.state === 'Pending') {
 						throw 'Pending';
 					}
+					if (result.LastUpdateStatus === 'InProgress') {
+						throw 'Pending';
+					}
 				});
 		},
 		timeout,

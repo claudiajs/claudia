@@ -271,6 +271,10 @@ module.exports = function update(options, optionalLogger) {
 		return updateConfiguration(requiresHandlerUpdate && functionConfig.Handler);
 	})
 	.then(() => {
+		logger.logStage('waiting for lambda resource allocation');
+		return waitUntilNotPending(lambda, lambdaConfig.name, awsDelay, awsRetries);
+	})
+	.then(() => {
 		return updateEnvVars(options, lambda, lambdaConfig.name, functionConfig.Environment && functionConfig.Environment.Variables);
 	})
 	.then(() => {
