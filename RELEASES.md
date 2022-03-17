@@ -1,6 +1,6 @@
 # Release history
 
-### 5.14.1 (17 March 2021)
+### 5.14.1 (17 March 2022)
 
 - additional fixes for the lambda lifecycle updates, thanks to [Mangwan](https://github.com/CodeBanBan)
 
