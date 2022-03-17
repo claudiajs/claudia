@@ -145,7 +145,11 @@ module.exports = function update(options, optionalLogger) {
 					},
 					() => logger.logStage('waiting for IAM role propagation'),
 					Promise
-				);
+				).then(result => {
+					logger.logStage('waiting for lambda resource allocation');
+					return waitUntilNotPending(lambda, lambdaConfig.name, awsDelay, awsRetries)
+						.then(() => result);
+				});
 			}
 		},
 		cleanup = function () {
