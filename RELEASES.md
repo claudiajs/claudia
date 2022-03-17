@@ -1,5 +1,9 @@
 # Release history
 
+### 5.14.1 (17 March 2021)
+
+- additional fixes for the lambda lifecycle updates, thanks to [Mangwan](https://github.com/CodeBanBan)
+
 ### 5.14.0 (18 October 2021)
 
 - [Support for architecture option in create and update commands](https://github.com/claudiajs/claudia/pull/228), thanks to  [Tony BenBrahim](https://github.com/tbenbrahim)
