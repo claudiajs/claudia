@@ -16,6 +16,12 @@ claudia update {OPTIONS}
     * _Defaults to_: current directory
 *  `--config`:  (_optional_) Config file containing the resource names
     * _Defaults to_: claudia.json
+*  `--handler`:  (_optional_) Main function for Lambda to execute, as module.function
+    * _For example_: if it is in the main.js file and exported as router, this would be main.router
+*  `--no-handler-update`:  (_optional_) Do not update the handler in Lambda. This can be used in conjunction with `--handler`
+    when you want to validate a handler function name different from what is configured in Lambda. 
+    This is useful if additional layers wrap the handler (e.g., [Datadog](https://docs.datadoghq.com/serverless/installation/nodejs/?tab=custom)).
+    * _Defaults to_: updates handler if provided via `--handler` or ends in `'router'`
 *  `--timeout`:  (_optional_) The function execution time, in seconds, at which AWS Lambda should terminate the function
 *  `--runtime`:  (_optional_) Node.js runtime to use. For supported values, see
     http://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html
