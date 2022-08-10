@@ -5,10 +5,10 @@ module.exports = function waitUntilNotPending(lambda, functionName, timeout, ret
 		() => {
 			return lambda.getFunctionConfiguration({FunctionName: functionName}).promise()
 				.then(result => {
-					if (result.state === 'Failed') {
+					if (result.State === 'Failed') {
 						throw `Lambda resource update failed`;
 					}
-					if (result.state === 'Pending') {
+					if (result.State === 'Pending') {
 						throw 'Pending';
 					}
 					if (result.LastUpdateStatus === 'InProgress') {

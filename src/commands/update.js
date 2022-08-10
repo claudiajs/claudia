@@ -230,12 +230,13 @@ module.exports = function update(options, optionalLogger) {
 	.then(() => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name}).promise())
 	.then(result => {
 		functionConfig = result;
-		requiresHandlerUpdate = apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
+		const explicitNoUpdateHandler = options['handler-update'] === false;
+		requiresHandlerUpdate = !explicitNoUpdateHandler && apiConfig && apiConfig.id && /\.router$/.test(functionConfig.Handler);
 		if (requiresHandlerUpdate) {
 			functionConfig.Handler = functionConfig.Handler.replace(/\.router$/, '.proxyRouter');
 		} else if (options.handler) {
 			functionConfig.Handler = options.handler;
-			requiresHandlerUpdate = true;
+			requiresHandlerUpdate = !explicitNoUpdateHandler;
 		}
 	})
 	.then(() => {
