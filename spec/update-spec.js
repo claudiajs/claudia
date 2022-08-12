@@ -624,6 +624,7 @@ describe('update', () => {
 			]);
 		}).then(done, done.fail);
 	});
+
 	describe('handler option support', () => {
 		beforeEach(done => {
 			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
@@ -656,9 +657,16 @@ describe('update', () => {
 			.then(configuration => expect(configuration.Handler).toEqual('main.handler'))
 			.then(done, done.fail);
 		});
-
+		it('does not update AWS handler name with --no-handler-update', done => {
+			fsUtil.copy('spec/test-projects/api-gw-echo', workingdir, true);
+			underTest({source: workingdir, version: 'new', handler: 'main.proxyRouter', 'handler-update': false})
+				.then(() => getLambdaConfiguration())
+				.then(configuration => expect(configuration.Handler).toEqual('main.handler'))// TODO: this may be old
+				.then(() => getLambdaConfiguration('new'))
+				.then(configuration => expect(configuration.Handler).toEqual('main.handler'))
+				.then(done, done.fail);
+		});
 	});
-
 	describe('timeout option support', () => {
 		beforeEach(done => {
 			fsUtil.copy('spec/test-projects/hello-world', workingdir, true);
