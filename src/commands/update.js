@@ -234,9 +234,7 @@ module.exports = function update(options, optionalLogger) {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
 		lambda = loggingWrap(new Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
-		s3 = loggingWrap(new S3({
-            region: lambdaConfig.region
-        }), {log: logger.logApiCall, logName: 's3'});
+		s3 = loggingWrap(new S3({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 's3'});
 		iam = loggingWrap(new IAM({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'iam'});
 		apiGateway = retriableWrap(
 			loggingWrap(
