@@ -17,9 +17,7 @@ module.exports = function addIOTTopicRuleEventSource(options) {
 		iot;
 	const initServices = function () {
 			lambda = new Lambda({region: lambdaConfig.region});
-			iot = new IoT({
-                region: lambdaConfig.region
-            });
+			iot = new IoT({region: lambdaConfig.region});
 		},
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})
