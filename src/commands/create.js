@@ -65,9 +65,7 @@ module.exports = function create(options, optionalLogger) {
 		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = loggingWrap(new IAM({
-            region: options.region
-        }), {log: logger.logApiCall, logName: 'iam'}),
+		iam = loggingWrap(new IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		s3 = loggingWrap(new S3({
             region: options.region,

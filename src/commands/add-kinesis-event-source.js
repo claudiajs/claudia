@@ -25,9 +25,7 @@ module.exports = function addKinesisEventSource(options, logger) {
 		awsRetries = Number(options['aws-retries']) || 15,
 		initServices = function () {
 			lambda = new Lambda({region: lambdaConfig.region});
-			iam = new IAM({
-                region: lambdaConfig.region
-            });
+			iam = new IAM({region: lambdaConfig.region});
 			kinesis = new Kinesis({
                 region: lambdaConfig.region
             });

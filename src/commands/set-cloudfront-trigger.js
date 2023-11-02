@@ -42,9 +42,7 @@ to propagate changes to Lambda@Edge.
 		},
 		initServices = function (config) {
 			lambda = loggingWrap(new Lambda({region: config.region}), {log: logger.logApiCall, logName: 'lambda'});
-			iam = loggingWrap(new IAM({
-                region: config.region
-            }), {log: logger.logApiCall, logName: 'iam'});
+			iam = loggingWrap(new IAM({region: config.region}), {log: logger.logApiCall, logName: 'iam'});
 			cloudFront = loggingWrap(new CloudFront({
                 region: config.region
             }), {log: logger.logApiCall, logName: 'cloudfront'});

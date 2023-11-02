@@ -40,9 +40,7 @@ module.exports = function destroy(options) {
 			}
 		})
 		.then(() => {
-			const iam = new IAM({
-                region: lambdaConfig.region
-            });
+			const iam = new IAM({region: lambdaConfig.region});
 			if (lambdaConfig.role && !lambdaConfig.sharedRole) {
 				return destroyRole(iam, lambdaConfig.role);
 			}

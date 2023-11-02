@@ -38,9 +38,7 @@ module.exports = function addS3EventSource(options) {
 				});
 		},
 		addS3AccessPolicy = function () {
-			const iam = new IAM({
-                region: lambdaConfig.region
-            });
+			const iam = new IAM({region: lambdaConfig.region});
 			return iam.putRolePolicy({
 				RoleName: lambdaConfig.role,
 				PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
