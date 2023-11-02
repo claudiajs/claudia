@@ -235,11 +235,7 @@ module.exports = function update(options, optionalLogger) {
 		apiConfig = config.api;
 		lambda = loggingWrap(new Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		s3 = loggingWrap(new S3({
-            region: lambdaConfig.region,
-
-            // The key signatureVersion is no longer supported in v3, and can be removed.
-            // @deprecated SDK v3 only supports signature v4.
-            signatureVersion: 'v4'
+            region: lambdaConfig.region
         }), {log: logger.logApiCall, logName: 's3'});
 		iam = loggingWrap(new IAM({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'iam'});
 		apiGateway = retriableWrap(

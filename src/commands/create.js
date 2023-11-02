@@ -68,11 +68,7 @@ module.exports = function create(options, optionalLogger) {
 		iam = loggingWrap(new IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
 		lambda = loggingWrap(new Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		s3 = loggingWrap(new S3({
-            region: options.region,
-
-            // The key signatureVersion is no longer supported in v3, and can be removed.
-            // @deprecated SDK v3 only supports signature v4.
-            signatureVersion: 'v4'
+            region: options.region
         }), {log: logger.logApiCall, logName: 's3'}),
 		getSnsDLQTopic = function () {
 			const topicNameOrArn = options['dlq-sns'];
