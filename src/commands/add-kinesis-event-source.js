@@ -26,9 +26,7 @@ module.exports = function addKinesisEventSource(options, logger) {
 		initServices = function () {
 			lambda = new Lambda({region: lambdaConfig.region});
 			iam = new IAM({region: lambdaConfig.region});
-			kinesis = new Kinesis({
-                region: lambdaConfig.region
-            });
+			kinesis = new Kinesis({region: lambdaConfig.region});
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {
