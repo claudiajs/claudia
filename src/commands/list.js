@@ -25,9 +25,7 @@ module.exports = async function list(options /*, optionalLogger*/) {
 			);
 		},
 		config = await loadConfig(options, {lambda: {name: true, region: true}}),
-		lambda = new Lambda({
-            region: config.lambda.region
-        }),
+		lambda = new Lambda({region: config.lambda.region}),
 		versionList = await listVersions(config.lambda.name, lambda, options.version);
 
 	if (!formatter) {

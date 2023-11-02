@@ -17,9 +17,7 @@ module.exports = function addScheduledEvent(options) {
 		eventData,
 		ruleArn;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 			events = new CloudWatchEvents({
                 region: lambdaConfig.region
             });

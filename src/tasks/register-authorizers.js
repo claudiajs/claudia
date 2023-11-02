@@ -24,9 +24,7 @@ module.exports = function registerAuthorizers(authorizerMap, apiId, ownerAccount
 			),
 			() => logger.logApiCall('rate-limited by AWS, waiting before retry')
 		),
-		lambda = loggingWrap(new Lambda({
-            region: awsRegion
-        }), {log: logger.logApiCall, logName: 'lambda'}),
+		lambda = loggingWrap(new Lambda({region: awsRegion}), {log: logger.logApiCall, logName: 'lambda'}),
 		removeAuthorizer = function (authConfig) {
 			return apiGateway.deleteAuthorizerPromise({
 				authorizerId: authConfig.id,

@@ -16,9 +16,7 @@ module.exports = function addIOTTopicRuleEventSource(options) {
 		ruleName,
 		iot;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 			iot = new IoT({
                 region: lambdaConfig.region
             });

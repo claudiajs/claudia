@@ -20,9 +20,7 @@ module.exports = function addS3EventSource(options) {
 		lambda;
 	const ts = Date.now(),
 		getLambda = function (config) {
-			lambda = new Lambda({
-                region: config.lambda.region
-            });
+			lambda = new Lambda({region: config.lambda.region});
 			lambdaConfig = config.lambda;
 			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
 		},

@@ -16,9 +16,7 @@ module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 		lambda,
 		cognito;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 			cognito = new CognitoIdentityProvider({
                 region: lambdaConfig.region
             });

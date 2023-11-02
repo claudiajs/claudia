@@ -19,9 +19,7 @@ module.exports = function tag(options) {
 		region,
 		api;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 			api = new APIGateway({
                 region: lambdaConfig.region
             });

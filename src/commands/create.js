@@ -68,9 +68,7 @@ module.exports = function create(options, optionalLogger) {
 		iam = loggingWrap(new IAM({
             region: options.region
         }), {log: logger.logApiCall, logName: 'iam'}),
-		lambda = loggingWrap(new Lambda({
-            region: options.region
-        }), {log: logger.logApiCall, logName: 'lambda'}),
+		lambda = loggingWrap(new Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
 		s3 = loggingWrap(new S3({
             region: options.region,
 

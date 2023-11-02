@@ -9,9 +9,7 @@ module.exports = function allowAlexaSkillTrigger(options) {
 	let lambdaConfig,
 		lambda;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

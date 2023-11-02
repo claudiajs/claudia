@@ -22,9 +22,7 @@ module.exports = function testLambda(options) {
 	})
 	.then(getPayload)
 	.then(payload => {
-		const lambda = new Lambda({
-            region: lambdaConfig.region
-        });
+		const lambda = new Lambda({region: lambdaConfig.region});
 		return lambda.invoke(
             {FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version}
         );

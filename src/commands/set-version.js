@@ -53,9 +53,7 @@ module.exports = function setVersion(options, optionalLogger) {
 	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = loggingWrap(new Lambda({
-            region: lambdaConfig.region
-        }), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
 			loggingWrap(
 				new APIGateway({

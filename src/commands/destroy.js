@@ -26,9 +26,7 @@ module.exports = function destroy(options) {
 			apiConfig = config.api;
 		})
 		.then(() => {
-			const lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			const lambda = new Lambda({region: lambdaConfig.region});
 			return lambda.deleteFunction({ FunctionName: lambdaConfig.name });
 		})
 		.then(() => {

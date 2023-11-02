@@ -15,9 +15,7 @@ module.exports = function addSNSEventSource(options) {
 		lambda,
 		sns;
 	const initServices = function () {
-			lambda = new Lambda({
-                region: lambdaConfig.region
-            });
+			lambda = new Lambda({region: lambdaConfig.region});
 			sns = new SNS({
                 region: lambdaConfig.region
             });

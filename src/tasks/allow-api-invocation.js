@@ -3,9 +3,7 @@ const {
 } = require("@aws-sdk/client-lambda");
 module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsPartition, awsRegion, path) {
 	'use strict';
-	const lambda = new Lambda({
-        region: awsRegion
-    }),
+	const lambda = new Lambda({region: awsRegion}),
 		activePath = path || '*/*/*',
 		policy = {
 			Action: 'lambda:InvokeFunction',

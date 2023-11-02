@@ -41,9 +41,7 @@ to propagate changes to Lambda@Edge.
 			console.log(`\x1b[3${color}m${text}\x1b[0m`);
 		},
 		initServices = function (config) {
-			lambda = loggingWrap(new Lambda({
-                region: config.region
-            }), {log: logger.logApiCall, logName: 'lambda'});
+			lambda = loggingWrap(new Lambda({region: config.region}), {log: logger.logApiCall, logName: 'lambda'});
 			iam = loggingWrap(new IAM({
                 region: config.region
             }), {log: logger.logApiCall, logName: 'iam'});

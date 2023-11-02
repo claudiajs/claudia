@@ -233,9 +233,7 @@ module.exports = function update(options, optionalLogger) {
 	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = loggingWrap(new Lambda({
-            region: lambdaConfig.region
-        }), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
 		s3 = loggingWrap(new S3({
             region: lambdaConfig.region,
 
