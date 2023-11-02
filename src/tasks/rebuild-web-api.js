@@ -1,4 +1,16 @@
-const validAuthType = require('../util/valid-auth-type'), sequentialPromiseMap = require('sequential-promise-map'), validCredentials = require('../util/valid-credentials'), allowApiInvocation = require('./allow-api-invocation'), pathSplitter = require('../util/path-splitter'), loggingWrap = require('../util/logging-wrap'), retriableWrap = require('../util/retriable-wrap'), NullLogger = require('../util/null-logger'), safeHash = require('../util/safe-hash'), flattenRequestParameters = require('./flatten-request-parameters'), patchBinaryTypes = require('./patch-binary-types'), clearApi = require('./clear-api'), registerAuthorizers = require('./register-authorizers');
+const validAuthType = require('../util/valid-auth-type'),
+	sequentialPromiseMap = require('sequential-promise-map'),
+	validCredentials = require('../util/valid-credentials'),
+	allowApiInvocation = require('./allow-api-invocation'),
+	pathSplitter = require('../util/path-splitter'),
+	loggingWrap = require('../util/logging-wrap'),
+	retriableWrap = require('../util/retriable-wrap'),
+	NullLogger = require('../util/null-logger'),
+	safeHash = require('../util/safe-hash'),
+	flattenRequestParameters = require('./flatten-request-parameters'),
+	patchBinaryTypes = require('./patch-binary-types'),
+	clearApi = require('./clear-api'),
+	registerAuthorizers = require('./register-authorizers');
 
 const {
     APIGateway

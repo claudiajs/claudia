@@ -1,4 +1,5 @@
-const loadConfig = require('../util/loadconfig'), iamNameSanitize = require('../util/iam-name-sanitize');
+const loadConfig = require('../util/loadconfig'),
+	iamNameSanitize = require('../util/iam-name-sanitize');
 
 const {
     IAM

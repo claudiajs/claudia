@@ -1,4 +1,6 @@
-const loadConfig = require('../util/loadconfig'), parseKeyValueCSV = require('../util/parse-key-value-csv'), getOwnerInfo = require('../tasks/get-owner-info');
+const loadConfig = require('../util/loadconfig'),
+	parseKeyValueCSV = require('../util/parse-key-value-csv'),
+	getOwnerInfo = require('../tasks/get-owner-info');
 
 const {
     APIGateway

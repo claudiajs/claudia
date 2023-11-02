@@ -1,4 +1,7 @@
-const loadConfig = require('../util/loadconfig'), isRoleArn = require('../util/is-role-arn'), isKinesisArn = require('../util/is-kinesis-arn'), retry = require('oh-no-i-insist');
+const loadConfig = require('../util/loadconfig'),
+	isRoleArn = require('../util/is-role-arn'),
+	isKinesisArn = require('../util/is-kinesis-arn'),
+	retry = require('oh-no-i-insist');
 
 const {
     IAM

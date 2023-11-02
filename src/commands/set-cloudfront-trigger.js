@@ -1,4 +1,10 @@
-const loadConfig = require('../util/loadconfig'), NullLogger = require('../util/null-logger'), loggingWrap = require('../util/logging-wrap'), appendServiceToRole = require('../tasks/append-service-to-role'), retry = require('oh-no-i-insist'), findCloudfrontBehavior = require('../tasks/find-cloudfront-behavior'), patchLambdaFunctionAssociations = require('../tasks/patch-lambda-function-associations');
+const loadConfig = require('../util/loadconfig'),
+	NullLogger = require('../util/null-logger'),
+	loggingWrap = require('../util/logging-wrap'),
+	appendServiceToRole = require('../tasks/append-service-to-role'),
+	retry = require('oh-no-i-insist'),
+	findCloudfrontBehavior = require('../tasks/find-cloudfront-behavior'),
+	patchLambdaFunctionAssociations = require('../tasks/patch-lambda-function-associations');
 
 const {
     CloudFront

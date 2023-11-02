@@ -1,4 +1,5 @@
-const loggingWrap = require('../util/logging-wrap'), NullLogger = require('../util/null-logger');
+const loggingWrap = require('../util/logging-wrap'),
+	NullLogger = require('../util/null-logger');
 
 const {
     STS

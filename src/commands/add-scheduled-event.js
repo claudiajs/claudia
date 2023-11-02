@@ -1,4 +1,5 @@
-const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise');
+const loadConfig = require('../util/loadconfig'),
+	fsPromise = require('../util/fs-promise');
 
 const {
     CloudWatchEvents

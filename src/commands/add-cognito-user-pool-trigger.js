@@ -1,4 +1,6 @@
-const loadConfig = require('../util/loadconfig'), iamNameSanitize = require('../util/iam-name-sanitize'), getOwnerInfo = require('../tasks/get-owner-info');
+const loadConfig = require('../util/loadconfig'),
+	iamNameSanitize = require('../util/iam-name-sanitize'),
+	getOwnerInfo = require('../tasks/get-owner-info');
 
 const {
     CognitoIdentityProvider

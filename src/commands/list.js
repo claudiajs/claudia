@@ -1,4 +1,5 @@
-const loadConfig = require('../util/loadconfig'), listVersions = require('../tasks/list-versions');
+const loadConfig = require('../util/loadconfig'),
+	listVersions = require('../tasks/list-versions');
 
 const {
     Lambda

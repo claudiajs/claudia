@@ -1,4 +1,13 @@
-const loadConfig = require('../util/loadconfig'), allowApiInvocation = require('../tasks/allow-api-invocation'), retriableWrap = require('../util/retriable-wrap'), loggingWrap = require('../util/logging-wrap'), readEnvVarsFromOptions = require('../util/read-env-vars-from-options'), updateEnvVars = require('../tasks/update-env-vars'), apiGWUrl = require('../util/apigw-url'), NullLogger = require('../util/null-logger'), markAlias = require('../tasks/mark-alias'), getOwnerInfo = require('../tasks/get-owner-info');
+const loadConfig = require('../util/loadconfig'),
+	allowApiInvocation = require('../tasks/allow-api-invocation'),
+	retriableWrap = require('../util/retriable-wrap'),
+	loggingWrap = require('../util/logging-wrap'),
+	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
+	updateEnvVars = require('../tasks/update-env-vars'),
+	apiGWUrl = require('../util/apigw-url'),
+	NullLogger = require('../util/null-logger'),
+	markAlias = require('../tasks/mark-alias'),
+	getOwnerInfo = require('../tasks/get-owner-info');
 
 const {
     APIGateway

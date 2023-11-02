@@ -1,4 +1,8 @@
-const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise'), path = require('path'), retriableWrap = require('../util/retriable-wrap'), destroyRole = require('../util/destroy-role');
+const loadConfig = require('../util/loadconfig'),
+	fsPromise = require('../util/fs-promise'),
+	path = require('path'),
+	retriableWrap = require('../util/retriable-wrap'),
+	destroyRole = require('../util/destroy-role');
 
 const {
     APIGateway

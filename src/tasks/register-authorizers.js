@@ -1,4 +1,8 @@
-const loggingWrap = require('../util/logging-wrap'), retriableWrap = require('../util/retriable-wrap'), allowApiInvocation = require('./allow-api-invocation'), NullLogger = require('../util/null-logger'), sequentialPromiseMap = require('sequential-promise-map');
+const loggingWrap = require('../util/logging-wrap'),
+	retriableWrap = require('../util/retriable-wrap'),
+	allowApiInvocation = require('./allow-api-invocation'),
+	NullLogger = require('../util/null-logger'),
+	sequentialPromiseMap = require('sequential-promise-map');
 
 const {
     APIGateway

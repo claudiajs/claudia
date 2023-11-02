@@ -1,4 +1,7 @@
-const loadConfig = require('../util/loadconfig'), isSQSArn = require('../util/is-sqs-arn'), iamNameSanitize = require('../util/iam-name-sanitize'), retry = require('oh-no-i-insist');
+const loadConfig = require('../util/loadconfig'),
+	isSQSArn = require('../util/is-sqs-arn'),
+	iamNameSanitize = require('../util/iam-name-sanitize'),
+	retry = require('oh-no-i-insist');
 
 const {
     IAM
