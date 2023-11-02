@@ -1,9 +1,17 @@
-const aws = require('aws-sdk'),
-	loadConfig = require('../util/loadconfig'),
-	fsPromise = require('../util/fs-promise'),
-	path = require('path'),
-	retriableWrap = require('../util/retriable-wrap'),
-	destroyRole = require('../util/destroy-role');
+const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise'), path = require('path'), retriableWrap = require('../util/retriable-wrap'), destroyRole = require('../util/destroy-role');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
 module.exports = function destroy(options) {
 	'use strict';
 	let lambdaConfig, apiConfig;
@@ -14,11 +22,15 @@ module.exports = function destroy(options) {
 			apiConfig = config.api;
 		})
 		.then(() => {
-			const lambda = new aws.Lambda({ region: lambdaConfig.region });
-			return lambda.deleteFunction({ FunctionName: lambdaConfig.name }).promise();
+			const lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			return lambda.deleteFunction({ FunctionName: lambdaConfig.name });
 		})
 		.then(() => {
-			const apiGateway = retriableWrap(new aws.APIGateway({ region: lambdaConfig.region }));
+			const apiGateway = retriableWrap(new APIGateway({
+                region: lambdaConfig.region
+            }));
 			if (apiConfig) {
 				return apiGateway.deleteRestApiPromise({
 					restApiId: apiConfig.id
@@ -26,7 +38,9 @@ module.exports = function destroy(options) {
 			}
 		})
 		.then(() => {
-			const iam = new aws.IAM({ region: lambdaConfig.region });
+			const iam = new IAM({
+                region: lambdaConfig.region
+            });
 			if (lambdaConfig.role && !lambdaConfig.sharedRole) {
 				return destroyRole(iam, lambdaConfig.role);
 			}

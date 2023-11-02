@@ -1,7 +1,11 @@
-const aws = require('aws-sdk');
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 module.exports = function allowApiInvocation(functionName, functionVersion, restApiId, ownerId, awsPartition, awsRegion, path) {
 	'use strict';
-	const lambda = new aws.Lambda({region: awsRegion}),
+	const lambda = new Lambda({
+        region: awsRegion
+    }),
 		activePath = path || '*/*/*',
 		policy = {
 			Action: 'lambda:InvokeFunction',
@@ -21,16 +25,16 @@ module.exports = function allowApiInvocation(functionName, functionVersion, rest
 	return lambda.getPolicy({
 		FunctionName: functionName,
 		Qualifier: functionVersion
-	}).promise()
+	})
 	.then(policyResponse => policyResponse && policyResponse.Policy && JSON.parse(policyResponse.Policy))
 	.then(currentPolicy => {
 		const statements = (currentPolicy && currentPolicy.Statement) || [];
 		if (!statements.find(matchesPolicy)) {
-			return lambda.addPermission(policy).promise();
+			return lambda.addPermission(policy);
 		}
 	}, e => {
 		if (e && e.code === 'ResourceNotFoundException') {
-			return lambda.addPermission(policy).promise();
+			return lambda.addPermission(policy);
 		} else {
 			return Promise.reject(e);
 		}

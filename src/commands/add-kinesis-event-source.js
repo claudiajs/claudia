@@ -1,8 +1,16 @@
-const loadConfig = require('../util/loadconfig'),
-	isRoleArn = require('../util/is-role-arn'),
-	isKinesisArn = require('../util/is-kinesis-arn'),
-	retry = require('oh-no-i-insist'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), isRoleArn = require('../util/is-role-arn'), isKinesisArn = require('../util/is-kinesis-arn'), retry = require('oh-no-i-insist');
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Kinesis
+} = require("@aws-sdk/client-kinesis");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 
 module.exports = function addKinesisEventSource(options, logger) {
 	'use strict';
@@ -13,9 +21,15 @@ module.exports = function addKinesisEventSource(options, logger) {
 	const awsDelay = Number(options['aws-delay']) || 5000,
 		awsRetries = Number(options['aws-retries']) || 15,
 		initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			iam = new aws.IAM({region: lambdaConfig.region});
-			kinesis = new aws.Kinesis({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			iam = new IAM({
+                region: lambdaConfig.region
+            });
+			kinesis = new Kinesis({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

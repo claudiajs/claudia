@@ -1,6 +1,12 @@
-const loadConfig = require('../util/loadconfig'),
-	fsPromise = require('../util/fs-promise'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise');
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
+const {
+    SNS
+} = require("@aws-sdk/client-sns");
 
 module.exports = function addSNSEventSource(options) {
 	'use strict';
@@ -8,8 +14,12 @@ module.exports = function addSNSEventSource(options) {
 		lambda,
 		sns;
 	const initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			sns = new aws.SNS({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			sns = new SNS({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

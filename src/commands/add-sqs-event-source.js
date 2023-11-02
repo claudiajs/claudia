@@ -1,8 +1,16 @@
-const loadConfig = require('../util/loadconfig'),
-	isSQSArn = require('../util/is-sqs-arn'),
-	iamNameSanitize = require('../util/iam-name-sanitize'),
-	retry = require('oh-no-i-insist'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), isSQSArn = require('../util/is-sqs-arn'), iamNameSanitize = require('../util/iam-name-sanitize'), retry = require('oh-no-i-insist');
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
+const {
+    SQS
+} = require("@aws-sdk/client-sqs");
 
 module.exports = function addSQSEventSource(options, logger) {
 	'use strict';
@@ -13,9 +21,15 @@ module.exports = function addSQSEventSource(options, logger) {
 	const awsDelay = Number(options['aws-delay']) || 5000,
 		awsRetries = Number(options['aws-retries']) || 15,
 		initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			iam = new aws.IAM({region: lambdaConfig.region});
-			sqs = new aws.SQS({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			iam = new IAM({
+                region: lambdaConfig.region
+            });
+			sqs = new SQS({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

@@ -1,15 +1,25 @@
-const loadConfig = require('../util/loadconfig'),
-	iamNameSanitize = require('../util/iam-name-sanitize'),
-	aws = require('aws-sdk'),
-	getOwnerInfo = require('../tasks/get-owner-info');
+const loadConfig = require('../util/loadconfig'), iamNameSanitize = require('../util/iam-name-sanitize'), getOwnerInfo = require('../tasks/get-owner-info');
+
+const {
+    CognitoIdentityProvider
+} = require("@aws-sdk/client-cognito-identity-provider");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
 module.exports = function addCognitoUserPoolTrigger(options, optionalLogger) {
 	'use strict';
 	let lambdaConfig,
 		lambda,
 		cognito;
 	const initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			cognito = new aws.CognitoIdentityServiceProvider({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			cognito = new CognitoIdentityProvider({
+                region: lambdaConfig.region
+            });
 		},
 		readConfig = function () {
 			return loadConfig(options, {lambda: {name: true, region: true}})

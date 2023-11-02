@@ -1,14 +1,13 @@
-const aws = require('aws-sdk'),
-	loadConfig = require('../util/loadconfig'),
-	allowApiInvocation = require('../tasks/allow-api-invocation'),
-	retriableWrap = require('../util/retriable-wrap'),
-	loggingWrap = require('../util/logging-wrap'),
-	readEnvVarsFromOptions = require('../util/read-env-vars-from-options'),
-	updateEnvVars = require('../tasks/update-env-vars'),
-	apiGWUrl = require('../util/apigw-url'),
-	NullLogger = require('../util/null-logger'),
-	markAlias = require('../tasks/mark-alias'),
-	getOwnerInfo = require('../tasks/get-owner-info');
+const loadConfig = require('../util/loadconfig'), allowApiInvocation = require('../tasks/allow-api-invocation'), retriableWrap = require('../util/retriable-wrap'), loggingWrap = require('../util/logging-wrap'), readEnvVarsFromOptions = require('../util/read-env-vars-from-options'), updateEnvVars = require('../tasks/update-env-vars'), apiGWUrl = require('../util/apigw-url'), NullLogger = require('../util/null-logger'), markAlias = require('../tasks/mark-alias'), getOwnerInfo = require('../tasks/get-owner-info');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
 module.exports = function setVersion(options, optionalLogger) {
 	'use strict';
 	let lambdaConfig, lambda, apiGateway, apiConfig;
@@ -45,10 +44,14 @@ module.exports = function setVersion(options, optionalLogger) {
 	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
+		lambda = loggingWrap(new Lambda({
+            region: lambdaConfig.region
+        }), {log: logger.logApiCall, logName: 'lambda'});
 		apiGateway = retriableWrap(
 			loggingWrap(
-				new aws.APIGateway({region: lambdaConfig.region}),
+				new APIGateway({
+                    region: lambdaConfig.region
+                }),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')

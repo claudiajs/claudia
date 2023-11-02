@@ -1,11 +1,16 @@
-const loadConfig = require('../util/loadconfig'),
-	NullLogger = require('../util/null-logger'),
-	loggingWrap = require('../util/logging-wrap'),
-	appendServiceToRole = require('../tasks/append-service-to-role'),
-	retry = require('oh-no-i-insist'),
-	findCloudfrontBehavior = require('../tasks/find-cloudfront-behavior'),
-	patchLambdaFunctionAssociations = require('../tasks/patch-lambda-function-associations'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), NullLogger = require('../util/null-logger'), loggingWrap = require('../util/logging-wrap'), appendServiceToRole = require('../tasks/append-service-to-role'), retry = require('oh-no-i-insist'), findCloudfrontBehavior = require('../tasks/find-cloudfront-behavior'), patchLambdaFunctionAssociations = require('../tasks/patch-lambda-function-associations');
+
+const {
+    CloudFront
+} = require("@aws-sdk/client-cloudfront");
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 
 module.exports = function setCloudFrontTrigger(options, optionalLogger) {
 	'use strict';
@@ -30,9 +35,15 @@ to propagate changes to Lambda@Edge.
 			console.log(`\x1b[3${color}m${text}\x1b[0m`);
 		},
 		initServices = function (config) {
-			lambda = loggingWrap(new aws.Lambda({region: config.region}), {log: logger.logApiCall, logName: 'lambda'});
-			iam = loggingWrap(new aws.IAM({region: config.region}), {log: logger.logApiCall, logName: 'iam'});
-			cloudFront = loggingWrap(new aws.CloudFront({region: config.region}), {log: logger.logApiCall, logName: 'cloudfront'});
+			lambda = loggingWrap(new Lambda({
+                region: config.region
+            }), {log: logger.logApiCall, logName: 'lambda'});
+			iam = loggingWrap(new IAM({
+                region: config.region
+            }), {log: logger.logApiCall, logName: 'iam'});
+			cloudFront = loggingWrap(new CloudFront({
+                region: config.region
+            }), {log: logger.logApiCall, logName: 'cloudfront'});
 		},
 		readConfig = function () {
 			const version = String(options.version);

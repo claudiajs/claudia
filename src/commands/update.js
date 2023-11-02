@@ -26,6 +26,23 @@ const zipdir = require('../tasks/zipdir'),
 	retry = require('oh-no-i-insist'),
 	waitUntilNotPending = require('../tasks/wait-until-not-pending'),
 	combineLists = require('../util/combine-lists');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
+const {
+    S3
+} = require("@aws-sdk/client-s3");
+
 module.exports = function update(options, optionalLogger) {
 	'use strict';
 	let lambda, s3, iam, apiGateway, lambdaConfig, apiConfig, updateResult,
@@ -216,12 +233,24 @@ module.exports = function update(options, optionalLogger) {
 	.then(config => {
 		lambdaConfig = config.lambda;
 		apiConfig = config.api;
-		lambda = loggingWrap(new aws.Lambda({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'lambda'});
-		s3 = loggingWrap(new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'});
-		iam = loggingWrap(new aws.IAM({region: lambdaConfig.region}), {log: logger.logApiCall, logName: 'iam'});
+		lambda = loggingWrap(new Lambda({
+            region: lambdaConfig.region
+        }), {log: logger.logApiCall, logName: 'lambda'});
+		s3 = loggingWrap(new S3({
+            region: lambdaConfig.region,
+
+            // The key signatureVersion is no longer supported in v3, and can be removed.
+            // @deprecated SDK v3 only supports signature v4.
+            signatureVersion: 'v4'
+        }), {log: logger.logApiCall, logName: 's3'});
+		iam = loggingWrap(new IAM({
+            region: lambdaConfig.region
+        }), {log: logger.logApiCall, logName: 'iam'});
 		apiGateway = retriableWrap(
 			loggingWrap(
-				new aws.APIGateway({region: lambdaConfig.region}),
+				new APIGateway({
+                    region: lambdaConfig.region
+                }),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')

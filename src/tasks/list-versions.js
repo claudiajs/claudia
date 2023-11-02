@@ -14,7 +14,7 @@ module.exports = async function listVersions(lambdaName, lambda, filter) {
 			const results = await lambda.listVersionsByFunction({FunctionName: lambdaName, Marker: marker}).promise(),
 				versions = results.Versions,
 				next = results.NextMarker,
-				remainingVersions = next && await listVersionsFromMarker(next);
+				remainingVersions = next && (await listVersionsFromMarker(next));
 
 			if (!remainingVersions) {
 				return versions;

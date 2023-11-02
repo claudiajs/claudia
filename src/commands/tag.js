@@ -1,7 +1,12 @@
-const loadConfig = require('../util/loadconfig'),
-	parseKeyValueCSV = require('../util/parse-key-value-csv'),
-	getOwnerInfo = require('../tasks/get-owner-info'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), parseKeyValueCSV = require('../util/parse-key-value-csv'), getOwnerInfo = require('../tasks/get-owner-info');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 
 module.exports = function tag(options) {
 	'use strict';
@@ -12,8 +17,12 @@ module.exports = function tag(options) {
 		region,
 		api;
 	const initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			api = new aws.APIGateway({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			api = new APIGateway({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

@@ -1,24 +1,18 @@
-const aws = require('aws-sdk'),
-	validAuthType = require('../util/valid-auth-type'),
-	sequentialPromiseMap = require('sequential-promise-map'),
-	validCredentials = require('../util/valid-credentials'),
-	allowApiInvocation = require('./allow-api-invocation'),
-	pathSplitter = require('../util/path-splitter'),
-	loggingWrap = require('../util/logging-wrap'),
-	retriableWrap = require('../util/retriable-wrap'),
-	NullLogger = require('../util/null-logger'),
-	safeHash = require('../util/safe-hash'),
-	flattenRequestParameters = require('./flatten-request-parameters'),
-	patchBinaryTypes = require('./patch-binary-types'),
-	clearApi = require('./clear-api'),
-	registerAuthorizers = require('./register-authorizers');
+const validAuthType = require('../util/valid-auth-type'), sequentialPromiseMap = require('sequential-promise-map'), validCredentials = require('../util/valid-credentials'), allowApiInvocation = require('./allow-api-invocation'), pathSplitter = require('../util/path-splitter'), loggingWrap = require('../util/logging-wrap'), retriableWrap = require('../util/retriable-wrap'), NullLogger = require('../util/null-logger'), safeHash = require('../util/safe-hash'), flattenRequestParameters = require('./flatten-request-parameters'), patchBinaryTypes = require('./patch-binary-types'), clearApi = require('./clear-api'), registerAuthorizers = require('./register-authorizers');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
 module.exports = function rebuildWebApi(functionName, functionVersion, restApiId, apiConfig, ownerAccount, awsPartition, awsRegion, optionalLogger, configCacheStageVar) {
 	'use strict';
 	let authorizerIds;
 	const logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
 			loggingWrap(
-				new aws.APIGateway({region: awsRegion}),
+				new APIGateway({
+                    region: awsRegion
+                }),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			() => logger.logApiCall('rate-limited by AWS, waiting before retry')

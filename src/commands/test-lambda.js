@@ -1,6 +1,9 @@
-const aws = require('aws-sdk'),
-	loadConfig = require('../util/loadconfig'),
-	fsPromise = require('../util/fs-promise');
+const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise');
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
 module.exports = function testLambda(options) {
 	'use strict';
 	let lambdaConfig;
@@ -18,8 +21,12 @@ module.exports = function testLambda(options) {
 	})
 	.then(getPayload)
 	.then(payload => {
-		const lambda = new aws.Lambda({region: lambdaConfig.region});
-		return lambda.invoke({FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version}).promise();
+		const lambda = new Lambda({
+            region: lambdaConfig.region
+        });
+		return lambda.invoke(
+            {FunctionName: lambdaConfig.name, Payload: payload, Qualifier: options.version}
+        );
 	});
 };
 module.exports.doc = {

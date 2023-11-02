@@ -1,12 +1,17 @@
-const loadConfig = require('../util/loadconfig'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig');
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 
 module.exports = function allowAlexaSkillTrigger(options) {
 	'use strict';
 	let lambdaConfig,
 		lambda;
 	const initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

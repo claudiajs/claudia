@@ -31,6 +31,23 @@ const path = require('path'),
 	lambdaInvocationPolicy = require('../policies/lambda-invocation-policy'),
 	waitUntilNotPending = require('../tasks/wait-until-not-pending'),
 	NullLogger = require('../util/null-logger');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
+const {
+    S3
+} = require("@aws-sdk/client-s3");
+
 module.exports = function create(options, optionalLogger) {
 	'use strict';
 	let roleMetadata,
@@ -48,9 +65,19 @@ module.exports = function create(options, optionalLogger) {
 		awsRetries = options && options['aws-retries'] && parseInt(options['aws-retries'], 10) || 15,
 		source = (options && options.source) || process.cwd(),
 		configFile = (options && options.config) || path.join(source, 'claudia.json'),
-		iam = loggingWrap(new aws.IAM({region: options.region}), {log: logger.logApiCall, logName: 'iam'}),
-		lambda = loggingWrap(new aws.Lambda({region: options.region}), {log: logger.logApiCall, logName: 'lambda'}),
-		s3 = loggingWrap(new aws.S3({region: options.region, signatureVersion: 'v4'}), {log: logger.logApiCall, logName: 's3'}),
+		iam = loggingWrap(new IAM({
+            region: options.region
+        }), {log: logger.logApiCall, logName: 'iam'}),
+		lambda = loggingWrap(new Lambda({
+            region: options.region
+        }), {log: logger.logApiCall, logName: 'lambda'}),
+		s3 = loggingWrap(new S3({
+            region: options.region,
+
+            // The key signatureVersion is no longer supported in v3, and can be removed.
+            // @deprecated SDK v3 only supports signature v4.
+            signatureVersion: 'v4'
+        }), {log: logger.logApiCall, logName: 's3'}),
 		getSnsDLQTopic = function () {
 			const topicNameOrArn = options['dlq-sns'];
 			if (!topicNameOrArn) {
@@ -62,7 +89,9 @@ module.exports = function create(options, optionalLogger) {
 			return `arn:${awsPartition}:sns:${options.region}:${ownerAccount}:${topicNameOrArn}`;
 		},
 		apiGatewayPromise = retriableWrap(
-			loggingWrap(new aws.APIGateway({region: options.region}), {log: logger.logApiCall, logName: 'apigateway'}),
+			loggingWrap(new APIGateway({
+                region: options.region
+            }), {log: logger.logApiCall, logName: 'apigateway'}),
 			() => logger.logStage('rate-limited by AWS, waiting before retry')
 		),
 		policyFiles = function () {

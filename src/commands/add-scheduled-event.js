@@ -1,6 +1,12 @@
-const loadConfig = require('../util/loadconfig'),
-	fsPromise = require('../util/fs-promise'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), fsPromise = require('../util/fs-promise');
+
+const {
+    CloudWatchEvents
+} = require("@aws-sdk/client-cloudwatch-events");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
 
 module.exports = function addScheduledEvent(options) {
 	'use strict';
@@ -10,8 +16,12 @@ module.exports = function addScheduledEvent(options) {
 		eventData,
 		ruleArn;
 	const initServices = function () {
-			lambda = new aws.Lambda({region: lambdaConfig.region});
-			events = new aws.CloudWatchEvents({region: lambdaConfig.region});
+			lambda = new Lambda({
+                region: lambdaConfig.region
+            });
+			events = new CloudWatchEvents({
+                region: lambdaConfig.region
+            });
 		},
 		getLambda = () => lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise(),
 		readConfig = function () {

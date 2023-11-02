@@ -1,6 +1,17 @@
-const loadConfig = require('../util/loadconfig'),
-	iamNameSanitize = require('../util/iam-name-sanitize'),
-	aws = require('aws-sdk');
+const loadConfig = require('../util/loadconfig'), iamNameSanitize = require('../util/iam-name-sanitize');
+
+const {
+    IAM
+} = require("@aws-sdk/client-iam");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
+const {
+    S3
+} = require("@aws-sdk/client-s3");
+
 module.exports = function addS3EventSource(options) {
 	'use strict';
 	let lambdaConfig,
@@ -8,7 +19,9 @@ module.exports = function addS3EventSource(options) {
 		lambda;
 	const ts = Date.now(),
 		getLambda = function (config) {
-			lambda = new aws.Lambda({region: config.lambda.region});
+			lambda = new Lambda({
+                region: config.lambda.region
+            });
 			lambdaConfig = config.lambda;
 			return lambda.getFunctionConfiguration({FunctionName: lambdaConfig.name, Qualifier: options.version}).promise();
 		},
@@ -26,7 +39,9 @@ module.exports = function addS3EventSource(options) {
 				});
 		},
 		addS3AccessPolicy = function () {
-			const iam = new aws.IAM({region: lambdaConfig.region});
+			const iam = new IAM({
+                region: lambdaConfig.region
+            });
 			return iam.putRolePolicy({
 				RoleName: lambdaConfig.role,
 				PolicyName: iamNameSanitize(`s3-${options.bucket}-access-${ts}`),
@@ -44,7 +59,7 @@ module.exports = function addS3EventSource(options) {
 						}
 					]
 				})
-			}).promise();
+			});
 		},
 		addInvokePermission = function () {
 			return lambda.addPermission({
@@ -58,7 +73,13 @@ module.exports = function addS3EventSource(options) {
 		},
 		addBucketNotificationConfig = function () {
 			const events = options.events ? options.events.split(',') : ['s3:ObjectCreated:*'],
-				s3 = new aws.S3({region: lambdaConfig.region, signatureVersion: 'v4'}),
+				s3 = new S3({
+                    region: lambdaConfig.region,
+
+                    // The key signatureVersion is no longer supported in v3, and can be removed.
+                    // @deprecated SDK v3 only supports signature v4.
+                    signatureVersion: 'v4'
+                }),
 				eventConfig = {
 					LambdaFunctionArn: lambdaConfig.arn,
 					Events: events
@@ -85,7 +106,7 @@ module.exports = function addS3EventSource(options) {
 			}
 			return s3.getBucketNotificationConfiguration({
 				Bucket: options.bucket
-			}).promise()
+			})
 			.then(currentConfig => {
 				const merged = currentConfig || {};
 				if (!merged.LambdaFunctionConfigurations) {
@@ -95,7 +116,7 @@ module.exports = function addS3EventSource(options) {
 				return s3.putBucketNotificationConfiguration({
 					Bucket: options.bucket,
 					NotificationConfiguration: merged
-				}).promise();
+				});
 			});
 		};
 

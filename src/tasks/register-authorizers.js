@@ -1,20 +1,28 @@
-const aws = require('aws-sdk'),
-	loggingWrap = require('../util/logging-wrap'),
-	retriableWrap = require('../util/retriable-wrap'),
-	allowApiInvocation = require('./allow-api-invocation'),
-	NullLogger = require('../util/null-logger'),
-	sequentialPromiseMap = require('sequential-promise-map');
+const loggingWrap = require('../util/logging-wrap'), retriableWrap = require('../util/retriable-wrap'), allowApiInvocation = require('./allow-api-invocation'), NullLogger = require('../util/null-logger'), sequentialPromiseMap = require('sequential-promise-map');
+
+const {
+    APIGateway
+} = require("@aws-sdk/client-api-gateway");
+
+const {
+    Lambda
+} = require("@aws-sdk/client-lambda");
+
 module.exports = function registerAuthorizers(authorizerMap, apiId, ownerAccount, awsPartition, awsRegion, functionVersion, optionalLogger) {
 	'use strict';
 	const logger = optionalLogger || new NullLogger(),
 		apiGateway = retriableWrap(
 			loggingWrap(
-				new aws.APIGateway({region: awsRegion}),
+				new APIGateway({
+                    region: awsRegion
+                }),
 				{log: logger.logApiCall, logName: 'apigateway'}
 			),
 			() => logger.logApiCall('rate-limited by AWS, waiting before retry')
 		),
-		lambda = loggingWrap(new aws.Lambda({region: awsRegion}), {log: logger.logApiCall, logName: 'lambda'}),
+		lambda = loggingWrap(new Lambda({
+            region: awsRegion
+        }), {log: logger.logApiCall, logName: 'lambda'}),
 		removeAuthorizer = function (authConfig) {
 			return apiGateway.deleteAuthorizerPromise({
 				authorizerId: authConfig.id,
